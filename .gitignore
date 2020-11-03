@@ -6,5 +6,5 @@ devel/
 **/*.fuse*
 
 #Dependencies
-src/
-!src/rtabmap_ros_melodic_0.19.3-1
+src/*
+!src/rtabmap_ros_melodic_0.19.3-1/
