@@ -1,10 +1,21 @@
-build/
-devel/
+/*
+!.git/
+!.gitignore
+!README.md
+!.catkin_workspace
+
+#Dependencies
+!/src
+/src/*
+!/src/rtabmap_ros_melodic_0.19.3-1
+!/src/kitti_to_rosbag
+
 **/.git2/
+**/build/
+**/bin/
 **/*.user
 **/*.pyc
 **/*.fuse*
+**/*.vscode
 
-#Dependencies
-src/*
-!src/rtabmap_ros_melodic_0.19.3-1/
+
