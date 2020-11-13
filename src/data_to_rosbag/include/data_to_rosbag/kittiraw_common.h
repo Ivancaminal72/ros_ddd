@@ -27,8 +27,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef KITTI_TO_ROSBAG_KITTI_COMMON_H_
-#define KITTI_TO_ROSBAG_KITTI_COMMON_H_
+#ifndef DATA_TO_ROSBAG_KITTI_COMMON_H_
+#define DATA_TO_ROSBAG_KITTI_COMMON_H_
 
 #include <Eigen/Core>
 #include <Eigen/StdVector>
@@ -76,4 +76,4 @@ Transformation interpolateTransformations(const Transformation& left,
 
 }  // namespace kitti
 
-#endif  // KITTI_TO_ROSBAG_KITTI_COMMON_H_
+#endif  // DATA_TO_ROSBAG_KITTI_COMMON_H_

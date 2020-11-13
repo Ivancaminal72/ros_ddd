@@ -27,15 +27,15 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef KITTI_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_
-#define KITTI_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_
+#ifndef DATA_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_
+#define DATA_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_
 
 #include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_datatypes.h>
 
-#include "kitti_to_rosbag/kitti_common.h"
+#include "data_to_rosbag/kittiraw_common.h"
 
 namespace kitti {
 
@@ -58,4 +58,4 @@ std::string getCameraFrameId(int cam_id);
 
 }  // namespace kitty
 
-#endif  // KITTI_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_
+#endif  // DATA_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_

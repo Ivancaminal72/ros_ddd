@@ -1,12 +1,11 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>kitti_to_rosbag</name>
+  <name>data_to_rosbag</name>
   <version>0.0.0</version>
-  <description>A set of tools for parsing KITTI into ROS messages and outputting them as ROS bag files (or merged pointclouds).</description>
+  <description>Extension of the kitti_to_ros package (https://github.com/ethz-asl/kitti_to_rosbag) other datasets. It contains a set of tools for parsing datasets into ROS messages and outputting them as ROS bag files (or merged pointclouds).</description>
 
-  <author email="helen.oleynikova@mavt.ethz.ch">Helen Oleynikova</author>
-
-  <maintainer email="helen.oleynikova@mavt.ethz.ch">Helen Oleynikova</maintainer>
+  <author>Ivan Caminal</author>
+  <maintainer email="ivancaminal72@gmail.com">Ivan Caminal</maintainer>
 
   <license>BSD</license>
 

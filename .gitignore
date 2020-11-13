@@ -8,7 +8,7 @@
 !/src
 /src/*
 !/src/rtabmap_ros_melodic_0.19.3-1
-!/src/kitti_to_rosbag
+!/src/data_to_rosbag
 
 **/.git2/
 **/build/

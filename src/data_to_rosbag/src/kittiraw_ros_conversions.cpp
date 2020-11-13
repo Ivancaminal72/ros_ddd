@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <minkindr_conversions/kindr_msg.h>
 #include <minkindr_conversions/kindr_tf.h>
 
-#include "kitti_to_rosbag/kitti_ros_conversions.h"
+#include "data_to_rosbag/kittiraw_ros_conversions.h"
 
 namespace kitti {
 

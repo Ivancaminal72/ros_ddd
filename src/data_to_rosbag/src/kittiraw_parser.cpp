@@ -33,39 +33,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <opencv2/highgui/highgui.hpp>
 
-#include "kitti_to_rosbag/kitti_parser.h"
+#include "data_to_rosbag/kittiraw_parser.h"
 
 namespace kitti {
 
-const std::string KittiParser::kVelToCamCalibrationFilename =
+const std::string KittirawParser::kVelToCamCalibrationFilename =
     "calib_velo_to_cam.txt";
-const std::string KittiParser::kCamToCamCalibrationFilename =
+const std::string KittirawParser::kCamToCamCalibrationFilename =
     "calib_cam_to_cam.txt";
-const std::string KittiParser::kImuToVelCalibrationFilename =
+const std::string KittirawParser::kImuToVelCalibrationFilename =
     "calib_imu_to_velo.txt";
 
-const std::string KittiParser::kVelodyneFolder = "velodyne_points";
-const std::string KittiParser::kCameraFolder = "image_";
-const std::string KittiParser::kPoseFolder = "oxts";
+const std::string KittirawParser::kVelodyneFolder = "velodyne_points";
+const std::string KittirawParser::kCameraFolder = "image_";
+const std::string KittirawParser::kPoseFolder = "oxts";
 
-const std::string KittiParser::kTimestampFilename = "timestamps.txt";
-const std::string KittiParser::kDataFolder = "data";
+const std::string KittirawParser::kTimestampFilename = "timestamps.txt";
+const std::string KittirawParser::kDataFolder = "data";
 
-KittiParser::KittiParser(const std::string& calibration_path,
+KittirawParser::KittirawParser(const std::string& calibration_path,
                          const std::string& dataset_path, bool rectified)
     : calibration_path_(calibration_path),
       dataset_path_(dataset_path),
       rectified_(rectified),
       initial_pose_set_(false) {}
 
-bool KittiParser::loadCalibration() {
+bool KittirawParser::loadCalibration() {
   loadVelToCamCalibration();
   loadImuToVelCalibration();
   loadCamToCamCalibration();
   return true;
 }
 
-bool KittiParser::loadVelToCamCalibration() {
+bool KittirawParser::loadVelToCamCalibration() {
   std::string filename = calibration_path_ + "/" + kVelToCamCalibrationFilename;
   std::ifstream import_file(filename, std::ios::in);
   if (!import_file) {
@@ -107,7 +107,7 @@ bool KittiParser::loadVelToCamCalibration() {
   return true;
 }
 
-bool KittiParser::loadImuToVelCalibration() {
+bool KittirawParser::loadImuToVelCalibration() {
   std::string filename = calibration_path_ + "/" + kImuToVelCalibrationFilename;
   std::ifstream import_file(filename, std::ios::in);
   if (!import_file) {
@@ -150,7 +150,7 @@ bool KittiParser::loadImuToVelCalibration() {
   return true;
 }
 
-bool KittiParser::loadCamToCamCalibration() {
+bool KittirawParser::loadCamToCamCalibration() {
   std::string filename = calibration_path_ + "/" + kCamToCamCalibrationFilename;
   std::ifstream import_file(filename, std::ios::in);
   if (!import_file) {
@@ -314,7 +314,7 @@ bool KittiParser::loadCamToCamCalibration() {
   return true;
 }
 
-bool KittiParser::parseVectorOfDoubles(const std::string& input,
+bool KittirawParser::parseVectorOfDoubles(const std::string& input,
                                        std::vector<double>* output) const {
   output->clear();
   // Parse the line as a stringstream for space-delimeted doubles.
@@ -339,7 +339,7 @@ bool KittiParser::parseVectorOfDoubles(const std::string& input,
   return true;
 }
 
-void KittiParser::loadTimestampMaps() {
+void KittirawParser::loadTimestampMaps() {
   // Load timestamps for poses.
   std::string filename =
       dataset_path_ + "/" + kPoseFolder + "/" + kTimestampFilename;
@@ -363,7 +363,7 @@ void KittiParser::loadTimestampMaps() {
   }
 }
 
-bool KittiParser::loadTimestampsIntoVector(
+bool KittirawParser::loadTimestampsIntoVector(
     const std::string& filename, std::vector<uint64_t>* timestamp_vec) const {
   std::ifstream import_file(filename, std::ios::in);
   if (!import_file) {
@@ -400,7 +400,7 @@ bool KittiParser::loadTimestampsIntoVector(
   return true;
 }
 
-bool KittiParser::getCameraCalibration(uint64_t cam_id,
+bool KittirawParser::getCameraCalibration(uint64_t cam_id,
                                        CameraCalibration* cam) const {
   if (cam_id >= camera_calibrations_.size()) {
     return false;
@@ -409,7 +409,7 @@ bool KittiParser::getCameraCalibration(uint64_t cam_id,
   return true;
 }
 
-bool KittiParser::getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
+bool KittirawParser::getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
                                  Transformation* pose) {
   std::string filename = dataset_path_ + "/" + kPoseFolder + "/" + kDataFolder +
                          "/" + getFilenameForEntry(entry) + ".txt";
@@ -435,14 +435,14 @@ bool KittiParser::getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
   return false;
 }
 
-uint64_t KittiParser::getPoseTimestampAtEntry(uint64_t entry) {
+uint64_t KittirawParser::getPoseTimestampAtEntry(uint64_t entry) {
   if (timestamps_pose_ns_.size() <= entry) {
     return 0;
   }
   return timestamps_pose_ns_[entry];
 }
 
-bool KittiParser::getPointcloudAtEntry(
+bool KittirawParser::getPointcloudAtEntry(
     uint64_t entry, uint64_t* timestamp,
     pcl::PointCloud<pcl::PointXYZI>* ptcloud) {
   // Get the timestamp for this first.
@@ -480,7 +480,7 @@ bool KittiParser::getPointcloudAtEntry(
   return true;
 }
 
-bool KittiParser::getImageAtEntry(uint64_t entry, uint64_t cam_id,
+bool KittirawParser::getImageAtEntry(uint64_t entry, uint64_t cam_id,
                                   uint64_t* timestamp, cv::Mat* image) {
   // Get the timestamp for this first.
   if (timestamps_cam_ns_.size() <= cam_id ||
@@ -504,7 +504,7 @@ bool KittiParser::getImageAtEntry(uint64_t entry, uint64_t cam_id,
 }
 
 // From the MATLAB raw data dev kit.
-bool KittiParser::convertGpsToPose(const std::vector<double>& oxts,
+bool KittirawParser::convertGpsToPose(const std::vector<double>& oxts,
                                    Transformation* pose) {
   if (oxts.size() < 6) {
     return false;
@@ -551,43 +551,43 @@ bool KittiParser::convertGpsToPose(const std::vector<double>& oxts,
 }
 
 // From the MATLAB raw data dev kit.
-double KittiParser::latToScale(double lat) const {
+double KittirawParser::latToScale(double lat) const {
   return cos(lat * M_PI / 180.0);
 }
 
 // From the MATLAB raw data dev kit.
-void KittiParser::latlonToMercator(double lat, double lon, double scale,
+void KittirawParser::latlonToMercator(double lat, double lon, double scale,
                                    Eigen::Vector2d* mercator) const {
   double er = 6378137;
   mercator->x() = scale * lon * M_PI * er / 180.0;
   mercator->y() = scale * er * log(tan((90.0 + lat) * M_PI / 360.0));
 }
 
-std::string KittiParser::getFolderNameForCamera(int cam_number) const {
+std::string KittirawParser::getFolderNameForCamera(int cam_number) const {
   char buffer[20];
   sprintf(buffer, "%s%02d", kCameraFolder.c_str(), cam_number);
   return std::string(buffer);
 }
 
-std::string KittiParser::getFilenameForEntry(uint64_t entry) const {
+std::string KittirawParser::getFilenameForEntry(uint64_t entry) const {
   char buffer[20];
   sprintf(buffer, "%010llu", entry);
   return std::string(buffer);
 }
 
-Transformation KittiParser::T_camN_vel(int cam_number) const {
+Transformation KittirawParser::T_camN_vel(int cam_number) const {
   return camera_calibrations_[cam_number].T_cam0_cam * T_cam0_vel_;
 }
 
-Transformation KittiParser::T_camN_imu(int cam_number) const {
+Transformation KittirawParser::T_camN_imu(int cam_number) const {
   return T_camN_vel(cam_number) * T_vel_imu_;
 }
 
-Transformation KittiParser::T_cam0_vel() const { return T_cam0_vel_; }
+Transformation KittirawParser::T_cam0_vel() const { return T_cam0_vel_; }
 
-Transformation KittiParser::T_vel_imu() const { return T_vel_imu_; }
+Transformation KittirawParser::T_vel_imu() const { return T_vel_imu_; }
 
-bool KittiParser::interpolatePoseAtTimestamp(uint64_t timestamp,
+bool KittirawParser::interpolatePoseAtTimestamp(uint64_t timestamp,
                                              Transformation* pose) {
   // Look up the closest 2 timestamps to this.
   size_t left_index = timestamps_pose_ns_.size();
@@ -634,7 +634,7 @@ bool KittiParser::interpolatePoseAtTimestamp(uint64_t timestamp,
   return true;
 }
 
-size_t KittiParser::getNumCameras() const {
+size_t KittirawParser::getNumCameras() const {
   return camera_calibrations_.size();
 }
 

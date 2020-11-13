@@ -34,14 +34,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rosgraph_msgs/Clock.h>
 #include <tf/transform_broadcaster.h>
 
-#include "kitti_to_rosbag/kitti_parser.h"
-#include "kitti_to_rosbag/kitti_ros_conversions.h"
+#include "data_to_rosbag/kittiraw_parser.h"
+#include "data_to_rosbag/kittiraw_ros_conversions.h"
 
 namespace kitti {
 
-class KittiToRosLiveNode {
+class KittiLiveNode {
  public:
-  KittiToRosLiveNode(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
+  KittiLiveNode(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
                 const std::string& calibration_path,
                 const std::string& dataset_path);
 
@@ -75,7 +75,7 @@ class KittiToRosLiveNode {
   // Call startPublishing() to turn this on.
   ros::WallTimer publish_timer_;
 
-  kitti::KittiParser parser_;
+  kitti::KittirawParser parser_;
 
   std::string world_frame_id_;
   std::string imu_frame_id_;
@@ -87,7 +87,7 @@ class KittiToRosLiveNode {
   uint64_t current_timestamp_ns_;
 };
 
-KittiToRosLiveNode::KittiToRosLiveNode(const ros::NodeHandle& nh,
+KittiLiveNode::KittiLiveNode(const ros::NodeHandle& nh,
                              const ros::NodeHandle& nh_private,
                              const std::string& calibration_path,
                              const std::string& dataset_path)
@@ -121,15 +121,15 @@ KittiToRosLiveNode::KittiToRosLiveNode(const ros::NodeHandle& nh,
   }
 }
 
-void KittiToRosLiveNode::startPublishing(double rate_hz) {
+void KittiLiveNode::startPublishing(double rate_hz) {
   double publish_dt_sec = 1.0 / rate_hz;
   publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);
   std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
   publish_timer_ = nh_.createWallTimer(ros::WallDuration(publish_dt_sec),
-                                       &KittiToRosLiveNode::timerCallback, this);
+                                       &KittiLiveNode::timerCallback, this);
 }
 
-void KittiToRosLiveNode::timerCallback(const ros::WallTimerEvent& event) {
+void KittiLiveNode::timerCallback(const ros::WallTimerEvent& event) {
   Transformation tf_interpolated;
 
   std::cout << "Current entry: " << current_entry_ << std::endl;
@@ -174,7 +174,7 @@ void KittiToRosLiveNode::timerCallback(const ros::WallTimerEvent& event) {
   }
 }
 
-void KittiToRosLiveNode::publishClock(uint64_t timestamp_ns) {
+void KittiLiveNode::publishClock(uint64_t timestamp_ns) {
   ros::Time timestamp_ros;
   timestampToRos(timestamp_ns, &timestamp_ros);
   rosgraph_msgs::Clock clock_time;
@@ -182,7 +182,7 @@ void KittiToRosLiveNode::publishClock(uint64_t timestamp_ns) {
   clock_pub_.publish(clock_time);
 }
 
-bool KittiToRosLiveNode::publishEntry(uint64_t entry) {
+bool KittiLiveNode::publishEntry(uint64_t entry) {
   ros::Time timestamp_ros;
   uint64_t timestamp_ns;
   rosgraph_msgs::Clock clock_time;
@@ -249,7 +249,7 @@ bool KittiToRosLiveNode::publishEntry(uint64_t entry) {
   return true;
 }
 
-void KittiToRosLiveNode::publishTf(uint64_t timestamp_ns,
+void KittiLiveNode::publishTf(uint64_t timestamp_ns,
                               const Transformation& imu_pose) {
   ros::Time timestamp_ros;
   timestampToRos(timestamp_ns, &timestamp_ros);
@@ -278,7 +278,7 @@ void KittiToRosLiveNode::publishTf(uint64_t timestamp_ns,
 }  // namespace kitti
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "kitti_live");
+  ros::init(argc, argv, "kittiraw_live");
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InstallFailureSignalHandler();
@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh_private("~");
 
   if (argc < 3) {
-    std::cout << "Usage: rosrun kitti_to_rosbag kitti_live_node "
+    std::cout << "Usage: rosrun data_to_rosbag kitti_live_node "
                  "calibration_path dataset_path\n";
     std::cout << "Note: no trailing slashes.\n";
     return 0;
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
   const std::string calibration_path = argv[1];
   const std::string dataset_path = argv[2];
 
-  kitti::KittiToRosLiveNode node(nh, nh_private, calibration_path, dataset_path);
+  kitti::KittiLiveNode node(nh, nh_private, calibration_path, dataset_path);
 
   node.startPublishing(50.0);
 

@@ -27,8 +27,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef KITTI_TO_ROSBAG_KITTI_PARSER_H_
-#define KITTI_TO_ROSBAG_KITTI_PARSER_H_
+#ifndef DATA_TO_ROSBAG_KITTI_PARSER_H_
+#define DATA_TO_ROSBAG_KITTI_PARSER_H_
 
 #include <memory>
 #include <map>
@@ -37,11 +37,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pcl/conversions.h>
 #include <opencv2/core/core.hpp>
 
-#include "kitti_to_rosbag/kitti_common.h"
+#include "data_to_rosbag/kittiraw_common.h"
 
 namespace kitti {
 
-class KittitorosParser {
+class KittiParser {
  public:
   // Constants for filenames for calibration files.
   static const std::string kVelToCamCalibrationFilename;
@@ -53,7 +53,7 @@ class KittitorosParser {
   static const std::string kTimestampFilename;
   static const std::string kDataFolder;
 
-  KittitorosParser(const std::string& calibration_path,
+  KittiParser(const std::string& calibration_path,
               const std::string& dataset_path, bool rectified);
 
   // MAIN API: all you should need to use!
@@ -141,4 +141,4 @@ class KittitorosParser {
 };
 }
 
-#endif  // KITTI_TO_ROSBAG_KITTI_PARSER_H_
+#endif  // DATA_TO_ROSBAG_KITTI_PARSER_H_

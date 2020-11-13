@@ -32,14 +32,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rosbag/bag.h>
 #include <tf/tfMessage.h>
 
-#include "kitti_to_rosbag/kitti_parser.h"
-#include "kitti_to_rosbag/kitti_ros_conversions.h"
+#include "data_to_rosbag/kittiraw_parser.h"
+#include "data_to_rosbag/kittiraw_ros_conversions.h"
 
 namespace kitti {
 
-class KittiBagConverter {
+class KittirawConverter {
  public:
-  KittiBagConverter(const std::string& calibration_path,
+  KittirawConverter(const std::string& calibration_path,
                     const std::string& dataset_path,
                     const std::string& output_filename);
 
@@ -48,7 +48,7 @@ class KittiBagConverter {
   void convertTf(uint64_t timestamp_ns, const Transformation& imu_pose);
 
  private:
-  kitti::KittiParser parser_;
+  kitti::KittirawParser parser_;
 
   rosbag::Bag bag_;
 
@@ -62,7 +62,7 @@ class KittiBagConverter {
   std::string pointcloud_topic_;
 };
 
-KittiBagConverter::KittiBagConverter(const std::string& calibration_path,
+KittirawConverter::KittirawConverter(const std::string& calibration_path,
                                      const std::string& dataset_path,
                                      const std::string& output_filename)
     : parser_(calibration_path, dataset_path, true),
@@ -80,7 +80,7 @@ KittiBagConverter::KittiBagConverter(const std::string& calibration_path,
   bag_.open(output_filename, rosbag::bagmode::Write);
 }
 
-void KittiBagConverter::convertAll() {
+void KittirawConverter::convertAll() {
   uint64_t entry = 0;
   while (convertEntry(entry)) {
     entry++;
@@ -88,7 +88,7 @@ void KittiBagConverter::convertAll() {
   std::cout << "Converted " << entry << " entries into a rosbag.\n";
 }
 
-bool KittiBagConverter::convertEntry(uint64_t entry) {
+bool KittirawConverter::convertEntry(uint64_t entry) {
   ros::Time timestamp_ros;
   uint64_t timestamp_ns;
 
@@ -156,7 +156,7 @@ bool KittiBagConverter::convertEntry(uint64_t entry) {
   return true;
 }
 
-void KittiBagConverter::convertTf(uint64_t timestamp_ns,
+void KittirawConverter::convertTf(uint64_t timestamp_ns,
                                   const Transformation& imu_pose) {
   tf::tfMessage tf_msg;
   ros::Time timestamp_ros;
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
   google::InstallFailureSignalHandler();
 
   if (argc < 4) {
-    std::cout << "Usage: rosrun kitti_to_rosbag kitti_rosbag_converter "
+    std::cout << "Usage: rosrun data_to_rosbag kitti_rosbag_converter "
                  "calibration_path dataset_path output_path\n";
     std::cout << "Note: no trailing slashes.\n";
     return 0;
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
   const std::string dataset_path = argv[2];
   const std::string output_path = argv[3];
 
-  kitti::KittiBagConverter converter(calibration_path, dataset_path,
+  kitti::KittirawConverter converter(calibration_path, dataset_path,
                                      output_path);
   converter.convertAll();
 

@@ -34,8 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rosgraph_msgs/Clock.h>
 #include <tf/transform_broadcaster.h>
 
-#include "kitti_to_rosbag/kitti_parser.h"
-#include "kitti_to_rosbag/kitti_ros_conversions.h"
+#include "data_to_rosbag/kitti_parser.h"
+#include "data_to_rosbag/kittiraw_ros_conversions.h"
 
 namespace kitti {
 
@@ -285,15 +285,22 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh;
   ros::NodeHandle nh_private("~");
 
-  if (argc < 3) {
-    std::cout << "Usage: rosrun kitti_to_rosbag kitti_live_node "
-                 "calibration_path dataset_path\n";
-    std::cout << "Note: no trailing slashes.\n";
-    return 0;
+  if (argc < 2)
+  {
+    ROS_ERROR("Usage: rosrun data_to_ros kitti_live mandatory [optional]");
+    return 1;
   }
 
-  const std::string calibration_path = argv[1];
-  const std::string dataset_path = argv[2];
+  int i=0;
+  const std::string dataset_path = argv[++i];
+  const std::string calibration_path = dataset_path + "/sequences";
+  // for(int i=1; i<argc; ++i)
+  // {
+  //   if(std::strcmp(argv[i], "--outdir") == 0)
+  //   {
+  //     out_dir = argv[++i];
+  //   }
+  // }
 
   kitti::KittiLiveNode node(nh, nh_private, calibration_path, dataset_path);
 

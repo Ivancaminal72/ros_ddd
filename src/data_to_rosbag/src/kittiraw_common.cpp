@@ -27,7 +27,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "kitti_to_rosbag/kitti_common.h"
+#include "data_to_rosbag/kittiraw_common.h"
 
 namespace kitti {
 
