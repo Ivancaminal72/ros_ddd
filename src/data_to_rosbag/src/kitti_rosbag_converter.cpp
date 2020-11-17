@@ -2,7 +2,7 @@
 Copyright (c) 2016, Helen Oleynikova, ETH Zurich, Switzerland
 You can contact the author at <helen dot oleynikova at mavt dot ethz dot ch>
 
-All rights reserved.
+mandatory rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -31,16 +31,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pcl_ros/point_cloud.h>
 #include <rosbag/bag.h>
 #include <tf/tfMessage.h>
+#include <boost/program_options.hpp>
 
-#include "data_to_rosbag/kittiraw_parser.h"
+#include "data_to_rosbag/kitti_parser.h"
 #include "data_to_rosbag/kittiraw_ros_conversions.h"
+
+namespace po = boost::program_options;
 
 namespace kitti {
 
-class KittirawConverter {
+class KittiConverter {
  public:
-  KittirawConverter(const std::string& calibration_path,
-                    const std::string& dataset_path,
+  KittiConverter(const std::string& calibration_path,
+                    const std::string& sequence_path,
                     const std::string& output_filename);
 
   void convertAll();
@@ -48,7 +51,7 @@ class KittirawConverter {
   void convertTf(uint64_t timestamp_ns, const Transformation& imu_pose);
 
  private:
-  kitti::KittirawParser parser_;
+  kitti::KittiParser parser_;
 
   rosbag::Bag bag_;
 
@@ -62,10 +65,10 @@ class KittirawConverter {
   std::string pointcloud_topic_;
 };
 
-KittirawConverter::KittirawConverter(const std::string& calibration_path,
-                                     const std::string& dataset_path,
+KittiConverter::KittiConverter(const std::string& calibration_path,
+                                     const std::string& sequence_path,
                                      const std::string& output_filename)
-    : parser_(calibration_path, dataset_path, true),
+    : parser_(calibration_path, sequence_path, true),
       world_frame_id_("world"),
       imu_frame_id_("imu"),
       cam_frame_id_prefix_("cam"),
@@ -73,14 +76,14 @@ KittirawConverter::KittirawConverter(const std::string& calibration_path,
       pose_topic_("pose_imu"),
       transform_topic_("transform_imu"),
       pointcloud_topic_("velodyne_points") {
-  // Load all the timestamp maps and calibration parameters.
+  // Load mandatory the timestamp maps and calibration parameters.
   parser_.loadCalibration();
   parser_.loadTimestampMaps();
 
   bag_.open(output_filename, rosbag::bagmode::Write);
 }
 
-void KittirawConverter::convertAll() {
+void KittiConverter::convertAll() {
   uint64_t entry = 0;
   while (convertEntry(entry)) {
     entry++;
@@ -88,7 +91,7 @@ void KittirawConverter::convertAll() {
   std::cout << "Converted " << entry << " entries into a rosbag.\n";
 }
 
-bool KittirawConverter::convertEntry(uint64_t entry) {
+bool KittiConverter::convertEntry(uint64_t entry) {
   ros::Time timestamp_ros;
   uint64_t timestamp_ns;
 
@@ -156,7 +159,7 @@ bool KittirawConverter::convertEntry(uint64_t entry) {
   return true;
 }
 
-void KittirawConverter::convertTf(uint64_t timestamp_ns,
+void KittiConverter::convertTf(uint64_t timestamp_ns,
                                   const Transformation& imu_pose) {
   tf::tfMessage tf_msg;
   ros::Time timestamp_ros;
@@ -181,7 +184,7 @@ void KittirawConverter::convertTf(uint64_t timestamp_ns,
   tf_msg.transforms.push_back(tf_imu_world);
   tf_msg.transforms.push_back(tf_vel_imu);
 
-  // Get all of the camera transformations as well.
+  // Get mandatory of the camera transformations as well.
   for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
     T_cam_imu = parser_.T_camN_imu(cam_id);
     transformToRos(T_cam_imu.inverse(), &tf_cam_imu);
@@ -197,24 +200,51 @@ void KittirawConverter::convertTf(uint64_t timestamp_ns,
 }  // namespace kitti
 
 int main(int argc, char** argv) {
-  google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, false);
-  google::InstallFailureSignalHandler();
+  // google::InitGoogleLogging(argv[0]);
+  // google::ParseCommandLineFlags(&argc, &argv, false);
+  // google::InstallFailureSignalHandler();
 
-  if (argc < 4) {
-    std::cout << "Usage: rosrun data_to_rosbag kittiraw_rosbag_converter "
-                 "calibration_path dataset_path output_path\n";
-    std::cout << "Note: no trailing slashes.\n";
-    return 0;
+  //Parse arguments
+  std::string sequence_path;
+  std::string calibration_path;
+  std::string output_path;
+
+  po::options_description mandatory("Mandatory args");
+  mandatory.add_options()
+    ("seq,s", po::value<std::string>(&sequence_path), "sequence path (without trailing slash)");
+  
+  po::positional_options_description p;
+  p.add("seq", -1);
+
+  po::options_description optional("Optional args");
+  optional.add_options()
+    ("help,h", "produce a help message")
+    ("calib,c", po::value<std::string>(&calibration_path), "calibration path (without trailing slash)")
+    ("out,o", po::value<std::string>(&output_path), "output path (without trailing slash)");
+
+  po::variables_map vm;
+  po::options_description options;
+  options.add(mandatory).add(optional);
+  po::store(po::command_line_parser(argc, argv).options(options).positional(p).run(), vm);
+  po::notify(vm);
+
+  if (vm.count("help")) 
+  {
+    std::cout << "Usage: rosrun data_to_rosbag kitti_rosbag_converter [args]\n\n";
+    std::cout << options << std::endl;
+    return 1;
   }
+  else
+  {
+    std::cout<<sequence_path<<"\n";
+    std::cout<<calibration_path<<"\n";
+    std::cout<<output_path<<"\n";
+  }
+  
+  
 
-  const std::string calibration_path = argv[1];
-  const std::string dataset_path = argv[2];
-  const std::string output_path = argv[3];
-
-  kitti::KittirawConverter converter(calibration_path, dataset_path,
-                                     output_path);
-  converter.convertAll();
+  // kitti::KittiConverter converter(calibration_path, sequence_path, output_path);
+  // converter.convertAll();
 
   return 0;
 }

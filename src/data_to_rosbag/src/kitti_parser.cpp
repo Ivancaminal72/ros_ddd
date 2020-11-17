@@ -48,7 +48,7 @@ const std::string KittiParser::kVelodyneFolder = "velodyne_points";
 const std::string KittiParser::kCameraFolder = "image_";
 const std::string KittiParser::kPoseFolder = "oxts";
 
-const std::string KittiParser::kTimestampFilename = "timestamps.txt";
+const std::string KittiParser::kTimestampFilename = "times.txt";
 const std::string KittiParser::kDataFolder = "data";
 
 KittiParser::KittiParser(const std::string& calibration_path,

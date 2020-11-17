@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh_private("~");
 
   if (argc < 3) {
-    std::cout << "Usage: rosrun data_to_rosbag kitti_live_node "
+    std::cout << "Usage: rosrun data_to_rosbag kittiraw_live_node "
                  "calibration_path dataset_path\n";
     std::cout << "Note: no trailing slashes.\n";
     return 0;

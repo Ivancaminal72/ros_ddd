@@ -278,7 +278,7 @@ void KittiLiveNode::publishTf(uint64_t timestamp_ns,
 }  // namespace kitti
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "kitti_live");
+  ros::init(argc, argv, "kitti_live_node");
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InstallFailureSignalHandler();
@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
 
   if (argc < 2)
   {
-    ROS_ERROR("Usage: rosrun data_to_ros kitti_live mandatory [optional]");
+    ROS_ERROR("Usage: rosrun data_to_rosbag kitti_live_node mandatory [optional]");
     return 1;
   }
 
