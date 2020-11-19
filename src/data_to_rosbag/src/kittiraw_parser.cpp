@@ -571,7 +571,7 @@ std::string KittirawParser::getFolderNameForCamera(int cam_number) const {
 
 std::string KittirawParser::getFilenameForEntry(uint64_t entry) const {
   char buffer[20];
-  sprintf(buffer, "%010llu", entry);
+  sprintf(buffer, "%010lu", entry);
   return std::string(buffer);
 }
 

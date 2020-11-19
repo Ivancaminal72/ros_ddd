@@ -44,29 +44,25 @@ const std::string KittiParser::kCamToCamCalibrationFilename =
 const std::string KittiParser::kImuToVelCalibrationFilename =
     "calib_imu_to_velo.txt";
 
-const std::string KittiParser::kVelodyneFolder = "velodyne_points";
+const std::string KittiParser::kVelodyneFolder = "velodyne";
 const std::string KittiParser::kCameraFolder = "image_";
-const std::string KittiParser::kPoseFolder = "oxts";
+const std::string KittiParser::kCalibrationFile = "calib.txt";
+const std::string KittiParser::kTimestampFile = "times.txt";
 
-const std::string KittiParser::kTimestampFilename = "times.txt";
-const std::string KittiParser::kDataFolder = "data";
-
-KittiParser::KittiParser(const std::string& calibration_path,
-                         const std::string& sequence_dir, bool rectified)
-    : calibration_path_(calibration_path),
-      sequence_dir_(sequence_dir),
+KittiParser::KittiParser(const std::string& sequence_dir, bool rectified)
+    : sequence_dir_(sequence_dir),
       rectified_(rectified),
       initial_pose_set_(false) {}
 
 bool KittiParser::loadCalibration() {
   std::string line_str, item_str;
   std::istringstream line_istr;
-  std::ifstream inCalib(calibration_path_.c_str());
+  std::ifstream fin_calib(sequence_dir_ + "/" + kCalibrationFile);
   
   while(true)
     {
-      std::getline(inCalib, line_str);
-      if(inCalib.eof()) break;
+      std::getline(fin_calib, line_str);
+      if(fin_calib.eof()) break;
       line_istr.str(line_str);
       line_istr.clear();
       line_istr>>item_str;
@@ -78,8 +74,12 @@ bool KittiParser::loadCalibration() {
               for(int i=0; line_istr.good(); i++)
               {
                   line_istr>>item_str;
-                  if(i==0 || i==2 || i==5 || i==6) camera_calibrations_[cam_idx].projection_mat(i/4, i%4) = stod(item_str);
-                  else camera_calibrations_[cam_idx].projection_mat(i/4, i%4) = stod(item_str);
+                  if(i==0 || i==2 || i==5 || i==6) 
+                    camera_calibrations_[cam_idx]
+                      .projection_mat(i/4, i%4) = stod(item_str);
+                  else 
+                    camera_calibrations_[cam_idx]
+                      .projection_mat(i/4, i%4) = stod(item_str);
               }
           }
           else continue;
@@ -94,7 +94,7 @@ bool KittiParser::loadCalibration() {
           }
       }
     }
-    inCalib.close();
+    fin_calib.close();
 
   return true;
 }
@@ -102,7 +102,7 @@ bool KittiParser::loadCalibration() {
 bool KittiParser::parseVectorOfDoubles(const std::string& input,
                                        std::vector<double>* output) const {
   output->clear();
-  // Parse the line_istr as a stringstream for space-delimeted doubles.
+  // Parse the line as a stringstream for space-delimeted doubles.
   std::stringstream line_stream(input);
   if (line_stream.eof()) {
     return false;
@@ -124,65 +124,28 @@ bool KittiParser::parseVectorOfDoubles(const std::string& input,
   return true;
 }
 
-void KittiParser::loadTimestampMaps() {
+bool KittiParser::loadTimestampMaps() {
   // Load timestamps for poses.
-  std::string filename =
-      sequence_dir_ + "/" + kPoseFolder + "/" + kTimestampFilename;
-  loadTimestampsIntoVector(filename, &timestamps_pose_ns_);
-
-  std::cout << "Timestmap map for pose:\n";
-  for (size_t i = 0; i < timestamps_pose_ns_.size(); ++i) {
-    std::cout << i << " " << timestamps_pose_ns_[i] << std::endl;
-  }
-
-  // Velodyne.
-  filename = sequence_dir_ + "/" + kVelodyneFolder + "/" + kTimestampFilename;
-  loadTimestampsIntoVector(filename, &timestamps_vel_ns_);
-
-  // One per camera.
-  timestamps_cam_ns_.resize(camera_calibrations_.size());
-  for (int i = 0; i < camera_calibrations_.size(); ++i) {
-    filename = sequence_dir_ + "/" + getFolderNameForCamera(i) + "/" +
-               kTimestampFilename;
-    loadTimestampsIntoVector(filename, &timestamps_cam_ns_[i]);
-  }
-}
-
-bool KittiParser::loadTimestampsIntoVector(
-    const std::string& filename, std::vector<uint64_t>* timestamp_vec) const {
-  std::ifstream import_file(filename, std::ios::in);
-  if (!import_file) {
+  std::ifstream fin_time(sequence_dir_ + "/" + kTimestampFile, std::ios::in);
+  if (!fin_time) {
     return false;
   }
 
-  timestamp_vec->clear();
-  std::string line_istr;
-  while (std::getline(import_file, line_istr)) {
-    std::stringstream line_stream(line_istr);
-
-    std::string timestamp_string = line_stream.str();
-    std::tm t = {};
-    t.tm_year = std::stoi(timestamp_string.substr(0, 4)) - 1900;
-    t.tm_mon = std::stoi(timestamp_string.substr(5, 2)) - 1;
-    t.tm_mday = std::stoi(timestamp_string.substr(8, 2));
-    t.tm_hour = std::stoi(timestamp_string.substr(11, 2));
-    t.tm_min = std::stoi(timestamp_string.substr(14, 2));
-    t.tm_sec = std::stoi(timestamp_string.substr(17, 2));
-    t.tm_isdst = -1;
-
-    static const uint64_t kSecondsToNanoSeconds = 1e9;
-    time_t time_since_epoch = mktime(&t);
-
-    uint64_t timestamp = time_since_epoch * kSecondsToNanoSeconds +
-                         std::stoi(timestamp_string.substr(20, 9));
-    timestamp_vec->push_back(timestamp);
+  timestamps_.clear();
+  std::string stamp_str;
+  while (std::getline(fin_time, stamp_str)) {
+    // Seconds to nanoseconds
+    uint64_t timestamp = static_cast<uint64_t>(std::stod(stamp_str) * 1e9);
+    timestamps_.push_back(timestamp);
   }
 
   std::cout << "Timestamps: " << std::endl
-            << timestamp_vec->front() << " " << timestamp_vec->back()
+            << timestamps_.front() << " " << timestamps_.back()
             << std::endl;
 
-  return true;
+  // std::cout << "Timestmap map for pose:\n";
+  // for (size_t i = 0; i < timestamps_.size(); ++i) 
+  //   std::cout << i << " " << timestamps_[i] << std::endl;
 }
 
 bool KittiParser::getCameraCalibration(uint64_t cam_id,
@@ -194,57 +157,51 @@ bool KittiParser::getCameraCalibration(uint64_t cam_id,
   return true;
 }
 
-bool KittiParser::getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
-                                 Transformation* pose) {
-  std::string filename = sequence_dir_ + "/" + kPoseFolder + "/" + kDataFolder +
-                         "/" + getFilenameForEntry(entry) + ".txt";
+// bool KittiParser::getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
+//                                  Transformation* pose) {
+//   std::string filename = sequence_dir_ + "/" + kDataFolder +
+//                          "/" + getFilenameForEntry(entry) + ".txt";
 
-  std::ifstream import_file(filename, std::ios::in);
-  if (!import_file) {
-    return false;
-  }
-  if (timestamps_pose_ns_.size() <= entry) {
-    return false;
-  }
-  *timestamp = timestamps_pose_ns_[entry];
+//   std::ifstream fin_time(filename, std::ios::in);
+//   if (!fin_time) {
+//     return false;
+//   }
+//   if (timestamps_.size() <= entry) {
+//     return false;
+//   }
+//   *timestamp = timestamps_[entry];
 
-  std::string line_istr;
-  std::vector<double> parsed_doubles;
-  while (std::getline(import_file, line_istr)) {
-    if (parseVectorOfDoubles(line_istr, &parsed_doubles)) {
-      if (convertGpsToPose(parsed_doubles, pose)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
+//   std::string line_str;
+//   std::vector<double> parsed_doubles;
+//   while (std::getline(fin_time, line_str)) {
+//     if (parseVectorOfDoubles(line_str, &parsed_doubles)) {
+//       if (convertGpsToPose(parsed_doubles, pose)) {
+//         return true;
+//       }
+//     }
+//   }
+//   return false;
+// }
 
-uint64_t KittiParser::getPoseTimestampAtEntry(uint64_t entry) {
-  if (timestamps_pose_ns_.size() <= entry) {
+uint64_t KittiParser::getTimestampAtEntry(uint64_t entry) {
+  if (timestamps_.size() <= entry) {
     return 0;
   }
-  return timestamps_pose_ns_[entry];
+  return timestamps_[entry];
 }
 
-bool KittiParser::getPointcloudAtEntry(
-    uint64_t entry, uint64_t* timestamp,
-    pcl::PointCloud<pcl::PointXYZI>* ptcloud) {
-  // Get the timestamp for this first.
-  if (timestamps_vel_ns_.size() <= entry) {
-    std::cout << "Warning: no timestamp for this entry!\n";
-    return false;
-  }
-
-  *timestamp = timestamps_vel_ns_[entry];
+bool KittiParser::getPointcloudAtEntry( uint64_t entry,
+    pcl::PointCloud<pcl::PointXYZI>* ptcloud,
+    Eigen::Matrix3Xd* ddd_pts,
+    Eigen::RowVectorXd* intensity_pts) {
 
   // Load the actual pointcloud.
   const size_t kMaxNumberOfPoints = 1e6;  // From Readme for raw files.
   ptcloud->clear();
   ptcloud->reserve(kMaxNumberOfPoints);
 
-  std::string filename = sequence_dir_ + "/" + kVelodyneFolder + "/" +
-                         kDataFolder + "/" + getFilenameForEntry(entry) +
+  std::string filename = sequence_dir_ + "/" + kVelodyneFolder 
+                         + "/" + getFilenameForEntry(entry) + 
                          ".bin";
 
   std::ifstream input(filename, std::ios::in | std::ios::binary);
@@ -253,30 +210,107 @@ bool KittiParser::getPointcloudAtEntry(
     return false;
   }
 
-  // From yanii's kitti-pcl toolkit:
-  // https://github.com/yanii/kitti-pcl/blob/master/src/kitti2pcd.cpp
+  std::streampos begin, end;
+  int numPts;
+  begin = input.tellg();
+  input.seekg (0, input.end);
+  end = input.tellg();
+  input.seekg(0, input.beg);
+  numPts = (end-begin)/(4*sizeof(float)); //calculate number of points
+  (ddd_pts)->Zero(3, numPts);
+  (intensity_pts)->Zero(1, numPts);
   for (size_t i = 0; input.good() && !input.eof(); i++) {
     pcl::PointXYZI point;
     input.read((char*)&point.x, 3 * sizeof(float));
     input.read((char*)&point.intensity, sizeof(float));
     ptcloud->push_back(point);
+    ddd_pts->col(i) << (double) point.x, (double) point.y, (double) point.z;
+    intensity_pts->col(i) << (double) point.intensity;
   }
   input.close();
   return true;
 }
 
+bool KittiParser::projectPointcloud(int cam_idx_proj,
+                                    Eigen::Matrix3Xd* ddd_pts,
+                                    Eigen::RowVectorXd* intensity_pts, 
+                                    cv::Mat* depth_img, cv::Mat* intensity_img)
+{
+  Eigen::Matrix3Xd ddd_pts_p;
+  Eigen::RowVectorXd depth_pts;
+  CameraCalibration cam_calib;
+  getCameraCalibration(cam_idx_proj, &cam_calib);
+  int width = (int) cam_calib.image_size.x();
+  int height = (int) cam_calib.image_size.y();
+
+  // Start projection
+  *ddd_pts = Tr_cam0_vel_ * ddd_pts->colwise().homogeneous();
+  ddd_pts_p = (camera_calibrations_[cam_idx_proj]
+    .projection_mat * ddd_pts->colwise().homogeneous()).array();
+  ddd_pts_p.rowwise() /= ddd_pts_p.row(2);
+  depth_pts = ddd_pts->row(2);
+  Eigen::Array<double,1,Eigen::Dynamic> depth_pts_arr = depth_pts.array();
+  depth_pts = depth_pts_arr.round().matrix();
+  *depth_img = cv::Mat::zeros(width, height, CV_16UC1);
+  *intensity_img = cv::Mat::zeros(width, height, CV_16UC1);
+  
+
+  uint inside=0, outside=0, valid=0;
+  int x, y;
+  //iterate depth values
+  for(int i=0; i<depth_pts.cols(); i++)
+  {
+      x = round(ddd_pts_p(0,i));
+      y = round(ddd_pts_p(1,i));
+
+      //consider only points projected within camera sensor
+      if(x<width && x>=0 && y<height && y>=0)
+      {
+          inside +=1;
+          //only positive depth
+          if(depth_pts(0,i)>0)
+          {
+              valid+=1;
+              uint8_t d = (uint8_t) depth_pts(0,i);
+              
+              //pixel need update
+              if(depth_img->at<uint8_t>(y,x) == 0 
+                || depth_img->at<uint8_t>(y,x) > d)
+              {
+                
+                //exceed established limit (save max)
+                if(d>=pow(2,16)) depth_img->at<uint8_t>(y,x) 
+                  = pow(2,16)-1;
+                
+                //inside limit (save sensed depth)
+                else if(depth_img->at<uint8_t>(y,x) == 0) 
+                  depth_img->at<uint8_t>(y,x) = d;
+                
+                //pixel with value (save the smallest depth)
+                else depth_img->at<uint8_t>(y,x) = d;
+
+                //Save 16bit intensity
+                intensity_img->at<uint16_t>(y,x) 
+                  = trunc((*intensity_pts)(0,i) * pow(2,16));
+              }
+          }
+      }
+      else outside+=1;
+  }
+}
+
 bool KittiParser::getImageAtEntry(uint64_t entry, uint64_t cam_id,
-                                  uint64_t* timestamp, cv::Mat* image) {
+                                  cv::Mat* image) {
   // Get the timestamp for this first.
-  if (timestamps_cam_ns_.size() <= cam_id ||
-      timestamps_cam_ns_[cam_id].size() <= entry) {
+  if (timestamps_.size() <= cam_id ||
+      timestamps_.size() <= entry) {
     std::cout << "Warning: no timestamp for this entry!\n";
     return false;
   }
-  *timestamp = (timestamps_cam_ns_[cam_id])[entry];
+  *timestamp = timestamps_[entry];
 
   std::string filename = sequence_dir_ + "/" + getFolderNameForCamera(cam_id) +
-                         "/" + kDataFolder + "/" + getFilenameForEntry(entry) +
+                         "/" + getFilenameForEntry(entry) +
                          ".png";
 
   *image = cv::imread(filename, CV_LOAD_IMAGE_UNCHANGED);
@@ -356,7 +390,7 @@ std::string KittiParser::getFolderNameForCamera(int cam_number) const {
 
 std::string KittiParser::getFilenameForEntry(uint64_t entry) const {
   char buffer[20];
-  sprintf(buffer, "%010llu", entry);
+  sprintf(buffer, "%010lu", entry);
   return std::string(buffer);
 }
 
@@ -375,9 +409,9 @@ Transformation KittiParser::T_vel_imu() const { return T_vel_imu_; }
 bool KittiParser::interpolatePoseAtTimestamp(uint64_t timestamp,
                                              Transformation* pose) {
   // Look up the closest 2 timestamps to this.
-  size_t left_index = timestamps_pose_ns_.size();
-  for (size_t i = 0; i < timestamps_pose_ns_.size(); ++i) {
-    if (timestamps_pose_ns_[i] > timestamp) {
+  size_t left_index = timestamps_.size();
+  for (size_t i = 0; i < timestamps_.size(); ++i) {
+    if (timestamps_[i] > timestamp) {
       if (i == 0) {
         // Then we can't interpolate the pose since we're outside the range.
         return false;
@@ -386,23 +420,23 @@ bool KittiParser::interpolatePoseAtTimestamp(uint64_t timestamp,
       break;
     }
   }
-  if (left_index >= timestamps_pose_ns_.size()) {
+  if (left_index >= timestamps_.size()) {
     return false;
   }
   // Make sure we don't go over the size
-  // if (left_index == timestamps_pose_ns_.size() - 1) {
+  // if (left_index == timestamps_.size() - 1) {
   //  left_index--;
   //}
 
   // Figure out what 't' should be, where t = 0 means 100% left boundary,
   // and t = 1 means 100% right boundary.
-  double t = (timestamp - timestamps_pose_ns_[left_index]) /
-             static_cast<double>(timestamps_pose_ns_[left_index + 1] -
-                                 timestamps_pose_ns_[left_index]);
+  double t = (timestamp - timestamps_[left_index]) /
+             static_cast<double>(timestamps_[left_index + 1] -
+                                 timestamps_[left_index]);
 
   std::cout << "Timestamp: " << timestamp
-            << " timestamp left: " << timestamps_pose_ns_[left_index]
-            << " timestamp right: " << timestamps_pose_ns_[left_index + 1]
+            << " timestamp left: " << timestamps_[left_index]
+            << " timestamp right: " << timestamps_[left_index + 1]
             << " t: " << t << std::endl;
 
   // Load the two transformations.

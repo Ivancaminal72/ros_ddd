@@ -131,8 +131,7 @@ bool KittiConverter::convertEntry(uint64_t entry) {
       CameraCalibration cam_calib;
       parser_.getCameraCalibration(cam_id, &cam_calib);
       sensor_msgs::CameraInfo cam_info;
-      cam_info.width = image.size().width;
-      cam_info.height = image.size().height;
+      cam_calib.image_size << rgb_img.size().width, rgb_img.size().height;
       calibrationToRos(cam_id, cam_calib, &cam_info);
       cam_info.header = image_msg.header;
 

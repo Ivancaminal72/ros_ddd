@@ -45,8 +45,7 @@ namespace kitti {
 class KittiLiveNode {
  public:
   KittiLiveNode(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
-                const std::string& calibration_path,
-                const std::string& sequence_dir);
+                const std::string& sequence_dir, const int cam_idx_proj);
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
@@ -88,23 +87,26 @@ class KittiLiveNode {
   uint64_t current_entry_;
   uint64_t publish_dt_ns_;
   uint64_t current_timestamp_ns_;
+
+  int cam_idx_proj_;
 };
 
 KittiLiveNode::KittiLiveNode(const ros::NodeHandle& nh,
                              const ros::NodeHandle& nh_private,
-                             const std::string& calibration_path,
-                             const std::string& sequence_dir)
+                             const std::string& sequence_dir,
+                             const int cam_idx_proj)
     : nh_(nh),
       nh_private_(nh_private),
       image_transport_(nh_),
-      parser_(calibration_path, sequence_dir, true),
+      parser_(sequence_dir, true),
       world_frame_id_("world"),
       imu_frame_id_("imu"),
       cam_frame_id_prefix_("cam"),
       velodyne_frame_id_("velodyne"),
       current_entry_(0),
       publish_dt_ns_(0),
-      current_timestamp_ns_(0) {
+      current_timestamp_ns_(0),
+      cam_idx_proj_(cam_idx_proj) {
   // Load all the timestamp maps and calibration parameters.
   parser_.loadCalibration();
   parser_.loadTimestampMaps();
@@ -113,10 +115,10 @@ KittiLiveNode::KittiLiveNode(const ros::NodeHandle& nh,
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 1, false);
   pointcloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
       "velodyne_points", 10, false);
-  pose_pub_ =
-      nh_.advertise<geometry_msgs::PoseStamped>("pose_imu", 10, false);
-  transform_pub_ = nh_.advertise<geometry_msgs::TransformStamped>(
-      "transform_imu", 10, false);
+  // pose_pub_ =
+  //     nh_.advertise<geometry_msgs::PoseStamped>("pose_imu", 10, false);
+  // transform_pub_ = nh_.advertise<geometry_msgs::TransformStamped>(
+  //     "transform_imu", 10, false);
 
   for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
     image_pubs_.push_back(
@@ -143,7 +145,7 @@ void KittiLiveNode::timerCallback(const ros::WallTimerEvent& event) {
     if (!publishEntry(current_entry_)) {
       publish_timer_.stop();
     }
-    current_timestamp_ns_ = parser_.getPoseTimestampAtEntry(current_entry_);
+    current_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
     publishClock(current_timestamp_ns_);
     if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
                                            &tf_interpolated)) {
@@ -166,8 +168,8 @@ void KittiLiveNode::timerCallback(const ros::WallTimerEvent& event) {
   }
 
   std::cout << "Current entry's timestamp: "
-            << parser_.getPoseTimestampAtEntry(current_entry_) << std::endl;
-  if (parser_.getPoseTimestampAtEntry(current_entry_) <=
+            << parser_.getTimestampAtEntry(current_entry_) << std::endl;
+  if (parser_.getTimestampAtEntry(current_entry_) <=
       current_timestamp_ns_) {
     if (!publishEntry(current_entry_)) {
       publish_timer_.stop();
@@ -190,45 +192,44 @@ bool KittiLiveNode::publishEntry(uint64_t entry) {
   uint64_t timestamp_ns;
   rosgraph_msgs::Clock clock_time;
 
-  // Publish poses + TF transforms + clock.
-  Transformation pose;
-  if (parser_.getPoseAtEntry(entry, &timestamp_ns, &pose)) {
-    geometry_msgs::PoseStamped pose_msg;
-    geometry_msgs::TransformStamped transform_msg;
+  // // Publish poses + TF transforms + clock.
+  // Transformation pose;
+  // if (parser_.getPoseAtEntry(entry, &timestamp_ns, &pose)) {
+  //   geometry_msgs::PoseStamped pose_msg;
+  //   geometry_msgs::TransformStamped transform_msg;
 
-    timestampToRos(timestamp_ns, &timestamp_ros);
-    pose_msg.header.frame_id = world_frame_id_;
-    pose_msg.header.stamp = timestamp_ros;
-    transform_msg.header.frame_id = world_frame_id_;
-    transform_msg.header.stamp = timestamp_ros;
+  //   timestampToRos(timestamp_ns, &timestamp_ros);
+  //   pose_msg.header.frame_id = world_frame_id_;
+  //   pose_msg.header.stamp = timestamp_ros;
+  //   transform_msg.header.frame_id = world_frame_id_;
+  //   transform_msg.header.stamp = timestamp_ros;
 
-    poseToRos(pose, &pose_msg);
-    transformToRos(pose, &transform_msg);
+  //   poseToRos(pose, &pose_msg);
+  //   transformToRos(pose, &transform_msg);
 
-    pose_pub_.publish(pose_msg);
-    transform_pub_.publish(transform_msg);
+  //   pose_pub_.publish(pose_msg);
+  //   transform_pub_.publish(transform_msg);
 
-    // publishClock(timestamp_ns);
-    // publishTf(timestamp_ns, pose);
-  } else {
-    return false;
-  }
+  //   // publishClock(timestamp_ns);
+  //   // publishTf(timestamp_ns, pose);
+  // } else {
+  //   return false;
+  // }
 
   // Publish images.
-  cv::Mat image;
+  cv::Mat rgb_img;
   for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
-    if (parser_.getImageAtEntry(entry, cam_id, &timestamp_ns, &image)) {
+    if (parser_.getImageAtEntry(entry, cam_id, &rgb_img)) {
       sensor_msgs::Image image_msg;
-      imageToRos(image, &image_msg);
+      imageToRos(rgb_img, &image_msg);
 
       // TODO(helenol): cache this.
       // Get the calibration info for this camera.
       CameraCalibration cam_calib;
       parser_.getCameraCalibration(cam_id, &cam_calib);
       sensor_msgs::CameraInfo cam_info;
+      cam_calib.image_size << rgb_img.size().width, rgb_img.size().height;
       calibrationToRos(cam_id, cam_calib, &cam_info);
-
-      timestampToRos(timestamp_ns, &timestamp_ros);
 
       image_msg.header.stamp = timestamp_ros;
       image_msg.header.frame_id = getCameraFrameId(cam_id);
@@ -240,9 +241,19 @@ bool KittiLiveNode::publishEntry(uint64_t entry) {
 
   // Publish pointclouds.
   pcl::PointCloud<pcl::PointXYZI> pointcloud;
-  if (parser_.getPointcloudAtEntry(entry, &timestamp_ns, &pointcloud)) {
-    timestampToRos(timestamp_ns, &timestamp_ros);
+  
+  timestamp_ns = parser_.getTimestampAtEntry(entry);
+  timestampToRos(timestamp_ns, &timestamp_ros);
 
+  cv::Mat depth_img, intensity_img;
+  Eigen::RowVectorXd intensity_pts;
+  Eigen::Matrix3Xd ddd_pts;
+
+  if (parser_.getPointcloudAtEntry(entry, &pointcloud, &ddd_pts, &intensity_pts)) {
+    if (cam_idx_proj_ >= 0)
+      if (parser_.projectPointcloud(cam_idx_proj_, &ddd_pts, &intensity_pts, &depth_img, &intensity_img))
+    
+    
     // This value is in MICROSECONDS, not nanoseconds.
     pointcloud.header.stamp = timestamp_ns / 1000;
     pointcloud.header.frame_id = velodyne_frame_id_;
@@ -287,20 +298,22 @@ int main(int argc, char** argv) {
 
   //Declare variables
   std::string sequence_dir;
-  std::string calibration_path;
+  std::string calibration_file;
+  std::string timestamp_file;
+  int cam_idx_proj = -1;
 
   //Parse arguments
   po::options_description mandatory_opts("Mandatory args");
   mandatory_opts.add_options()
-    ("seq,s", po::value<std::string>(&sequence_dir), "Sequence directory (without trailing slash)")
-    ("calib,c", po::value<std::string>(&calibration_path), "Calibration path");
+    ("seq,s", po::value<std::string>(&sequence_dir), "Sequence directory (without trailing slash)");
   
   po::positional_options_description positional_opts;
   positional_opts.add("seq", -1);
 
   po::options_description optional_opts("Optional args");
   optional_opts.add_options()
-    ("help,h", "produce a help message");
+    ("help,h", "produce a help message")
+    ("project,p", po::value<int>(&cam_idx_proj), "Do pcd projection to camera idx");
 
   po::variables_map vm;
   po::options_description all_opts;
@@ -326,7 +339,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  kitti::KittiLiveNode node(nh, nh_private, calibration_path, sequence_dir);
+  kitti::KittiLiveNode node(nh, nh_private, sequence_dir, cam_idx_proj);
   node.startPublishing(50.0);
 
   ros::spin();

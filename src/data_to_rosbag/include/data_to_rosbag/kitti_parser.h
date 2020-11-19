@@ -49,22 +49,23 @@ class KittiParser {
   static const std::string kImuToVelCalibrationFilename;
   static const std::string kVelodyneFolder;
   static const std::string kCameraFolder;
+  static const std::string kCalibrationFile;
+  static const std::string kTimestampFile;
   static const std::string kPoseFolder;
   static const std::string kTimestampFilename;
   static const std::string kDataFolder;
 
-  KittiParser(const std::string& calibration_path,
-              const std::string& sequence_dir, bool rectified);
+  KittiParser(const std::string& sequence_dir, bool rectified);
 
   // MAIN API: all you should need to use!
   // Loading calibration files.
   bool loadCalibration();
-  void loadTimestampMaps();
+  bool loadTimestampMaps();
 
   // Load specific entries (indexed by filename).
   bool getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
                       Transformation* pose);
-  uint64_t getPoseTimestampAtEntry(uint64_t entry);
+  uint64_t getTimestampAtEntry(uint64_t entry);
 
   bool interpolatePoseAtTimestamp(uint64_t timestamp, Transformation* pose);
 
@@ -74,10 +75,15 @@ class KittiParser {
   bool getImuAtEntry() { /* TODO! */
     return false;
   }
-  bool getPointcloudAtEntry(uint64_t entry, uint64_t* timestamp,
-                            pcl::PointCloud<pcl::PointXYZI>* ptcloud);
-  bool getImageAtEntry(uint64_t entry, uint64_t cam_id, uint64_t* timestamp,
-                       cv::Mat* image);
+  bool getPointcloudAtEntry(uint64_t entry,
+                            pcl::PointCloud<pcl::PointXYZI>* ptcloud,
+                            Eigen::Matrix3Xd* ddd_pts,
+                            Eigen::RowVectorXd* intensity_pts);
+  bool projectPointcloud(int cam_idx_proj,
+                         Eigen::Matrix3Xd* ddd_pts,
+                         Eigen::RowVectorXd* intensity_pts,
+                         cv::Mat* D, cv::Mat* I);
+  bool getImageAtEntry(uint64_t entry, uint64_t cam_id, cv::Mat* image);
 
   bool getCameraCalibration(uint64_t cam_id, CameraCalibration* cam) const;
 
@@ -113,7 +119,6 @@ class KittiParser {
   std::string getFilenameForEntry(uint64_t entry) const;
 
   // Base paths.
-  std::string calibration_path_;
   std::string sequence_dir_;
   // Whether this dataset contains raw or rectified images. This determines
   // which calibration is read.
@@ -129,10 +134,7 @@ class KittiParser {
   Transformation T_vel_imu_;
 
   // Timestamp map from index to nanoseconds.
-  std::vector<uint64_t> timestamps_vel_ns_;
-  std::vector<uint64_t> timestamps_pose_ns_;
-  // Vector of camera timestamp vectors.
-  std::vector<std::vector<uint64_t> > timestamps_cam_ns_;
+  std::vector<uint64_t> timestamps_;
 
   // Cached pose information, to correct to odometry frame (instead of absolute
   // world coordinates).
