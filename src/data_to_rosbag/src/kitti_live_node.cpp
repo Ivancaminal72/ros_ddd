@@ -33,9 +33,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ros/ros.h>
 #include <rosgraph_msgs/Clock.h>
 #include <tf/transform_broadcaster.h>
+#include <boost/program_options.hpp>
 
 #include "data_to_rosbag/kitti_parser.h"
 #include "data_to_rosbag/kittiraw_ros_conversions.h"
+
+namespace po = boost::program_options;
 
 namespace kitti {
 
@@ -43,7 +46,7 @@ class KittiLiveNode {
  public:
   KittiLiveNode(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
                 const std::string& calibration_path,
-                const std::string& dataset_path);
+                const std::string& sequence_dir);
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
@@ -90,11 +93,11 @@ class KittiLiveNode {
 KittiLiveNode::KittiLiveNode(const ros::NodeHandle& nh,
                              const ros::NodeHandle& nh_private,
                              const std::string& calibration_path,
-                             const std::string& dataset_path)
+                             const std::string& sequence_dir)
     : nh_(nh),
       nh_private_(nh_private),
       image_transport_(nh_),
-      parser_(calibration_path, dataset_path, true),
+      parser_(calibration_path, sequence_dir, true),
       world_frame_id_("world"),
       imu_frame_id_("imu"),
       cam_frame_id_prefix_("cam"),
@@ -279,34 +282,52 @@ void KittiLiveNode::publishTf(uint64_t timestamp_ns,
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "kitti_live_node");
-  google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, false);
-  google::InstallFailureSignalHandler();
   ros::NodeHandle nh;
   ros::NodeHandle nh_private("~");
 
-  if (argc < 2)
+  //Declare variables
+  std::string sequence_dir;
+  std::string calibration_path;
+
+  //Parse arguments
+  po::options_description mandatory_opts("Mandatory args");
+  mandatory_opts.add_options()
+    ("seq,s", po::value<std::string>(&sequence_dir), "Sequence directory (without trailing slash)")
+    ("calib,c", po::value<std::string>(&calibration_path), "Calibration path");
+  
+  po::positional_options_description positional_opts;
+  positional_opts.add("seq", -1);
+
+  po::options_description optional_opts("Optional args");
+  optional_opts.add_options()
+    ("help,h", "produce a help message");
+
+  po::variables_map vm;
+  po::options_description all_opts;
+  all_opts.add(mandatory_opts).add(optional_opts);
+  po::store(po::command_line_parser(argc, argv).options(all_opts).positional(positional_opts).run(), vm);
+  po::notify(vm);
+
+  if (vm.count("help")) 
   {
-    ROS_ERROR("Usage: rosrun data_to_rosbag kitti_live_node mandatory [optional]");
-    return 1;
+    std::cout << "Usage: rosrun data_to_rosbag kitti_live_node {args}\n";
+    std::cout << all_opts << std::endl << std::endl;
+    std::cout << "Warn: the 1st mandatory arg can be directly specified (without option)\n";
+    return 0;
   }
 
-  int i=0;
-  const std::string dataset_path = argv[++i];
-  const std::string calibration_path = dataset_path + "/sequences";
-  // for(int i=1; i<argc; ++i)
-  // {
-  //   if(std::strcmp(argv[i], "--outdir") == 0)
-  //   {
-  //     out_dir = argv[++i];
-  //   }
-  // }
+  for(const auto& opt : mandatory_opts.options())
+  {
+    if(!vm.count(opt->long_name()))
+    {
+      std::cerr << "Missing mandatory_opts option " + opt->long_name() + "\n";
+      std::cout << "Try --help for more information\n";
+      return 1;
+    }
+  }
 
-  kitti::KittiLiveNode node(nh, nh_private, calibration_path, dataset_path);
-
+  kitti::KittiLiveNode node(nh, nh_private, calibration_path, sequence_dir);
   node.startPublishing(50.0);
 
   ros::spin();
-
-  return 0;
 }

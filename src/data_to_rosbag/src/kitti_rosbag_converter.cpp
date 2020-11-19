@@ -43,8 +43,8 @@ namespace kitti {
 class KittiConverter {
  public:
   KittiConverter(const std::string& calibration_path,
-                    const std::string& sequence_path,
-                    const std::string& output_filename);
+                    const std::string& sequence_dir,
+                    const std::string& output_path);
 
   void convertAll();
   bool convertEntry(uint64_t entry);
@@ -66,21 +66,18 @@ class KittiConverter {
 };
 
 KittiConverter::KittiConverter(const std::string& calibration_path,
-                                     const std::string& sequence_path,
-                                     const std::string& output_filename)
-    : parser_(calibration_path, sequence_path, true),
+                                     const std::string& sequence_dir,
+                                     const std::string& output_path)
+    : parser_(calibration_path, sequence_dir, true),
       world_frame_id_("world"),
-      imu_frame_id_("imu"),
       cam_frame_id_prefix_("cam"),
       velodyne_frame_id_("velodyne"),
-      pose_topic_("pose_imu"),
-      transform_topic_("transform_imu"),
       pointcloud_topic_("velodyne_points") {
   // Load mandatory the timestamp maps and calibration parameters.
   parser_.loadCalibration();
   parser_.loadTimestampMaps();
 
-  bag_.open(output_filename, rosbag::bagmode::Write);
+  bag_.open(output_path, rosbag::bagmode::Write);
 }
 
 void KittiConverter::convertAll() {
@@ -134,6 +131,8 @@ bool KittiConverter::convertEntry(uint64_t entry) {
       CameraCalibration cam_calib;
       parser_.getCameraCalibration(cam_id, &cam_calib);
       sensor_msgs::CameraInfo cam_info;
+      cam_info.width = image.size().width;
+      cam_info.height = image.size().height;
       calibrationToRos(cam_id, cam_calib, &cam_info);
       cam_info.header = image_msg.header;
 
@@ -200,18 +199,16 @@ void KittiConverter::convertTf(uint64_t timestamp_ns,
 }  // namespace kitti
 
 int main(int argc, char** argv) {
-  // google::InitGoogleLogging(argv[0]);
-  // google::ParseCommandLineFlags(&argc, &argv, false);
-  // google::InstallFailureSignalHandler();
 
-  //Parse arguments
-  std::string sequence_path;
+  //Declare variables
+  std::string sequence_dir;
   std::string calibration_path;
   std::string output_path;
 
+  //Parse arguments
   po::options_description mandatory("Mandatory args");
   mandatory.add_options()
-    ("seq,s", po::value<std::string>(&sequence_path), "sequence path (without trailing slash)");
+    ("seq,s", po::value<std::string>(&sequence_dir), "sequence directory (without trailing slash)");
   
   po::positional_options_description p;
   p.add("seq", -1);
@@ -219,8 +216,8 @@ int main(int argc, char** argv) {
   po::options_description optional("Optional args");
   optional.add_options()
     ("help,h", "produce a help message")
-    ("calib,c", po::value<std::string>(&calibration_path), "calibration path (without trailing slash)")
-    ("out,o", po::value<std::string>(&output_path), "output path (without trailing slash)");
+    ("calib,c", po::value<std::string>(&calibration_path), "default: seq/calib.txt")
+    ("out,o", po::value<std::string>(&output_path), "output rosbag path");
 
   po::variables_map vm;
   po::options_description options;
@@ -228,23 +225,22 @@ int main(int argc, char** argv) {
   po::store(po::command_line_parser(argc, argv).options(options).positional(p).run(), vm);
   po::notify(vm);
 
+  if (!vm.count("calib")) calibration_path = sequence_dir+"/calib.txt";
+
   if (vm.count("help")) 
   {
-    std::cout << "Usage: rosrun data_to_rosbag kitti_rosbag_converter [args]\n\n";
+    std::cout << "Usage: rosrun data_to_rosbag kitti_rosbag_converter [$seq] {args}\n";
     std::cout << options << std::endl;
     return 1;
   }
-  else
-  {
-    std::cout<<sequence_path<<"\n";
-    std::cout<<calibration_path<<"\n";
-    std::cout<<output_path<<"\n";
-  }
-  
+  // else
+  // {
+  //   std::cout<<"sequence_dir"<<" -> "<<sequence_dir<<std::endl;
+  //   std::cout<<"calibration_path"<<" -> "<<calibration_path<<std::endl;
+  //   std::cout<<"output_path"<<" -> "<<output_path<<std::endl;
+  // }
   
 
-  // kitti::KittiConverter converter(calibration_path, sequence_path, output_path);
-  // converter.convertAll();
-
-  return 0;
+  kitti::KittiConverter converter(calibration_path, sequence_dir, output_path);
+  converter.convertAll();
 }

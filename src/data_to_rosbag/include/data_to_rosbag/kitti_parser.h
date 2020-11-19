@@ -54,7 +54,7 @@ class KittiParser {
   static const std::string kDataFolder;
 
   KittiParser(const std::string& calibration_path,
-              const std::string& dataset_path, bool rectified);
+              const std::string& sequence_dir, bool rectified);
 
   // MAIN API: all you should need to use!
   // Loading calibration files.
@@ -114,7 +114,7 @@ class KittiParser {
 
   // Base paths.
   std::string calibration_path_;
-  std::string dataset_path_;
+  std::string sequence_dir_;
   // Whether this dataset contains raw or rectified images. This determines
   // which calibration is read.
   bool rectified_;
@@ -124,6 +124,7 @@ class KittiParser {
 
   // Transformation chain (cam-to-cam extrinsics stored above in cam calib
   // struct).
+  Eigen::Matrix<double, 3, 4> Tr_cam0_vel_ = Eigen::Matrix<double, 3, 4>::Identity();  // Tr of odometry bechnkmark
   Transformation T_cam0_vel_;
   Transformation T_vel_imu_;
 
