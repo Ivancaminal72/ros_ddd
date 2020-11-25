@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "data_to_rosbag/kittiraw_parser.h"
 #include "data_to_rosbag/kittiraw_ros_conversions.h"
 
-namespace kitti {
+namespace adapt {
 
 class KittiToPng {
  public:
@@ -75,7 +75,7 @@ class KittiToPng {
   // Call startPublishing() to turn this on.
   ros::WallTimer publish_timer_;
 
-  kitti::KittirawParser parser_;
+  adapt::KittirawParser parser_;
 
   std::string world_frame_id_;
   std::string imu_frame_id_;
@@ -275,7 +275,7 @@ void KittiToPng::publishTf(uint64_t timestamp_ns,
   }
 }
 
-}  // namespace kitti
+}  // namespace adapt
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "kittiraw_live");
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
   const std::string calibration_path = argv[1];
   const std::string dataset_path = argv[2];
 
-  kitti::KittiToPng node(nh, nh_private, calibration_path, dataset_path);
+  adapt::KittiToPng node(nh, nh_private, calibration_path, dataset_path);
 
   node.startPublishing(50.0);
 

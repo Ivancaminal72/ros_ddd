@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data_to_rosbag/kittiraw_common.h"
 
-namespace kitti {
+namespace adapt {
 
 class KittirawParser {
  public:

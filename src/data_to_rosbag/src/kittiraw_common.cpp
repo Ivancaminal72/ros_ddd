@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data_to_rosbag/kittiraw_common.h"
 
-namespace kitti {
+namespace adapt {
 
 Transformation interpolateTransformations(const Transformation& left,
                                           const Transformation& right,
@@ -46,4 +46,4 @@ Transformation interpolateTransformations(const Transformation& left,
   return output;
 }
 
-}  // namespace kitti
+}  // namespace adapt

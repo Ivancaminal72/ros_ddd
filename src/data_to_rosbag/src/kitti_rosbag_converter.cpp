@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace po = boost::program_options;
 
-namespace kitti {
+namespace adapt {
 
 class KittiConverter {
  public:
@@ -51,7 +51,7 @@ class KittiConverter {
   void convertTf(uint64_t timestamp_ns, const Transformation& imu_pose);
 
  private:
-  kitti::KittiParser parser_;
+  adapt::KittiParser parser_;
 
   rosbag::Bag bag_;
 
@@ -195,7 +195,7 @@ void KittiConverter::convertTf(uint64_t timestamp_ns,
   bag_.write("/tf", timestamp_ros, tf_msg);
 }
 
-}  // namespace kitti
+}  // namespace adapt
 
 int main(int argc, char** argv) {
 
@@ -240,6 +240,6 @@ int main(int argc, char** argv) {
   // }
   
 
-  kitti::KittiConverter converter(calibration_path, sequence_dir, output_path);
+  adapt::KittiConverter converter(calibration_path, sequence_dir, output_path);
   converter.convertAll();
 }

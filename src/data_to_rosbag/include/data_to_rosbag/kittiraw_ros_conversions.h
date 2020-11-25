@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data_to_rosbag/kittiraw_common.h"
 
-namespace kitti {
+namespace adapt {
 
 void calibrationToRos(uint64_t cam_id, const CameraCalibration& cam,
                       sensor_msgs::CameraInfo* cam_msg);

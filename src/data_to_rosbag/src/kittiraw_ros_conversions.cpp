@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data_to_rosbag/kittiraw_ros_conversions.h"
 
-namespace kitti {
+namespace adapt {
 
 std::string getCameraFrameId(int cam_id) {
   char buffer[20];
@@ -132,4 +132,4 @@ void timestampToRos(uint64_t timestamp_ns, ros::Time* time) {
   time->fromNSec(timestamp_ns);
 }
 
-}  // namespace kitti
+}  // namespace adapt

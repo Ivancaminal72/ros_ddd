@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace po = boost::program_options;
 
-namespace kitti {
+namespace adapt {
 
 class KittiToPng {
  public:
@@ -80,7 +80,7 @@ class KittiToPng {
   // Call startPublishing() to turn this on.
   ros::WallTimer publish_timer_;
 
-  kitti::KittiParser parser_;
+  adapt::KittiParser parser_;
 
   std::string world_frame_id_;
   std::string imu_frame_id_;
@@ -141,14 +141,15 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
 
   std::cout << "Current entry: " << current_entry_ << std::endl;
 
-  if (current_entry_ == 0) {
+  if (current_entry_ == 0) 
+  {
     current_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
     publishTf(current_timestamp_ns_);
     // This is the first time this is running! Initialize the current timestamp
     // and publish this entry.
-    if (!publishEntry(current_entry_, current_timestamp_ns_)) {
+    if (!publishEntry(current_entry_, current_timestamp_ns_))
       publish_timer_.stop();
-    }
+    
     publishClock(current_timestamp_ns_);
     // if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
     //                                        &tf_interpolated)) {
@@ -173,7 +174,8 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
 
   // std::cout << "Current entry's timestamp: "
   //           << next_entry_timestamp_ns_ << std::endl;
-  if (next_entry_timestamp_ns_ <= current_timestamp_ns_) {
+  if (next_entry_timestamp_ns_ <= current_timestamp_ns_) 
+  {
     if (!publishEntry(current_entry_, current_timestamp_ns_)) 
     {
       publish_timer_.stop();
@@ -247,14 +249,15 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
   
   // Publish pointclouds.
   pcl::PointCloud<pcl::PointXYZI> pointcloud;
-  cv::Mat depth_img, intensity_img;
-  Eigen::RowVectorXd intensity_pts;
-  Eigen::Matrix3Xd ddd_pts;
+  // cv::Mat depth_img, intensity_img;
+  // Eigen::RowVectorXd intensity_pts;
+  // Eigen::Matrix3Xd ddd_pts;
 
-  if (parser_.getPointcloudAtEntry(entry, &pointcloud, &ddd_pts, &intensity_pts)) {
-    //Project points and obtain depth/intensity images
-    if (cam_idx_proj_ >= 0)
-      if (parser_.projectPointcloud(cam_idx_proj_, &ddd_pts, &intensity_pts, &depth_img, &intensity_img))
+  if (parser_.getPointcloudAtEntry(entry, &pointcloud)) {
+  // if (parser_.getPointcloudAtEntry(entry, &pointcloud, &ddd_pts, &intensity_pts)) {
+    // //Project points and obtain depth/intensity images
+    // if (cam_idx_proj_ >= 0)
+    //   if (parser_.projectPointcloud(cam_idx_proj_, &ddd_pts, &intensity_pts, &depth_img, &intensity_img))
     
     
     // This value is in MICROSECONDS, not nanoseconds.
@@ -272,14 +275,14 @@ void KittiToPng::publishTf(uint64_t timestamp_ns) {
   Transformation T_cam_lidar;
 
   tf::Transform tf_cam_lidar;
-  static tf2_ros::StaticTransformBroadcaster static_tf_cam_lidar;
+  static tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
   geometry_msgs::TransformStamped Ts_cam0_lidar = parser_.Ts_cam0_lidar();
   
   Ts_cam0_lidar.header.stamp = timestamp_ros;
   Ts_cam0_lidar.header.frame_id = lidar_frame_id_;
   Ts_cam0_lidar.child_frame_id = getCameraFrameId(0);
   Ts_cam0_lidar.transform = Ts_cam0_lidar.transform;
-  static_tf_cam_lidar.sendTransform(Ts_cam0_lidar);
+  static_tf_broadcaster.sendTransform(Ts_cam0_lidar);
 }
 
 // void KittiToPng::publishTfGroundTruth(uint64_t timestamp_ns,
@@ -308,7 +311,7 @@ void KittiToPng::publishTf(uint64_t timestamp_ns) {
 //   }
 // }
 
-}  // namespace kitti
+}  // namespace adapt
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "kitti_live_node");
@@ -356,7 +359,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  kitti::KittiToPng node(nh, nh_private, sequence_dir);
+  //Ready to start
+  adapt::KittiToPng node(nh, nh_private, sequence_dir);
   node.startPublishing(50.0);
 
   ros::spin();

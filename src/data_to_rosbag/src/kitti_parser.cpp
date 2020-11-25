@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data_to_rosbag/kitti_parser.h"
 
-namespace kitti {
+namespace adapt {
 
 const std::string KittiParser::kVelToCamCalibrationFilename =
     "calib_velo_to_cam.txt";
@@ -48,6 +48,7 @@ const std::string KittiParser::kVelodyneFolder = "velodyne";
 const std::string KittiParser::kCameraFolder = "image_";
 const std::string KittiParser::kCalibrationFile = "calib.txt";
 const std::string KittiParser::kTimestampFile = "times.txt";
+const size_t KittiParser::kMaxNumberOfScanPoints = 1e6;  // From Readme for raw files.
 
 KittiParser::KittiParser(const std::string& sequence_dir, bool rectified)
     : sequence_dir_(sequence_dir),
@@ -191,14 +192,47 @@ uint64_t KittiParser::getTimestampAtEntry(uint64_t entry) {
 }
 
 bool KittiParser::getPointcloudAtEntry( uint64_t entry,
+    pcl::PointCloud<pcl::PointXYZI>* ptcloud) {
+
+  // Load the actual pointcloud.
+  ptcloud->clear();
+  ptcloud->reserve(kMaxNumberOfScanPoints);
+
+  std::string filename = sequence_dir_ + "/" + kVelodyneFolder 
+                         + "/" + getFilenameForEntry(entry) + 
+                         ".bin";
+
+  std::ifstream input(filename, std::ios::in | std::ios::binary);
+  if (!input) {
+    std::cout << "Could not open pointcloud file.\n";
+    return false;
+  }
+
+  std::streampos begin, end;
+  int numPts;
+  begin = input.tellg();
+  input.seekg (0, input.end);
+  end = input.tellg();
+  input.seekg(0, input.beg);
+  numPts = (end-begin)/(4*sizeof(float)); //calculate number of points
+  for (int i = 0; input.good() && !input.eof(); i++) {
+    pcl::PointXYZI point;
+    input.read((char*)&point.x, 3 * sizeof(float));
+    input.read((char*)&point.intensity, sizeof(float));
+    ptcloud->push_back(point);
+  }
+  input.close();
+  return true;
+}
+
+bool KittiParser::getPointcloudAtEntry( uint64_t entry,
     pcl::PointCloud<pcl::PointXYZI>* ptcloud,
     Eigen::Matrix3Xd* ddd_pts,
     Eigen::RowVectorXd* intensity_pts) {
 
   // Load the actual pointcloud.
-  const size_t kMaxNumberOfPoints = 1e6;  // From Readme for raw files.
   ptcloud->clear();
-  ptcloud->reserve(kMaxNumberOfPoints);
+  ptcloud->reserve(kMaxNumberOfScanPoints);
 
   std::string filename = sequence_dir_ + "/" + kVelodyneFolder 
                          + "/" + getFilenameForEntry(entry) + 
@@ -385,17 +419,17 @@ std::string KittiParser::getFolderNameForCamera(int cam_number) const {
 
 std::string KittiParser::getFilenameForEntry(uint64_t entry) const {
   char buffer[20];
-  sprintf(buffer, "%010lu", entry);
+  sprintf(buffer, "%06lu", entry);
   return std::string(buffer);
 }
 
-Transformation KittiParser::T_camN_vel(int cam_number) const {
-  return camera_calibrations_[cam_number].T_cam0_cam * T_cam0_vel_;
-}
+// Transformation KittiParser::T_camN_vel(int cam_number) const {
+//   return camera_calibrations_[cam_number].T_cam0_cam * T_cam0_vel_;
+// }
 
-Transformation KittiParser::T_camN_imu(int cam_number) const {
-  return T_camN_vel(cam_number) * T_lidar_imu_;
-}
+// Transformation KittiParser::T_camN_imu(int cam_number) const {
+//   return T_camN_vel(cam_number) * T_lidar_imu_;
+// }
 
 Transformation KittiParser::T_cam0_vel() const { return T_cam0_vel_; }
 geometry_msgs::TransformStamped KittiParser::Ts_cam0_lidar() const { return tf2::eigenToTransform(T_cam0_lidar_); }
@@ -453,4 +487,4 @@ size_t KittiParser::getNumCameras() const {
   return camera_calibrations_.size();
 }
 
-}  // namespace kitti
+}  // namespace adapt

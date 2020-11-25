@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data_to_rosbag/kittiraw_common.h"
 
-namespace kitti {
+namespace adapt {
 
 class KittiParser {
  public:
@@ -61,6 +61,7 @@ class KittiParser {
   static const std::string kPoseFolder;
   static const std::string kTimestampFilename;
   static const std::string kDataFolder;
+  static const size_t kMaxNumberOfScanPoints;
 
   KittiParser(const std::string& sequence_dir, bool rectified);
 
@@ -87,6 +88,8 @@ class KittiParser {
                             pcl::PointCloud<pcl::PointXYZI>* ptcloud,
                             Eigen::Matrix3Xd* ddd_pts,
                             Eigen::RowVectorXd* intensity_pts);
+  bool getPointcloudAtEntry(uint64_t entry,
+                            pcl::PointCloud<pcl::PointXYZI>* ptcloud);                          
   bool projectPointcloud(int cam_idx_proj,
                          Eigen::Matrix3Xd* ddd_pts,
                          Eigen::RowVectorXd* intensity_pts,
@@ -95,8 +98,8 @@ class KittiParser {
 
   bool getCameraCalibration(uint64_t cam_id, CameraCalibration* cam) const;
 
-  Transformation T_camN_vel(int cam_number) const;
-  Transformation T_camN_imu(int cam_number) const;
+  // Transformation T_camN_vel(int cam_number) const;
+  // Transformation T_camN_imu(int cam_number) const;
 
   // Returns the nanosecond timestamp since epoch for a particular entry.
   // Returns -1 if no valid timestamp is found.

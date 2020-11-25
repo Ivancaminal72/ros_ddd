@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "data_to_rosbag/kittiraw_parser.h"
 #include "data_to_rosbag/kittiraw_ros_conversions.h"
 
-namespace kitti {
+namespace adapt {
 
 class KittirawConverter {
  public:
@@ -48,7 +48,7 @@ class KittirawConverter {
   void convertTf(uint64_t timestamp_ns, const Transformation& imu_pose);
 
  private:
-  kitti::KittirawParser parser_;
+  adapt::KittirawParser parser_;
 
   rosbag::Bag bag_;
 
@@ -194,7 +194,7 @@ void KittirawConverter::convertTf(uint64_t timestamp_ns,
   bag_.write("/tf", timestamp_ros, tf_msg);
 }
 
-}  // namespace kitti
+}  // namespace adapt
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
   const std::string dataset_path = argv[2];
   const std::string output_path = argv[3];
 
-  kitti::KittirawConverter converter(calibration_path, dataset_path,
+  adapt::KittirawConverter converter(calibration_path, dataset_path,
                                      output_path);
   converter.convertAll();
 

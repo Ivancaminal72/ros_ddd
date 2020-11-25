@@ -40,12 +40,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace po = boost::program_options;
 
-namespace kitti {
+namespace adapt {
 
-class KittiToPng {
+class PcdToPng {
  public:
-  KittiToPng(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
-                const std::string& sequence_dir, const int cam_idx_proj);
+  PcdToPng(const ros::NodeHandle& nh, const int cam_idx_proj);
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
@@ -77,7 +76,7 @@ class KittiToPng {
   // Call startPublishing() to turn this on.
   ros::WallTimer publish_timer_;
 
-  kitti::KittiParser parser_;
+  adapt::KittiParser parser_;
 
   std::string world_frame_id_;
   std::string imu_frame_id_;
@@ -91,14 +90,10 @@ class KittiToPng {
   int cam_idx_proj_;
 };
 
-KittiToPng::KittiToPng(const ros::NodeHandle& nh,
-                             const ros::NodeHandle& nh_private,
-                             const std::string& sequence_dir,
+PcdToPng::PcdToPng(const ros::NodeHandle& nh,
                              const int cam_idx_proj)
     : nh_(nh),
-      nh_private_(nh_private),
       image_transport_(nh_),
-      parser_(sequence_dir, true),
       world_frame_id_("world"),
       imu_frame_id_("imu"),
       cam_frame_id_prefix_("cam"),
@@ -126,15 +121,15 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
   }
 }
 
-void KittiToPng::startPublishing(double rate_hz) {
+void PcdToPng::startPublishing(double rate_hz) {
   double publish_dt_sec = 1.0 / rate_hz;
   publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);
   std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
   publish_timer_ = nh_.createWallTimer(ros::WallDuration(publish_dt_sec),
-                                       &KittiToPng::timerCallback, this);
+                                       &PcdToPng::timerCallback, this);
 }
 
-void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
+void PcdToPng::timerCallback(const ros::WallTimerEvent& event) {
   Transformation tf_interpolated;
 
   std::cout << "Current entry: " << current_entry_ << std::endl;
@@ -179,7 +174,7 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   }
 }
 
-void KittiToPng::publishClock(uint64_t timestamp_ns) {
+void PcdToPng::publishClock(uint64_t timestamp_ns) {
   ros::Time timestamp_ros;
   timestampToRos(timestamp_ns, &timestamp_ros);
   rosgraph_msgs::Clock clock_time;
@@ -187,7 +182,7 @@ void KittiToPng::publishClock(uint64_t timestamp_ns) {
   clock_pub_.publish(clock_time);
 }
 
-bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
+bool PcdToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
   ros::Time timestamp_ros;
   rosgraph_msgs::Clock clock_time;
   timestampToRos(timestamp_ns, &timestamp_ros);
@@ -261,7 +256,7 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
   return true;
 }
 
-void KittiToPng::publishTf(uint64_t timestamp_ns,
+void PcdToPng::publishTf(uint64_t timestamp_ns,
                               const Transformation& imu_pose) {
   ros::Time timestamp_ros;
   timestampToRos(timestamp_ns, &timestamp_ros);
@@ -287,12 +282,11 @@ void KittiToPng::publishTf(uint64_t timestamp_ns,
   }
 }
 
-}  // namespace kitti
+}  // namespace adapt
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "kitti_live_node");
+  ros::init(argc, argv, "pcd_to_png");
   ros::NodeHandle nh;
-  ros::NodeHandle nh_private("~");
 
   //Declare variables
   std::string sequence_dir;
@@ -303,15 +297,14 @@ int main(int argc, char** argv) {
   //Parse arguments
   po::options_description mandatory_opts("Mandatory args");
   mandatory_opts.add_options()
-    ("seq,s", po::value<std::string>(&sequence_dir), "Sequence directory (without trailing slash)");
+    ("project,p", po::value<int>(&cam_idx_proj), "Do pcd projection to camera idx");
   
   po::positional_options_description positional_opts;
-  positional_opts.add("seq", -1);
+  positional_opts.add("project", -1);
 
   po::options_description optional_opts("Optional args");
   optional_opts.add_options()
-    ("help,h", "produce a help message")
-    ("project,p", po::value<int>(&cam_idx_proj), "Do pcd projection to camera idx");
+    ("help,h", "produce a help message");
 
   po::variables_map vm;
   po::options_description all_opts;
@@ -321,7 +314,7 @@ int main(int argc, char** argv) {
 
   if (vm.count("help")) 
   {
-    std::cout << "Usage: rosrun data_to_rosbag kitti_to_png {args}\n";
+    std::cout << "Usage: rosrun data_to_rosbag pcd_to_png {args}\n";
     std::cout << all_opts << std::endl << std::endl;
     std::cout << "Warn: the 1st mandatory arg can be directly specified (without option)\n";
     return 0;
@@ -337,7 +330,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  kitti::KittiToPng node(nh, nh_private, sequence_dir, cam_idx_proj);
+  //Ready to start
+  adapt::PcdToPng node(nh, cam_idx_proj);
   node.startPublishing(50.0);
 
   ros::spin();

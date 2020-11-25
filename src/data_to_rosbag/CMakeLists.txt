@@ -52,10 +52,10 @@ target_link_libraries(kitti_live_node ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boos
 # )
 # target_link_libraries(kitti_rosbag_converter ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
 
-# cs_add_executable(kitti_to_png
-#   src/kitti_to_png.cpp
+# cs_add_executable(pcd_to_png
+#   src/pcd_to_png.cpp
 # )
-# target_link_libraries(kitti_to_png ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
+# target_link_libraries(pcd_to_png ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
 
 
 ##########

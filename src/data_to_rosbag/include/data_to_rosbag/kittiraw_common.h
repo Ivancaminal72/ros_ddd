@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Eigen/StdVector>
 #include <kindr/minimal/quat-transformation.h>
 
-namespace kitti {
+namespace adapt {
 
 // Transformation type for defining sensor orientation.
 typedef kindr::minimal::QuatTransformation Transformation;
@@ -74,6 +74,6 @@ Transformation interpolateTransformations(const Transformation& left,
                                           const Transformation& right,
                                           double t);
 
-}  // namespace kitti
+}  // namespace adapt
 
 #endif  // DATA_TO_ROSBAG_KITTIRAW_COMMON_H_

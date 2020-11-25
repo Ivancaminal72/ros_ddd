@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "data_to_rosbag/kittiraw_parser.h"
 
-namespace kitti {
+namespace adapt {
 
 const std::string KittirawParser::kVelToCamCalibrationFilename =
     "calib_velo_to_cam.txt";
@@ -638,4 +638,4 @@ size_t KittirawParser::getNumCameras() const {
   return camera_calibrations_.size();
 }
 
-}  // namespace kitti
+}  // namespace adapt
