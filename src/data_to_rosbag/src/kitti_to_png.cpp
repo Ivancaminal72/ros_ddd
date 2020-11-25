@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ros/ros.h>
 #include <rosgraph_msgs/Clock.h>
 #include <tf/transform_broadcaster.h>
-#include <tf2_ros/static_transform_broadcaster.h>
 #include <boost/program_options.hpp>
 
 #include "data_to_rosbag/kitti_parser.h"
@@ -46,7 +45,7 @@ namespace kitti {
 class KittiToPng {
  public:
   KittiToPng(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
-                const std::string& sequence_dir);
+                const std::string& sequence_dir, const int cam_idx_proj);
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
@@ -54,9 +53,7 @@ class KittiToPng {
 
   bool publishEntry(uint64_t entry, uint64_t current_timestamp_ns_);
 
-  void publishTfGroundTruth(uint64_t timestamp_ns, const Transformation& imu_pose);
-
-  void publishTf(uint64_t timestamp_ns);
+  void publishTf(uint64_t timestamp_ns, const Transformation& imu_pose);
 
   void publishClock(uint64_t timestamp_ns);
 
@@ -85,19 +82,19 @@ class KittiToPng {
   std::string world_frame_id_;
   std::string imu_frame_id_;
   std::string cam_frame_id_prefix_;
-  std::string lidar_frame_id_;
+  std::string velodyne_frame_id_;
 
   uint64_t current_entry_;
   uint64_t publish_dt_ns_;
   uint64_t current_timestamp_ns_;
-  uint64_t next_entry_timestamp_ns_;
 
   int cam_idx_proj_;
 };
 
 KittiToPng::KittiToPng(const ros::NodeHandle& nh,
                              const ros::NodeHandle& nh_private,
-                             const std::string& sequence_dir)
+                             const std::string& sequence_dir,
+                             const int cam_idx_proj)
     : nh_(nh),
       nh_private_(nh_private),
       image_transport_(nh_),
@@ -105,18 +102,19 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
       world_frame_id_("world"),
       imu_frame_id_("imu"),
       cam_frame_id_prefix_("cam"),
-      lidar_frame_id_("lidar"),
+      velodyne_frame_id_("velodyne"),
       current_entry_(0),
       publish_dt_ns_(0),
-      current_timestamp_ns_(0) {
+      current_timestamp_ns_(0),
+      cam_idx_proj_(cam_idx_proj) {
   // Load all the timestamp maps and calibration parameters.
   parser_.loadCalibration();
   parser_.loadTimestampMaps(); //Todo(IC): delete and doit stream in get timestamp entry
 
   // Advertise all the publishing topics for ROS live streaming.
-  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("clock_bag", 1, false);
+  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 1, false);
   pointcloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
-      "lidar_bag", 10, false);
+      "velodyne_points", 10, false);
   // pose_pub_ =
   //     nh_.advertise<geometry_msgs::PoseStamped>("pose_imu", 10, false);
   // transform_pub_ = nh_.advertise<geometry_msgs::TransformStamped>(
@@ -124,14 +122,14 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
 
   for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
     image_pubs_.push_back(
-        image_transport_.advertiseCamera(getCameraFrameId(cam_id) + "_bag", 1, false));
+        image_transport_.advertiseCamera(getCameraFrameId(cam_id), 1));
   }
 }
 
 void KittiToPng::startPublishing(double rate_hz) {
   double publish_dt_sec = 1.0 / rate_hz;
   publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);
-  // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
+  std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
   publish_timer_ = nh_.createWallTimer(ros::WallDuration(publish_dt_sec),
                                        &KittiToPng::timerCallback, this);
 }
@@ -142,45 +140,42 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   std::cout << "Current entry: " << current_entry_ << std::endl;
 
   if (current_entry_ == 0) {
-    current_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
-    publishTf(current_timestamp_ns_);
     // This is the first time this is running! Initialize the current timestamp
     // and publish this entry.
     if (!publishEntry(current_entry_, current_timestamp_ns_)) {
       publish_timer_.stop();
     }
+    current_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
     publishClock(current_timestamp_ns_);
-    // if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
-    //                                        &tf_interpolated)) {
-    //   publishTfGroundTruth(current_timestamp_ns_, tf_interpolated);
-    // }
+    if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
+                                           &tf_interpolated)) {
+      publishTf(current_timestamp_ns_, tf_interpolated);
+    }
     current_entry_++;
-    next_entry_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
     return;
   }
 
-  // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
+  std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
   current_timestamp_ns_ += publish_dt_ns_;
-  // std::cout << "Updated timestmap: " << current_timestamp_ns_ << std::endl;
+  std::cout << "Updated timestmap: " << current_timestamp_ns_ << std::endl;
   publishClock(current_timestamp_ns_);
-  // if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
-  //                                        &tf_interpolated)) {
-  //   publishTfGroundTruth(current_timestamp_ns_, tf_interpolated);
-  //   // std::cout << "Transform: " << tf_interpolated << std::endl;
-  // } else {
-  //   std::cout << "Failed to interpolate!\n";
-  // }
+  if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
+                                         &tf_interpolated)) {
+    publishTf(current_timestamp_ns_, tf_interpolated);
+    // std::cout << "Transform: " << tf_interpolated << std::endl;
+  } else {
+    std::cout << "Failed to interpolate!\n";
+  }
 
-  // std::cout << "Current entry's timestamp: "
-  //           << next_entry_timestamp_ns_ << std::endl;
-  if (next_entry_timestamp_ns_ <= current_timestamp_ns_) {
-    if (!publishEntry(current_entry_, current_timestamp_ns_)) 
-    {
+  std::cout << "Current entry's timestamp: "
+            << parser_.getTimestampAtEntry(current_entry_) << std::endl;
+  if (parser_.getTimestampAtEntry(current_entry_) <=
+      current_timestamp_ns_) {
+    if (!publishEntry(current_entry_, current_timestamp_ns_)) {
       publish_timer_.stop();
       return;
     }
     current_entry_++;
-    next_entry_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
   }
 }
 
@@ -197,7 +192,7 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
   rosgraph_msgs::Clock clock_time;
   timestampToRos(timestamp_ns, &timestamp_ros);
 
-  // Publish poses + TF transforms + clock.
+  // // Publish poses + TF transforms + clock.
   // Transformation pose;
   // if (parser_.getPoseAtEntry(entry, &timestamp_ns, &pose)) {
   //   geometry_msgs::PoseStamped pose_msg;
@@ -216,14 +211,14 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
   //   transform_pub_.publish(transform_msg);
 
   //   // publishClock(timestamp_ns);
-  //   // publishTfGroundTruth(timestamp_ns, pose);
+  //   // publishTf(timestamp_ns, pose);
   // } else {
   //   return false;
   // }
 
-
   // Read images.
   cv::Mat rgb_img;
+  // std::vector<4, sensor_msgs::Image> 
   for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
     if (parser_.getImageAtEntry(entry, cam_id, &rgb_img)) {
       sensor_msgs::Image image_msg;
@@ -259,54 +254,38 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
     
     // This value is in MICROSECONDS, not nanoseconds.
     pointcloud.header.stamp = timestamp_ns / 1000;
-    pointcloud.header.frame_id = lidar_frame_id_;
+    pointcloud.header.frame_id = velodyne_frame_id_;
     pointcloud_pub_.publish(pointcloud);
   }
 
   return true;
 }
 
-void KittiToPng::publishTf(uint64_t timestamp_ns) {
+void KittiToPng::publishTf(uint64_t timestamp_ns,
+                              const Transformation& imu_pose) {
   ros::Time timestamp_ros;
   timestampToRos(timestamp_ns, &timestamp_ros);
-  Transformation T_cam_lidar;
+  Transformation T_imu_world = imu_pose;
+  Transformation T_vel_imu = parser_.T_vel_imu();
+  Transformation T_cam_imu;
 
-  tf::Transform tf_cam_lidar;
-  static tf2_ros::StaticTransformBroadcaster static_tf_cam_lidar;
-  geometry_msgs::TransformStamped Ts_cam0_lidar = parser_.Ts_cam0_lidar();
-  
-  Ts_cam0_lidar.header.stamp = timestamp_ros;
-  Ts_cam0_lidar.header.frame_id = lidar_frame_id_;
-  Ts_cam0_lidar.child_frame_id = getCameraFrameId(0);
-  Ts_cam0_lidar.transform = Ts_cam0_lidar.transform;
-  static_tf_cam_lidar.sendTransform(Ts_cam0_lidar);
+  tf::Transform tf_imu_world, tf_cam_imu, tf_vel_imu;
+
+  transformToTf(T_imu_world, &tf_imu_world);
+  transformToTf(T_vel_imu.inverse(), &tf_vel_imu);
+
+  tf_broadcaster_.sendTransform(tf::StampedTransform(
+      tf_imu_world, timestamp_ros, world_frame_id_, imu_frame_id_));
+  tf_broadcaster_.sendTransform(tf::StampedTransform(
+      tf_vel_imu, timestamp_ros, imu_frame_id_, velodyne_frame_id_));
+
+  for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
+    T_cam_imu = parser_.T_camN_imu(cam_id);
+    transformToTf(T_cam_imu.inverse(), &tf_cam_imu);
+    tf_broadcaster_.sendTransform(tf::StampedTransform(
+        tf_cam_imu, timestamp_ros, imu_frame_id_, getCameraFrameId(cam_id)));
+  }
 }
-
-// void KittiToPng::publishTfGroundTruth(uint64_t timestamp_ns,
-//                               const Transformation& imu_pose) {
-//   ros::Time timestamp_ros;
-//   timestampToRos(timestamp_ns, &timestamp_ros);
-//   Transformation T_imu_world = imu_pose;
-//   Transformation T_lidar_imu = parser_.T_lidar_imu();
-//   Transformation T_cam_imu;
-
-//   tf::Transform tf_imu_world, tf_cam_imu, tf_lidar_imu;
-
-//   transformToTf(T_imu_world, &tf_imu_world);
-//   transformToTf(T_lidar_imu.inverse(), &tf_lidar_imu);
-
-//   tf_broadcaster_.sendTransform(tf::StampedTransform(
-//       tf_imu_world, timestamp_ros, world_frame_id_, imu_frame_id_));
-//   tf_broadcaster_.sendTransform(tf::StampedTransform(
-//       tf_lidar_imu, timestamp_ros, imu_frame_id_, lidar_frame_id_));
-
-//   for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
-//     T_cam_imu = parser_.T_camN_imu(cam_id);
-//     transformToTf(T_cam_imu.inverse(), &tf_cam_imu);
-//     tf_broadcaster_.sendTransform(tf::StampedTransform(
-//         tf_cam_imu, timestamp_ros, imu_frame_id_, getCameraFrameId(cam_id)));
-//   }
-// }
 
 }  // namespace kitti
 
@@ -319,6 +298,7 @@ int main(int argc, char** argv) {
   std::string sequence_dir;
   std::string calibration_file;
   std::string timestamp_file;
+  int cam_idx_proj = -1;
 
   //Parse arguments
   po::options_description mandatory_opts("Mandatory args");
@@ -330,7 +310,8 @@ int main(int argc, char** argv) {
 
   po::options_description optional_opts("Optional args");
   optional_opts.add_options()
-    ("help,h", "produce a help message");
+    ("help,h", "produce a help message")
+    ("project,p", po::value<int>(&cam_idx_proj), "Do pcd projection to camera idx");
 
   po::variables_map vm;
   po::options_description all_opts;
@@ -340,7 +321,7 @@ int main(int argc, char** argv) {
 
   if (vm.count("help")) 
   {
-    std::cout << "Usage: rosrun data_to_rosbag kitti_live_node {args}\n";
+    std::cout << "Usage: rosrun data_to_rosbag kitti_to_png {args}\n";
     std::cout << all_opts << std::endl << std::endl;
     std::cout << "Warn: the 1st mandatory arg can be directly specified (without option)\n";
     return 0;
@@ -356,7 +337,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  kitti::KittiToPng node(nh, nh_private, sequence_dir);
+  kitti::KittiToPng node(nh, nh_private, sequence_dir, cam_idx_proj);
   node.startPublishing(50.0);
 
   ros::spin();

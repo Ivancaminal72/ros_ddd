@@ -47,10 +47,15 @@ cs_add_executable(kitti_live_node
 )
 target_link_libraries(kitti_live_node ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
 
-cs_add_executable(kitti_rosbag_converter
-  src/kitti_rosbag_converter.cpp
-)
-target_link_libraries(kitti_rosbag_converter ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
+# cs_add_executable(kitti_rosbag_converter
+#   src/kitti_rosbag_converter.cpp
+# )
+# target_link_libraries(kitti_rosbag_converter ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
+
+# cs_add_executable(kitti_to_png
+#   src/kitti_to_png.cpp
+# )
+# target_link_libraries(kitti_to_png ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
 
 
 ##########

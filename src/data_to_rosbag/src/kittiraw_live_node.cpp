@@ -39,9 +39,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace kitti {
 
-class KittiLiveNode {
+class KittiToPng {
  public:
-  KittiLiveNode(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
+  KittiToPng(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
                 const std::string& calibration_path,
                 const std::string& dataset_path);
 
@@ -87,7 +87,7 @@ class KittiLiveNode {
   uint64_t current_timestamp_ns_;
 };
 
-KittiLiveNode::KittiLiveNode(const ros::NodeHandle& nh,
+KittiToPng::KittiToPng(const ros::NodeHandle& nh,
                              const ros::NodeHandle& nh_private,
                              const std::string& calibration_path,
                              const std::string& dataset_path)
@@ -121,15 +121,15 @@ KittiLiveNode::KittiLiveNode(const ros::NodeHandle& nh,
   }
 }
 
-void KittiLiveNode::startPublishing(double rate_hz) {
+void KittiToPng::startPublishing(double rate_hz) {
   double publish_dt_sec = 1.0 / rate_hz;
   publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);
   std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
   publish_timer_ = nh_.createWallTimer(ros::WallDuration(publish_dt_sec),
-                                       &KittiLiveNode::timerCallback, this);
+                                       &KittiToPng::timerCallback, this);
 }
 
-void KittiLiveNode::timerCallback(const ros::WallTimerEvent& event) {
+void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   Transformation tf_interpolated;
 
   std::cout << "Current entry: " << current_entry_ << std::endl;
@@ -174,7 +174,7 @@ void KittiLiveNode::timerCallback(const ros::WallTimerEvent& event) {
   }
 }
 
-void KittiLiveNode::publishClock(uint64_t timestamp_ns) {
+void KittiToPng::publishClock(uint64_t timestamp_ns) {
   ros::Time timestamp_ros;
   timestampToRos(timestamp_ns, &timestamp_ros);
   rosgraph_msgs::Clock clock_time;
@@ -182,7 +182,7 @@ void KittiLiveNode::publishClock(uint64_t timestamp_ns) {
   clock_pub_.publish(clock_time);
 }
 
-bool KittiLiveNode::publishEntry(uint64_t entry) {
+bool KittiToPng::publishEntry(uint64_t entry) {
   ros::Time timestamp_ros;
   uint64_t timestamp_ns;
   rosgraph_msgs::Clock clock_time;
@@ -249,7 +249,7 @@ bool KittiLiveNode::publishEntry(uint64_t entry) {
   return true;
 }
 
-void KittiLiveNode::publishTf(uint64_t timestamp_ns,
+void KittiToPng::publishTf(uint64_t timestamp_ns,
                               const Transformation& imu_pose) {
   ros::Time timestamp_ros;
   timestampToRos(timestamp_ns, &timestamp_ros);
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
   const std::string calibration_path = argv[1];
   const std::string dataset_path = argv[2];
 
-  kitti::KittiLiveNode node(nh, nh_private, calibration_path, dataset_path);
+  kitti::KittiToPng node(nh, nh_private, calibration_path, dataset_path);
 
   node.startPublishing(50.0);
 

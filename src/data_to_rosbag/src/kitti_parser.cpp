@@ -90,7 +90,7 @@ bool KittiParser::loadCalibration() {
           for(int i=0; line_istr.good(); i++)
           {
               line_istr>>item_str;
-              Tr_cam0_vel_(i/4, i%4) = stof(item_str);
+              T_cam0_lidar_(i/4, i%4) = stod(item_str);
           }
       }
     }
@@ -144,7 +144,7 @@ bool KittiParser::loadTimestampMaps() {
             << std::endl;
 
   // std::cout << "Timestmap map for pose:\n";
-  // for (size_t i = 0; i < timestamps_.size(); ++i) 
+  // for (size_t i = 0; i < timestamps_.size(); i++) 
   //   std::cout << i << " " << timestamps_[i] << std::endl;
 }
 
@@ -217,9 +217,9 @@ bool KittiParser::getPointcloudAtEntry( uint64_t entry,
   end = input.tellg();
   input.seekg(0, input.beg);
   numPts = (end-begin)/(4*sizeof(float)); //calculate number of points
-  (ddd_pts)->Zero(3, numPts);
-  (intensity_pts)->Zero(1, numPts);
-  for (size_t i = 0; input.good() && !input.eof(); i++) {
+  *ddd_pts = Eigen::Matrix3Xd::Zero(3, numPts);
+  *intensity_pts = Eigen::RowVectorXd::Zero(1, numPts);
+  for (int i = 0; input.good() && !input.eof(); i++) {
     pcl::PointXYZI point;
     input.read((char*)&point.x, 3 * sizeof(float));
     input.read((char*)&point.intensity, sizeof(float));
@@ -236,15 +236,17 @@ bool KittiParser::projectPointcloud(int cam_idx_proj,
                                     Eigen::RowVectorXd* intensity_pts, 
                                     cv::Mat* depth_img, cv::Mat* intensity_img)
 {
-  Eigen::Matrix3Xd ddd_pts_p;
+  Eigen::Array3Xd ddd_pts_p;
   Eigen::RowVectorXd depth_pts;
   CameraCalibration cam_calib;
   getCameraCalibration(cam_idx_proj, &cam_calib);
   int width = (int) cam_calib.image_size.x();
   int height = (int) cam_calib.image_size.y();
+  Eigen::Matrix<double, 3, 4> T_cam0_lidar_; //todeclare
+
 
   // Start projection
-  *ddd_pts = Tr_cam0_vel_ * ddd_pts->colwise().homogeneous();
+  *ddd_pts = T_cam0_lidar_ * ddd_pts->colwise().homogeneous();
   ddd_pts_p = (camera_calibrations_[cam_idx_proj]
     .projection_mat * ddd_pts->colwise().homogeneous()).array();
   ddd_pts_p.rowwise() /= ddd_pts_p.row(2);
@@ -271,26 +273,26 @@ bool KittiParser::projectPointcloud(int cam_idx_proj,
           if(depth_pts(0,i)>0)
           {
               valid+=1;
-              uint8_t d = (uint8_t) depth_pts(0,i);
+              ushort d = (ushort) depth_pts(0,i);
               
               //pixel need update
-              if(depth_img->at<uint8_t>(y,x) == 0 
-                || depth_img->at<uint8_t>(y,x) > d)
+              if(depth_img->at<ushort>(y,x) == 0 
+                || depth_img->at<ushort>(y,x) > d)
               {
                 
                 //exceed established limit (save max)
-                if(d>=pow(2,16)) depth_img->at<uint8_t>(y,x) 
+                if(d>=pow(2,16)) depth_img->at<ushort>(y,x) 
                   = pow(2,16)-1;
                 
                 //inside limit (save sensed depth)
-                else if(depth_img->at<uint8_t>(y,x) == 0) 
-                  depth_img->at<uint8_t>(y,x) = d;
+                else if(depth_img->at<ushort>(y,x) == 0) 
+                  depth_img->at<ushort>(y,x) = d;
                 
                 //pixel with value (save the smallest depth)
-                else depth_img->at<uint8_t>(y,x) = d;
+                else depth_img->at<ushort>(y,x) = d;
 
                 //Save 16bit intensity
-                intensity_img->at<uint16_t>(y,x) 
+                intensity_img->at<ushort>(y,x) 
                   = trunc((*intensity_pts)(0,i) * pow(2,16));
               }
           }
@@ -301,13 +303,6 @@ bool KittiParser::projectPointcloud(int cam_idx_proj,
 
 bool KittiParser::getImageAtEntry(uint64_t entry, uint64_t cam_id,
                                   cv::Mat* image) {
-  // Get the timestamp for this first.
-  if (timestamps_.size() <= cam_id ||
-      timestamps_.size() <= entry) {
-    std::cout << "Warning: no timestamp for this entry!\n";
-    return false;
-  }
-  *timestamp = timestamps_[entry];
 
   std::string filename = sequence_dir_ + "/" + getFolderNameForCamera(cam_id) +
                          "/" + getFilenameForEntry(entry) +
@@ -384,7 +379,7 @@ void KittiParser::latlonToMercator(double lat, double lon, double scale,
 
 std::string KittiParser::getFolderNameForCamera(int cam_number) const {
   char buffer[20];
-  sprintf(buffer, "%s%02d", kCameraFolder.c_str(), cam_number);
+  sprintf(buffer, "%s%d", kCameraFolder.c_str(), cam_number);
   return std::string(buffer);
 }
 
@@ -399,59 +394,60 @@ Transformation KittiParser::T_camN_vel(int cam_number) const {
 }
 
 Transformation KittiParser::T_camN_imu(int cam_number) const {
-  return T_camN_vel(cam_number) * T_vel_imu_;
+  return T_camN_vel(cam_number) * T_lidar_imu_;
 }
 
 Transformation KittiParser::T_cam0_vel() const { return T_cam0_vel_; }
+geometry_msgs::TransformStamped KittiParser::Ts_cam0_lidar() const { return tf2::eigenToTransform(T_cam0_lidar_); }
 
-Transformation KittiParser::T_vel_imu() const { return T_vel_imu_; }
+Transformation KittiParser::T_lidar_imu() const { return T_lidar_imu_; }
 
-bool KittiParser::interpolatePoseAtTimestamp(uint64_t timestamp,
-                                             Transformation* pose) {
-  // Look up the closest 2 timestamps to this.
-  size_t left_index = timestamps_.size();
-  for (size_t i = 0; i < timestamps_.size(); ++i) {
-    if (timestamps_[i] > timestamp) {
-      if (i == 0) {
-        // Then we can't interpolate the pose since we're outside the range.
-        return false;
-      }
-      left_index = i - 1;
-      break;
-    }
-  }
-  if (left_index >= timestamps_.size()) {
-    return false;
-  }
-  // Make sure we don't go over the size
-  // if (left_index == timestamps_.size() - 1) {
-  //  left_index--;
-  //}
+// bool KittiParser::interpolatePoseAtTimestamp(uint64_t timestamp,
+//                                              Transformation* pose) {
+//   // Look up the closest 2 timestamps to this.
+//   size_t left_index = timestamps_.size();
+//   for (size_t i = 0; i < timestamps_.size(); i++) {
+//     if (timestamps_[i] > timestamp) {
+//       if (i == 0) {
+//         // Then we can't interpolate the pose since we're outside the range.
+//         return false;
+//       }
+//       left_index = i - 1;
+//       break;
+//     }
+//   }
+//   if (left_index >= timestamps_.size()) {
+//     return false;
+//   }
+//   // Make sure we don't go over the size
+//   // if (left_index == timestamps_.size() - 1) {
+//   //  left_index--;
+//   //}
 
-  // Figure out what 't' should be, where t = 0 means 100% left boundary,
-  // and t = 1 means 100% right boundary.
-  double t = (timestamp - timestamps_[left_index]) /
-             static_cast<double>(timestamps_[left_index + 1] -
-                                 timestamps_[left_index]);
+//   // Figure out what 't' should be, where t = 0 means 100% left boundary,
+//   // and t = 1 means 100% right boundary.
+//   double t = (timestamp - timestamps_[left_index]) /
+//              static_cast<double>(timestamps_[left_index + 1] -
+//                                  timestamps_[left_index]);
 
-  std::cout << "Timestamp: " << timestamp
-            << " timestamp left: " << timestamps_[left_index]
-            << " timestamp right: " << timestamps_[left_index + 1]
-            << " t: " << t << std::endl;
+//   std::cout << "Timestamp: " << timestamp
+//             << " timestamp left: " << timestamps_[left_index]
+//             << " timestamp right: " << timestamps_[left_index + 1]
+//             << " t: " << t << std::endl;
 
-  // Load the two transformations.
-  uint64_t timestamp_left, timestamp_right;
-  Transformation transform_left, transform_right;
-  if (!getPoseAtEntry(left_index, &timestamp_left, &transform_left) ||
-      !getPoseAtEntry(left_index + 1, &timestamp_right, &transform_right)) {
-    // For some reason couldn't load the poses.
-    return false;
-  }
+//   // Load the two transformations.
+//   uint64_t timestamp_left, timestamp_right;
+//   Transformation transform_left, transform_right;
+//   if (!getPoseAtEntry(left_index, &timestamp_left, &transform_left) ||
+//       !getPoseAtEntry(left_index + 1, &timestamp_right, &transform_right)) {
+//     // For some reason couldn't load the poses.
+//     return false;
+//   }
 
-  // Interpolate between them.
-  *pose = interpolateTransformations(transform_left, transform_right, t);
-  return true;
-}
+//   // Interpolate between them.
+//   *pose = interpolateTransformations(transform_left, transform_right, t);
+//   return true;
+// }
 
 size_t KittiParser::getNumCameras() const {
   return camera_calibrations_.size();

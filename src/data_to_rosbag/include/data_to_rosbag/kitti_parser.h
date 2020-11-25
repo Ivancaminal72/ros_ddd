@@ -37,6 +37,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pcl/conversions.h>
 #include <opencv2/core/core.hpp>
 
+#include <tf2/convert.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <Eigen/Geometry>
+#include <geometry_msgs/QuaternionStamped.h>
+#include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/PoseStamped.h>
+
 #include "data_to_rosbag/kittiraw_common.h"
 
 namespace kitti {
@@ -63,11 +70,12 @@ class KittiParser {
   bool loadTimestampMaps();
 
   // Load specific entries (indexed by filename).
-  bool getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
-                      Transformation* pose);
+  // bool getPoseAtEntry(uint64_t entry, uint64_t* timestamp,
+  //                     Transformation* pose);
+  
   uint64_t getTimestampAtEntry(uint64_t entry);
 
-  bool interpolatePoseAtTimestamp(uint64_t timestamp, Transformation* pose);
+  // bool interpolatePoseAtTimestamp(uint64_t timestamp, Transformation* pose);
 
   bool getGpsAtEntry() { /* TODO! */
     return false;
@@ -95,8 +103,9 @@ class KittiParser {
   // int64_t getTimestampNsAtEntry(int64_t entry) const;
 
   // Basic accessors.
+  geometry_msgs::TransformStamped Ts_cam0_lidar() const;
   Transformation T_cam0_vel() const;
-  Transformation T_vel_imu() const;
+  Transformation T_lidar_imu() const;
 
   size_t getNumCameras() const;
 
@@ -129,9 +138,9 @@ class KittiParser {
 
   // Transformation chain (cam-to-cam extrinsics stored above in cam calib
   // struct).
-  Eigen::Matrix<double, 3, 4> Tr_cam0_vel_ = Eigen::Matrix<double, 3, 4>::Identity();  // Tr of odometry bechnkmark
+  Eigen::Affine3d T_cam0_lidar_ = Eigen::Affine3d::Identity();
   Transformation T_cam0_vel_;
-  Transformation T_vel_imu_;
+  Transformation T_lidar_imu_;
 
   // Timestamp map from index to nanoseconds.
   std::vector<uint64_t> timestamps_;

@@ -21,5 +21,6 @@
   <depend>pcl_ros</depend>
   <depend>sensor_msgs</depend>
   <depend>tf</depend>
+  <depend>tf2</depend>
   <depend>rosbag</depend>
 </package>
