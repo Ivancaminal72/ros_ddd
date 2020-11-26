@@ -53,12 +53,22 @@ const size_t KittiParser::kMaxNumberOfScanPoints = 1e6;  // From Readme for raw 
 KittiParser::KittiParser(const std::string& sequence_dir, bool rectified)
     : sequence_dir_(sequence_dir),
       rectified_(rectified),
-      initial_pose_set_(false) {}
+      initial_pose_set_(false) 
+      {
+        camera_calibrations_.resize(4);
+      }
+
+KittiParser::KittiParser()
+    : rectified_(true),
+      initial_pose_set_(false) 
+      {
+        camera_calibrations_.resize(4);
+      }
 
 bool KittiParser::loadCalibration() {
-  std::string line_str, item_str;
+  std::string line_str, item_str, filename = sequence_dir_ + "/" + kCalibrationFile;
   std::istringstream line_istr;
-  std::ifstream fin_calib(sequence_dir_ + "/" + kCalibrationFile);
+  std::ifstream fin_calib(filename);
   
   while(true)
     {
@@ -123,6 +133,18 @@ bool KittiParser::parseVectorOfDoubles(const std::string& input,
     }
   }
   return true;
+}
+
+bool KittiParser::loadNextTimestamp(std::ifstream& fin_time, uint64_t& timestamp) {
+  std::string stamp_str;
+  if (std::getline(fin_time, stamp_str)) 
+  {
+    // Seconds to nanoseconds
+    timestamp = static_cast<uint64_t>(std::stod(stamp_str) * 1e9);
+    return true;
+  }
+  else 
+    return false;
 }
 
 bool KittiParser::loadTimestampMaps() {

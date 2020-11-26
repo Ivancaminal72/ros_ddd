@@ -93,6 +93,7 @@ class KittiToPng {
   uint64_t next_entry_timestamp_ns_;
 
   int cam_idx_proj_;
+  std::ifstream fin_time_;
 };
 
 KittiToPng::KittiToPng(const ros::NodeHandle& nh,
@@ -102,16 +103,25 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
       nh_private_(nh_private),
       image_transport_(nh_),
       parser_(sequence_dir, true),
-      world_frame_id_("world"),
-      imu_frame_id_("imu"),
+      world_frame_id_("world_bag"),
+      imu_frame_id_("imu_bag"),
       cam_frame_id_prefix_("cam"),
-      lidar_frame_id_("lidar"),
+      lidar_frame_id_("lidar_bag"),
       current_entry_(0),
       publish_dt_ns_(0),
       current_timestamp_ns_(0) {
+  
+  ROS_INFO("KittiToPng class initialization: OK");
+
   // Load all the timestamp maps and calibration parameters.
   parser_.loadCalibration();
-  parser_.loadTimestampMaps(); //Todo(IC): delete and doit stream in get timestamp entry
+  ROS_INFO("KittiToPng loadCalibration: OK");
+  
+  fin_time_.open(sequence_dir + "/" + KittiParser::kTimestampFile, std::ios::in);
+  if (!fin_time_) {
+    ROS_ERROR("KittiToPng failed opening timestamps file");
+    exit(1);
+  }
 
   // Advertise all the publishing topics for ROS live streaming.
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("clock_bag", 1, false);
@@ -126,7 +136,9 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
     image_pubs_.push_back(
         image_transport_.advertiseCamera(getCameraFrameId(cam_id) + "_bag", 1, false));
   }
+  ROS_INFO("KittiToPng advertise topics: OK");
 }
+
 
 void KittiToPng::startPublishing(double rate_hz) {
   double publish_dt_sec = 1.0 / rate_hz;
@@ -139,11 +151,11 @@ void KittiToPng::startPublishing(double rate_hz) {
 void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   Transformation tf_interpolated;
 
-  std::cout << "Current entry: " << current_entry_ << std::endl;
-
   if (current_entry_ == 0) 
   {
-    current_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
+    std::cout << "Current entry: " << current_entry_ << std::endl;
+    if(!parser_.loadNextTimestamp(fin_time_, current_timestamp_ns_))
+            publish_timer_.stop();
     publishTf(current_timestamp_ns_);
     // This is the first time this is running! Initialize the current timestamp
     // and publish this entry.
@@ -156,7 +168,8 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
     //   publishTfGroundTruth(current_timestamp_ns_, tf_interpolated);
     // }
     current_entry_++;
-    next_entry_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
+    if(!parser_.loadNextTimestamp(fin_time_, next_entry_timestamp_ns_))
+            publish_timer_.stop();
     return;
   }
 
@@ -176,13 +189,15 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   //           << next_entry_timestamp_ns_ << std::endl;
   if (next_entry_timestamp_ns_ <= current_timestamp_ns_) 
   {
+    std::cout << "Current entry: " << current_entry_ << std::endl;
     if (!publishEntry(current_entry_, current_timestamp_ns_)) 
     {
       publish_timer_.stop();
       return;
     }
     current_entry_++;
-    next_entry_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
+    if(!parser_.loadNextTimestamp(fin_time_, next_entry_timestamp_ns_))
+            exit(0);
   }
 }
 
@@ -240,7 +255,7 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
       calibrationToRos(cam_id, cam_calib, &cam_info);
 
       image_msg.header.stamp = timestamp_ros;
-      image_msg.header.frame_id = getCameraFrameId(cam_id);
+      image_msg.header.frame_id = getCameraFrameId(cam_id)+"_bag";
       cam_info.header = image_msg.header;
 
       image_pubs_[cam_id].publish(image_msg, cam_info, timestamp_ros);
@@ -280,7 +295,7 @@ void KittiToPng::publishTf(uint64_t timestamp_ns) {
   
   Ts_cam0_lidar.header.stamp = timestamp_ros;
   Ts_cam0_lidar.header.frame_id = lidar_frame_id_;
-  Ts_cam0_lidar.child_frame_id = getCameraFrameId(0);
+  Ts_cam0_lidar.child_frame_id = getCameraFrameId(0)+"_bag";
   Ts_cam0_lidar.transform = Ts_cam0_lidar.transform;
   static_tf_broadcaster.sendTransform(Ts_cam0_lidar);
 }
@@ -358,9 +373,11 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
+  ROS_INFO("Parsing of arguments: OK");
 
   //Ready to start
   adapt::KittiToPng node(nh, nh_private, sequence_dir);
+  ROS_INFO("KittiToPng class constructor: OK");
   node.startPublishing(50.0);
 
   ros::spin();

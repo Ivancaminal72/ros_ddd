@@ -27,7 +27,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <cv_bridge/cv_bridge.h>
 #include <minkindr_conversions/kindr_msg.h>
 #include <minkindr_conversions/kindr_tf.h>
 
@@ -111,6 +110,19 @@ void imageToRos(const cv::Mat& image, sensor_msgs::Image* image_msg) {
     image_cv_bridge.encoding = "bgr8";
   }
   image_cv_bridge.toImageMsg(*image_msg);
+}
+
+cv_bridge::CvImagePtr rosToImagePtr(const sensor_msgs::ImageConstPtr& image_msg, const std::string& encoding) {
+  cv_bridge::CvImagePtr image_cv_ptr;
+  try
+  {
+    return cv_bridge::toCvCopy(image_msg, encoding);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    ROS_ERROR("cv_bridge exception: %s", e.what());
+    exit(1);
+  }
 }
 
 void poseToRos(const Transformation& transform,

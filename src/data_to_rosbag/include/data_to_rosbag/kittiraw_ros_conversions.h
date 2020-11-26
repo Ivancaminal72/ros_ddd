@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef DATA_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_
 #define DATA_TO_ROSBAG_KITTI_ROS_CONVERSIONS_H_
 
+#include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -46,6 +47,7 @@ void stereoCalibrationToRos(const CameraCalibration& left_cam,
                             sensor_msgs::CameraInfo* left_cam_msg,
                             sensor_msgs::CameraInfo* right_cam_msg);
 void imageToRos(const cv::Mat& image, sensor_msgs::Image* image_msg);
+cv_bridge::CvImagePtr rosToImagePtr(const sensor_msgs::ImageConstPtr& image_msg, const std::string& encoding);
 void poseToRos(const Transformation& transform,
                geometry_msgs::PoseStamped* pose_msg);
 void transformToTf(const Transformation& transform,

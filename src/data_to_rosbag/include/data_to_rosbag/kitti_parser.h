@@ -63,12 +63,14 @@ class KittiParser {
   static const std::string kDataFolder;
   static const size_t kMaxNumberOfScanPoints;
 
+  KittiParser();
   KittiParser(const std::string& sequence_dir, bool rectified);
 
   // MAIN API: all you should need to use!
   // Loading calibration files.
   bool loadCalibration();
   bool loadTimestampMaps();
+  bool loadNextTimestamp(std::ifstream& fin_time, uint64_t& timestamp);
 
   // Load specific entries (indexed by filename).
   // bool getPoseAtEntry(uint64_t entry, uint64_t* timestamp,

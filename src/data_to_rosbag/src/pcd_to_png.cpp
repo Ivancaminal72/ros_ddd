@@ -31,9 +31,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl_ros/point_cloud.h>
 #include <ros/ros.h>
+#include <ros/callback_queue.h>
 #include <rosgraph_msgs/Clock.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <boost/program_options.hpp>
+#include <queue>
+#include <sensor_msgs/image_encodings.h>
+#include <Eigen/StdVector>
 
 #include "data_to_rosbag/kitti_parser.h"
 #include "data_to_rosbag/kittiraw_ros_conversions.h"
@@ -44,242 +51,269 @@ namespace adapt {
 
 class PcdToPng {
  public:
-  PcdToPng(const ros::NodeHandle& nh, const int cam_idx_proj);
+  PcdToPng(const ros::NodeHandle& nh,
+           const ros::NodeHandle& nh_private, const int cam_idx_proj);
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
-  void startPublishing(double rate_hz);
+  void start();
+  void rePublishClock(const rosgraph_msgs::Clock &msg);
+  void rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg);
+  void rePublishColor(const sensor_msgs::ImageConstPtr& image_msg,
+                      const sensor_msgs::CameraInfoConstPtr& info_msg);
 
-  bool publishEntry(uint64_t entry, uint64_t current_timestamp_ns_);
-
-  void publishTf(uint64_t timestamp_ns, const Transformation& imu_pose);
-
-  void publishClock(uint64_t timestamp_ns);
+  bool projectPointcloud(pcl::PointCloud<pcl::PointXYZI>& pcd,
+                          cv::Mat& depth_img,
+                          cv::Mat& intensity_img);
 
  private:
-  void timerCallback(const ros::WallTimerEvent& event);
 
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
+  // Subscribers for the topics.
+  ros::Subscriber clock_sub_;
+  ros::Subscriber pointcloud_sub_;
+
+  image_transport::ImageTransport image_transport_private_;
+  image_transport::CameraSubscriber image_rgb_sub_;
+  
+  
   // Publishers for the topics.
   ros::Publisher clock_pub_;
   ros::Publisher pointcloud_pub_;
   ros::Publisher pose_pub_;
-  ros::Publisher transform_pub_;
-  tf::TransformBroadcaster tf_broadcaster_;
 
   image_transport::ImageTransport image_transport_;
-  std::vector<image_transport::CameraPublisher> image_pubs_;
+  image_transport::CameraPublisher image_rgb_pub_;
+  image_transport::CameraPublisher image_infrared_pub_;
+  image_transport::CameraPublisher image_depth_pub_;
+  // std::vector<image_transport::CameraPublisher> image_pubs_;
 
   // Decides the rate of publishing (TF is published at this rate).
   // Call startPublishing() to turn this on.
-  ros::WallTimer publish_timer_;
-
-  adapt::KittiParser parser_;
 
   std::string world_frame_id_;
   std::string imu_frame_id_;
   std::string cam_frame_id_prefix_;
-  std::string velodyne_frame_id_;
+  std::string lidar_frame_id_;
 
   uint64_t current_entry_;
   uint64_t publish_dt_ns_;
   uint64_t current_timestamp_ns_;
 
+  std::queue<rosgraph_msgs::Clock> buffer_clock_;
+  std::queue<pcl::PointCloud<pcl::PointXYZI>> buffer_pcd_;
+  std::queue<sensor_msgs::Image> buffer_rgb_;
+  std::queue<sensor_msgs::CameraInfo> buffer_rgb_info_;
+  
+  
+  //Adaptation
   int cam_idx_proj_;
+  std::map<std::string, int> width_;
+  std::map<std::string, int> height_;
+  std::map<std::string, Eigen::Matrix<double, 3, 4>, std::less<int>, 
+         Eigen::aligned_allocator<std::pair<const std::string, Eigen::Matrix<double, 3, 4>> > > Proj_;
+  Eigen::Affine3d T_cam0_lidar_;
+  
+  //Magement
+  bool is_tf_ready_;
+  bool is_cam_ready_;
+  bool is_first_pcd_republished_;
 };
 
 PcdToPng::PcdToPng(const ros::NodeHandle& nh,
-                             const int cam_idx_proj)
+                   const ros::NodeHandle& nh_private,
+                   const int cam_idx_proj)
     : nh_(nh),
+      nh_private_(nh_private),
       image_transport_(nh_),
+      image_transport_private_(nh_private),
       world_frame_id_("world"),
       imu_frame_id_("imu"),
       cam_frame_id_prefix_("cam"),
-      velodyne_frame_id_("velodyne"),
+      lidar_frame_id_("lidar"),
       current_entry_(0),
-      publish_dt_ns_(0),
       current_timestamp_ns_(0),
-      cam_idx_proj_(cam_idx_proj) {
-  // Load all the timestamp maps and calibration parameters.
-  parser_.loadCalibration();
-  parser_.loadTimestampMaps(); //Todo(IC): delete and doit stream in get timestamp entry
-
+      cam_idx_proj_(cam_idx_proj),
+      is_tf_ready_(false),
+      is_first_pcd_republished_(false){
+ 
+  // Subcribe to the node_live / rosbag topics
+  clock_sub_ = nh_private_.subscribe("clock_bag",1,&PcdToPng::rePublishClock,this);
+  pointcloud_sub_ = nh_private_.subscribe("lidar_bag",1,&PcdToPng::rePublishLidar,this);
+  image_rgb_sub_ = image_transport_private_.subscribeCamera(getCameraFrameId(cam_idx_proj_), 1, &PcdToPng::rePublishColor, this);
+   
   // Advertise all the publishing topics for ROS live streaming.
   clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("/clock", 1, false);
   pointcloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
-      "velodyne_points", 10, false);
-  // pose_pub_ =
+      "lidar", 10, false);
+  image_rgb_pub_ = image_transport_.advertiseCamera(getCameraFrameId(cam_idx_proj_),1);
+  image_infrared_pub_ = image_transport_.advertiseCamera(getCameraFrameId(cam_idx_proj_)+"_infrared",1);
+  image_depth_pub_ = image_transport_.advertiseCamera(getCameraFrameId(cam_idx_proj_)+"_depth",1);
+  
   //     nh_.advertise<geometry_msgs::PoseStamped>("pose_imu", 10, false);
   // transform_pub_ = nh_.advertise<geometry_msgs::TransformStamped>(
   //     "transform_imu", 10, false);
+}
 
-  for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
-    image_pubs_.push_back(
-        image_transport_.advertiseCamera(getCameraFrameId(cam_id), 1));
+void PcdToPng::start() {
+  
+  tf2_ros::Buffer tf_buffer;
+  tf2_ros::TransformListener transform_listener(tf_buffer);
+  
+  while (nh_private_.ok())
+  {
+    geometry_msgs::TransformStamped Ts_cam0_lidar;
+    try
+    {
+      Ts_cam0_lidar = tf_buffer.lookupTransform(lidar_frame_id_, 
+              getCameraFrameId(0)+"_bag", ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_WARN("%s",ex.what());
+      ros::Duration(1.0).sleep();
+      continue;
+    }
+    
+    T_cam0_lidar_= tf2::transformToEigen(Ts_cam0_lidar);
+    is_tf_ready_=true;
   }
 }
 
-void PcdToPng::startPublishing(double rate_hz) {
-  double publish_dt_sec = 1.0 / rate_hz;
-  publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);
-  std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
-  publish_timer_ = nh_.createWallTimer(ros::WallDuration(publish_dt_sec),
-                                       &PcdToPng::timerCallback, this);
-}
-
-void PcdToPng::timerCallback(const ros::WallTimerEvent& event) {
-  Transformation tf_interpolated;
-
-  std::cout << "Current entry: " << current_entry_ << std::endl;
-
-  if (current_entry_ == 0) {
-    // This is the first time this is running! Initialize the current timestamp
-    // and publish this entry.
-    if (!publishEntry(current_entry_, current_timestamp_ns_)) {
-      publish_timer_.stop();
-    }
-    current_timestamp_ns_ = parser_.getTimestampAtEntry(current_entry_);
-    publishClock(current_timestamp_ns_);
-    if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
-                                           &tf_interpolated)) {
-      publishTf(current_timestamp_ns_, tf_interpolated);
-    }
-    current_entry_++;
-    return;
-  }
-
-  std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
-  current_timestamp_ns_ += publish_dt_ns_;
-  std::cout << "Updated timestmap: " << current_timestamp_ns_ << std::endl;
-  publishClock(current_timestamp_ns_);
-  if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
-                                         &tf_interpolated)) {
-    publishTf(current_timestamp_ns_, tf_interpolated);
-    // std::cout << "Transform: " << tf_interpolated << std::endl;
-  } else {
-    std::cout << "Failed to interpolate!\n";
-  }
-
-  std::cout << "Current entry's timestamp: "
-            << parser_.getTimestampAtEntry(current_entry_) << std::endl;
-  if (parser_.getTimestampAtEntry(current_entry_) <=
-      current_timestamp_ns_) {
-    if (!publishEntry(current_entry_, current_timestamp_ns_)) {
-      publish_timer_.stop();
-      return;
-    }
-    current_entry_++;
-  }
-}
-
-void PcdToPng::publishClock(uint64_t timestamp_ns) {
-  ros::Time timestamp_ros;
-  timestampToRos(timestamp_ns, &timestamp_ros);
-  rosgraph_msgs::Clock clock_time;
-  clock_time.clock = timestamp_ros;
-  clock_pub_.publish(clock_time);
-}
-
-bool PcdToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
-  ros::Time timestamp_ros;
-  rosgraph_msgs::Clock clock_time;
-  timestampToRos(timestamp_ns, &timestamp_ros);
-
-  // // Publish poses + TF transforms + clock.
-  // Transformation pose;
-  // if (parser_.getPoseAtEntry(entry, &timestamp_ns, &pose)) {
-  //   geometry_msgs::PoseStamped pose_msg;
-  //   geometry_msgs::TransformStamped transform_msg;
-
-  //   timestampToRos(timestamp_ns, &timestamp_ros);
-  //   pose_msg.header.frame_id = world_frame_id_;
-  //   pose_msg.header.stamp = timestamp_ros;
-  //   transform_msg.header.frame_id = world_frame_id_;
-  //   transform_msg.header.stamp = timestamp_ros;
-
-  //   poseToRos(pose, &pose_msg);
-  //   transformToRos(pose, &transform_msg);
-
-  //   pose_pub_.publish(pose_msg);
-  //   transform_pub_.publish(transform_msg);
-
-  //   // publishClock(timestamp_ns);
-  //   // publishTf(timestamp_ns, pose);
-  // } else {
-  //   return false;
-  // }
-
-  // Read images.
-  cv::Mat rgb_img;
-  // std::vector<4, sensor_msgs::Image> 
-  for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
-    if (parser_.getImageAtEntry(entry, cam_id, &rgb_img)) {
-      sensor_msgs::Image image_msg;
-      imageToRos(rgb_img, &image_msg);
-
-      // TODO(helenol): cache this.
-      // Get the calibration info for this camera.
-      CameraCalibration cam_calib;
-      parser_.getCameraCalibration(cam_id, &cam_calib);
-      sensor_msgs::CameraInfo cam_info;
-      cam_calib.image_size << rgb_img.size().width, rgb_img.size().height;
-      calibrationToRos(cam_id, cam_calib, &cam_info);
-
-      image_msg.header.stamp = timestamp_ros;
-      image_msg.header.frame_id = getCameraFrameId(cam_id);
-      cam_info.header = image_msg.header;
-
-      image_pubs_[cam_id].publish(image_msg, cam_info, timestamp_ros);
-    }
+void PcdToPng::rePublishClock(const rosgraph_msgs::Clock &msg) {
+  
+  buffer_clock_.push(msg);
+  
+  if(!is_first_pcd_republished_) return;
+  else
+  {
+    clock_pub_.publish(buffer_clock_.front());
+    buffer_clock_.pop();
   }
   
-  // Publish pointclouds.
-  pcl::PointCloud<pcl::PointXYZI> pointcloud;
-  cv::Mat depth_img, intensity_img;
+}
+
+void PcdToPng::rePublishColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
+                              const sensor_msgs::CameraInfoConstPtr& info_msg_ptr) {
+  
+  buffer_rgb_.push(*image_msg_ptr);
+  buffer_rgb_info_.push(*info_msg_ptr);
+  
+  if(!is_first_pcd_republished_) return;
+  else if (!is_cam_ready_)
+  {
+    width_[info_msg_ptr->header.frame_id] = (int) info_msg_ptr->width;
+    height_[info_msg_ptr->header.frame_id] = (int) info_msg_ptr->height;
+    
+    for (size_t i = 0; i < 3; ++i) {
+      for (size_t j = 0; j < 4; ++j) {
+        Proj_[info_msg_ptr->header.frame_id](i, j) = info_msg_ptr->P[4 * i + j];
+      }
+    }
+
+    info_msg_ptr->P;
+    is_cam_ready_=true;
+  }
+  else
+  {
+    sensor_msgs::Image image_msg = buffer_rgb_.front();
+    image_rgb_pub_.publish(image_msg, buffer_rgb_info_.front(), image_msg.header.stamp);
+    buffer_rgb_info_.pop();
+    buffer_rgb_.pop();
+  }
+
+  // cv_bridge::CvImagePtr image_cv_ptr = rosToImagePtr(image_msg, sensor_msgs::image_encodings::BGR8);
+}
+
+void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
+
+  buffer_pcd_.push(msg);
+  
+  if(!is_tf_ready_) return;
+  else if (width_.find(getCameraFrameId(cam_idx_proj_)+"_bag") != width_.end() && 
+            height_.find(getCameraFrameId(cam_idx_proj_)+"_bag") != height_.end() )
+  {
+    pcl::PointCloud<pcl::PointXYZI> pointcloud = buffer_pcd_.front();
+    cv::Mat depth_img, intensity_img;
+    if (cam_idx_proj_ >= 0)
+      if (projectPointcloud(pointcloud, depth_img, intensity_img))
+        buffer_pcd_.pop();
+      else 
+        ROS_ERROR("Error projecting points");
+    
+    //Publish
+    if(!is_first_pcd_republished_) is_first_pcd_republished_=true;
+  }
+
+}
+
+bool PcdToPng::projectPointcloud(pcl::PointCloud<pcl::PointXYZI>& pcd,
+                                 cv::Mat& depth_img,
+                                 cv::Mat& intensity_img)
+{
+  Eigen::Array3Xd ddd_pts_p;
+  Eigen::RowVectorXd depth_pts;
   Eigen::RowVectorXd intensity_pts;
   Eigen::Matrix3Xd ddd_pts;
 
-  if (parser_.getPointcloudAtEntry(entry, &pointcloud, &ddd_pts, &intensity_pts)) {
-    //Project points and obtain depth/intensity images
-    if (cam_idx_proj_ >= 0)
-      if (parser_.projectPointcloud(cam_idx_proj_, &ddd_pts, &intensity_pts, &depth_img, &intensity_img))
-    
-    
-    // This value is in MICROSECONDS, not nanoseconds.
-    pointcloud.header.stamp = timestamp_ns / 1000;
-    pointcloud.header.frame_id = velodyne_frame_id_;
-    pointcloud_pub_.publish(pointcloud);
-  }
+  Proj_[info_msg_ptr->header.frame_id]
 
+  // Start projection
+  *ddd_pts = T_cam0_lidar_ * ddd_pts->colwise().homogeneous();
+  ddd_pts_p = (camera_calibrations_[cam_idx_proj_]
+    .projection_mat * ddd_pts->colwise().homogeneous()).array();
+  ddd_pts_p.rowwise() /= ddd_pts_p.row(2);
+  depth_pts = ddd_pts->row(2);
+  Eigen::Array<double,1,Eigen::Dynamic> depth_pts_arr = depth_pts.array();
+  depth_pts = depth_pts_arr.round().matrix();
+  *depth_img = cv::Mat::zeros(width, height, CV_16UC1);
+  *intensity_img = cv::Mat::zeros(width, height, CV_16UC1);
+  
+
+  uint inside=0, outside=0, valid=0;
+  int x, y;
+  //iterate depth values
+  for(int i=0; i<depth_pts.cols(); i++)
+  {
+      x = round(ddd_pts_p(0,i));
+      y = round(ddd_pts_p(1,i));
+
+      //consider only points projected within camera sensor
+      if(x<width && x>=0 && y<height && y>=0)
+      {
+          inside +=1;
+          //only positive depth
+          if(depth_pts(0,i)>0)
+          {
+              valid+=1;
+              ushort d = (ushort) depth_pts(0,i);
+              
+              //pixel need update
+              if(depth_img->at<ushort>(y,x) == 0 
+                || depth_img->at<ushort>(y,x) > d)
+              {
+                
+                //exceed established limit (save max)
+                if(d>=pow(2,16)) depth_img->at<ushort>(y,x) 
+                  = pow(2,16)-1;
+                
+                //inside limit (save sensed depth)
+                else if(depth_img->at<ushort>(y,x) == 0) 
+                  depth_img->at<ushort>(y,x) = d;
+                
+                //pixel with value (save the smallest depth)
+                else depth_img->at<ushort>(y,x) = d;
+
+                //Save 16bit intensity
+                intensity_img->at<ushort>(y,x) 
+                  = trunc((*intensity_pts)(0,i) * pow(2,16));
+              }
+          }
+      }
+      else outside+=1;
+  }
   return true;
-}
-
-void PcdToPng::publishTf(uint64_t timestamp_ns,
-                              const Transformation& imu_pose) {
-  ros::Time timestamp_ros;
-  timestampToRos(timestamp_ns, &timestamp_ros);
-  Transformation T_imu_world = imu_pose;
-  Transformation T_vel_imu = parser_.T_vel_imu();
-  Transformation T_cam_imu;
-
-  tf::Transform tf_imu_world, tf_cam_imu, tf_vel_imu;
-
-  transformToTf(T_imu_world, &tf_imu_world);
-  transformToTf(T_vel_imu.inverse(), &tf_vel_imu);
-
-  tf_broadcaster_.sendTransform(tf::StampedTransform(
-      tf_imu_world, timestamp_ros, world_frame_id_, imu_frame_id_));
-  tf_broadcaster_.sendTransform(tf::StampedTransform(
-      tf_vel_imu, timestamp_ros, imu_frame_id_, velodyne_frame_id_));
-
-  for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
-    T_cam_imu = parser_.T_camN_imu(cam_id);
-    transformToTf(T_cam_imu.inverse(), &tf_cam_imu);
-    tf_broadcaster_.sendTransform(tf::StampedTransform(
-        tf_cam_imu, timestamp_ros, imu_frame_id_, getCameraFrameId(cam_id)));
-  }
 }
 
 }  // namespace adapt
@@ -287,11 +321,14 @@ void PcdToPng::publishTf(uint64_t timestamp_ns,
 int main(int argc, char** argv) {
   ros::init(argc, argv, "pcd_to_png");
   ros::NodeHandle nh;
+  ros::NodeHandle nh_private("~");
+  ros::CallbackQueue pub_queue;
+  ros::CallbackQueue sub_queue;
+  nh.setCallbackQueue(&pub_queue);
+  nh_private.setCallbackQueue(&sub_queue);
+
 
   //Declare variables
-  std::string sequence_dir;
-  std::string calibration_file;
-  std::string timestamp_file;
   int cam_idx_proj = -1;
 
   //Parse arguments
@@ -331,8 +368,13 @@ int main(int argc, char** argv) {
   }
 
   //Ready to start
-  adapt::PcdToPng node(nh, cam_idx_proj);
+  adapt::PcdToPng node(nh, nh_private, cam_idx_proj);
   node.startPublishing(50.0);
 
-  ros::spin();
+  ros::AsyncSpinner spinner_sub(3, &sub_queue);
+  ros::AsyncSpinner spinner_pub(1, &pub_queue);
+  spinner_sub.start();
+  spinner_pub.start();
+  ros::waitForShutdown();
+
 }
