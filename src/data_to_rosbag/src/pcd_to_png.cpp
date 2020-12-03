@@ -123,7 +123,7 @@ class PcdToPng {
 
   // Subscribers for the topics.
   ros::Subscriber clock_sub_;
-  ros::Subscriber pointcloud_sub_;
+  ros::Subscriber lidar_sub_;
 
   image_transport::ImageTransport image_transport_sub_;
   image_transport::CameraSubscriber image_rgb_sub_;
@@ -197,7 +197,7 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
   
   // Subcribe to the node_live / rosbag topics
   clock_sub_ = nh_sub_.subscribe(prefix_+"clock", 1, &PcdToPng::rePublishClock, this);
-  pointcloud_sub_ = nh_sub_.subscribe(prefix_+lidar_frame_id_, 1, &PcdToPng::rePublishLidar, this);
+  lidar_sub_ = nh_sub_.subscribe(prefix_+lidar_frame_id_, 1, &PcdToPng::rePublishLidar, this);
   image_rgb_sub_ = image_transport_sub_.subscribeCamera(sub_cam_frame_id, 1, &PcdToPng::rePublishColor, this);
   ROS_INFO("Subscribed for bag topics");
    
@@ -411,8 +411,8 @@ void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
   ddd_pts_p.row(0) /= ddd_pts_p.row(2);
   ddd_pts_p.row(1) /= ddd_pts_p.row(2);
   depth_pts = ddd_pts_h.row(2);
-  depth_img = cv::Mat::zeros(width, height, CV_16UC1);
-  infrared_img = cv::Mat::zeros(width, height, CV_16UC1);
+  depth_img = cv::Mat::zeros(height, width, CV_16UC1);
+  infrared_img = cv::Mat::zeros(height, width, CV_16UC1);
   // tick_high_resolution(start_t, tick, elapsed_process_pcd);
 
   uint inside=0, outside=0, valid=0;
@@ -477,7 +477,6 @@ void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
   cam_calib.image_size << width, height;
   cam_calib.projection_mat = P;
   calibrationToRos(pub_cam_frame_id, cam_calib, &cam_info);
-  
 
   image_depth_msg.header.stamp = timestamp_ros;
   image_depth_msg.header.frame_id = pub_cam_frame_id;
