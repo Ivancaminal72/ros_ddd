@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace adapt {
 
-void calibrationToRos(uint64_t cam_id, const CameraCalibration& cam,
+void calibrationToRos(std::string frame_id, const CameraCalibration& cam,
                       sensor_msgs::CameraInfo* cam_msg);
 void stereoCalibrationToRos(const CameraCalibration& left_cam,
                             const CameraCalibration& right_cam,
@@ -57,6 +57,7 @@ void transformToRos(const Transformation& transform,
 void timestampToRos(uint64_t timestamp_ns, ros::Time* time);
 
 std::string getCameraFrameId(int cam_id);
+std::string getSensorFrameId(std::string frame_id, int cam_id);
 
 }  // namespace kitty
 

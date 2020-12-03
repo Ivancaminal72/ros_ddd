@@ -131,7 +131,8 @@ bool KittirawConverter::convertEntry(uint64_t entry) {
       CameraCalibration cam_calib;
       parser_.getCameraCalibration(cam_id, &cam_calib);
       sensor_msgs::CameraInfo cam_info;
-      calibrationToRos(cam_id, cam_calib, &cam_info);
+      std::string cam_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_id);
+      calibrationToRos(cam_frame_id, cam_calib, &cam_info);
       cam_info.header = image_msg.header;
 
       bag_.write(getCameraFrameId(cam_id) + "/image_raw", timestamp_ros,

@@ -34,15 +34,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace adapt {
 
+std::string getSensorFrameId(std::string frame_id_prefix, int cam_id) {
+  char buffer[20];
+  sprintf(buffer, "%02d", cam_id);
+  return frame_id_prefix + std::string(buffer);
+}
+
 std::string getCameraFrameId(int cam_id) {
   char buffer[20];
   sprintf(buffer, "cam%02d", cam_id);
   return std::string(buffer);
 }
 
-void calibrationToRos(uint64_t cam_id, const CameraCalibration& cam,
+void calibrationToRos(std::string frame_id, const CameraCalibration& cam,
                       sensor_msgs::CameraInfo* cam_msg) {
-  cam_msg->header.frame_id = getCameraFrameId(cam_id);
+  cam_msg->header.frame_id = frame_id;
 
   cam_msg->width = cam.image_size.x();
   cam_msg->height = cam.image_size.y();
@@ -83,22 +89,22 @@ void calibrationToRos(uint64_t cam_id, const CameraCalibration& cam,
   //cam_msg->P[7] = cam.T_cam0_cam.getPosition().y();
 }
 
-void stereoCalibrationToRos(uint64_t left_cam_id, uint64_t right_cam_id,
-                            const CameraCalibration& left_cam,
-                            const CameraCalibration& right_cam,
-                            sensor_msgs::CameraInfo* left_cam_msg,
-                            sensor_msgs::CameraInfo* right_cam_msg) {
-  // Fill in the basics for each camera.
-  calibrationToRos(left_cam_id, left_cam, left_cam_msg);
-  calibrationToRos(right_cam_id, right_cam, right_cam_msg);
+// void stereoCalibrationToRos(uint64_t left_cam_id, uint64_t right_cam_id,
+//                             const CameraCalibration& left_cam,
+//                             const CameraCalibration& right_cam,
+//                             sensor_msgs::CameraInfo* left_cam_msg,
+//                             sensor_msgs::CameraInfo* right_cam_msg) {
+//   // Fill in the basics for each camera.
+//   calibrationToRos(left_cam_id, left_cam, left_cam_msg);
+//   calibrationToRos(right_cam_id, right_cam, right_cam_msg);
 
-  // Since all transforms are given relative to cam0, need to remove the cam0
-  // transform from both to get the relative one between the two (cam0 to cam0
-  // is ostensibly identity anyway).
-  // This is probably not even necessary.
-  // Transformation T_left_cam0 = left_cam.T_cam0_cam.inverse();
-  // Transformation T_left_right = T_left_cam0 * right_cam.T_cam0_cam;
-}
+//   // Since all transforms are given relative to cam0, need to remove the cam0
+//   // transform from both to get the relative one between the two (cam0 to cam0
+//   // is ostensibly identity anyway).
+//   // This is probably not even necessary.
+//   // Transformation T_left_cam0 = left_cam.T_cam0_cam.inverse();
+//   // Transformation T_left_right = T_left_cam0 * right_cam.T_cam0_cam;
+// }
 
 void imageToRos(const cv::Mat& image, sensor_msgs::Image* image_msg) {
   cv_bridge::CvImage image_cv_bridge;
@@ -108,6 +114,8 @@ void imageToRos(const cv::Mat& image, sensor_msgs::Image* image_msg) {
     image_cv_bridge.encoding = "mono8";
   } else if (image.type() == CV_8UC3) {
     image_cv_bridge.encoding = "bgr8";
+  } else if (image.type() == CV_16UC1) {
+    image_cv_bridge.encoding = "mono16";
   }
   image_cv_bridge.toImageMsg(*image_msg);
 }

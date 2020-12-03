@@ -103,10 +103,10 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
       nh_private_(nh_private),
       image_transport_(nh_),
       parser_(sequence_dir, true),
-      world_frame_id_("world_bag"),
-      imu_frame_id_("imu_bag"),
-      cam_frame_id_prefix_("cam"),
-      lidar_frame_id_("lidar_bag"),
+      world_frame_id_("bag_world"),
+      imu_frame_id_("bag_imu"),
+      cam_frame_id_prefix_("bag_cam"),
+      lidar_frame_id_("bag_lidar"),
       current_entry_(0),
       publish_dt_ns_(0),
       current_timestamp_ns_(0) {
@@ -124,9 +124,9 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
   }
 
   // Advertise all the publishing topics for ROS live streaming.
-  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("clock_bag", 1, false);
+  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("bag_clock", 1, false);
   pointcloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
-      "lidar_bag", 10, false);
+      lidar_frame_id_, 10, false);
   // pose_pub_ =
   //     nh_.advertise<geometry_msgs::PoseStamped>("pose_imu", 10, false);
   // transform_pub_ = nh_.advertise<geometry_msgs::TransformStamped>(
@@ -134,7 +134,7 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
 
   for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
     image_pubs_.push_back(
-        image_transport_.advertiseCamera(getCameraFrameId(cam_id) + "_bag", 1, false));
+        image_transport_.advertiseCamera(getSensorFrameId(cam_frame_id_prefix_, cam_id), 1, false));
   }
   ROS_INFO("KittiToPng advertise topics: OK");
 }
@@ -252,10 +252,11 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
       parser_.getCameraCalibration(cam_id, &cam_calib);
       sensor_msgs::CameraInfo cam_info;
       cam_calib.image_size << rgb_img.size().width, rgb_img.size().height;
-      calibrationToRos(cam_id, cam_calib, &cam_info);
+      std::string cam_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_id);
+      calibrationToRos(cam_frame_id, cam_calib, &cam_info);
 
       image_msg.header.stamp = timestamp_ros;
-      image_msg.header.frame_id = getCameraFrameId(cam_id)+"_bag";
+      image_msg.header.frame_id = cam_frame_id;
       cam_info.header = image_msg.header;
 
       image_pubs_[cam_id].publish(image_msg, cam_info, timestamp_ros);
@@ -291,13 +292,23 @@ void KittiToPng::publishTf(uint64_t timestamp_ns) {
 
   tf::Transform tf_cam_lidar;
   static tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
-  geometry_msgs::TransformStamped Ts_cam0_lidar = parser_.Ts_cam0_lidar();
+  // geometry_msgs::TransformStamped Ts_cam0_lidar = parser_.Ts_cam0_lidar();
+  geometry_msgs::TransformStamped Ts_cam_lidar = parser_.Ts_cam0_lidar();
   
-  Ts_cam0_lidar.header.stamp = timestamp_ros;
-  Ts_cam0_lidar.header.frame_id = lidar_frame_id_;
-  Ts_cam0_lidar.child_frame_id = getCameraFrameId(0)+"_bag";
-  Ts_cam0_lidar.transform = Ts_cam0_lidar.transform;
-  static_tf_broadcaster.sendTransform(Ts_cam0_lidar);
+  // Ts_cam0_lidar.header.stamp = timestamp_ros;
+  // Ts_cam0_lidar.header.frame_id = lidar_frame_id_;
+  // Ts_cam0_lidar.child_frame_id = "bag_"+getCameraFrameId(0);
+  // Ts_cam0_lidar.transform = Ts_cam0_lidar.transform;
+  // static_tf_broadcaster.sendTransform(Ts_cam0_lidar);
+
+  for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) 
+  {
+  Ts_cam_lidar.header.stamp = timestamp_ros;
+  Ts_cam_lidar.header.frame_id = lidar_frame_id_;
+  Ts_cam_lidar.child_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_id);
+  static_tf_broadcaster.sendTransform(Ts_cam_lidar);
+  }
+
 }
 
 // void KittiToPng::publishTfGroundTruth(uint64_t timestamp_ns,
