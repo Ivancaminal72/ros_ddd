@@ -108,7 +108,7 @@ class PcdToPng {
                                 int height,
                                 const Eigen::Affine3d T,
                                 const Eigen::Matrix<double, 3, 4> P,
-                                std::string cam_frame_id,
+                                std::string pub_cam_frame_id,
                                 std::string lidar_frame_id,
                                 ros::Publisher& lidar_pub,
                                 image_transport::CameraPublisher& image_depth_pub,
@@ -329,15 +329,15 @@ void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
   {    
     pcl::PointCloud<pcl::PointXYZI> pointcloud = buffer_pcd_.front();
     buffer_pcd_.pop();
+    int width = width_[sub_cam_frame_id];
+    int height = height_[sub_cam_frame_id];
     std::string pub_cam_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
-    int width = width_[pub_cam_frame_id];
-    int height = height_[pub_cam_frame_id];
     std::thread th(projectAndPublish, 
                   pointcloud, 
-                  width_[pub_cam_frame_id],
-                  height_[pub_cam_frame_id],
+                  width_[sub_cam_frame_id],
+                  height_[sub_cam_frame_id],
                   T_cam0_lidar_,
-                  Proj_[pub_cam_frame_id],
+                  Proj_[sub_cam_frame_id],
                   pub_cam_frame_id,
                   lidar_frame_id_,
                   std::ref(lidar_pub_),
@@ -347,10 +347,10 @@ void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
     th.detach();
 
     // projectAndPublish(pointcloud, 
-    //                   width_[pub_cam_frame_id],
-    //                   height_[pub_cam_frame_id],
+    //                   width_[sub_cam_frame_id],
+    //                   height_[sub_cam_frame_id],
     //                   T_cam0_lidar_,
-    //                   Proj_[pub_cam_frame_id],
+    //                   Proj_[sub_cam_frame_id],
     //                   pub_cam_frame_id,
     //                   lidar_frame_id_,
     //                   lidar_pub_,
@@ -358,6 +358,9 @@ void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
     //                   image_infrared_pub_,
     //                   is_first_pcd_republished_);
 
+    pcds_republished_++;
+    std::cout<<"Pcd republished: "<<pcds_republished_<<std::endl;
+    
     // tick_high_resolution(start_t, tick, elapsed_callback);
     // printElapsed(elapsed_callback, "Callback total");
     // std::cout<<std::endl;
@@ -369,7 +372,7 @@ void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
                                  int height,
                                  Eigen::Affine3d T,
                                  Eigen::Matrix<double, 3, 4> P,
-                                 std::string cam_frame_id,
+                                 std::string pub_cam_frame_id,
                                  std::string lidar_frame_id,
                                  ros::Publisher& lidar_pub,
                                  image_transport::CameraPublisher& image_depth_pub,
@@ -473,23 +476,21 @@ void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
   sensor_msgs::CameraInfo cam_info;
   cam_calib.image_size << width, height;
   cam_calib.projection_mat = P;
-  calibrationToRos(cam_frame_id, cam_calib, &cam_info);
+  calibrationToRos(pub_cam_frame_id, cam_calib, &cam_info);
+  
 
   image_depth_msg.header.stamp = timestamp_ros;
-  image_depth_msg.header.frame_id = cam_frame_id;
+  image_depth_msg.header.frame_id = pub_cam_frame_id;
   cam_info.header = image_depth_msg.header;
 
   image_infrared_msg.header.stamp = timestamp_ros;
-  image_infrared_msg.header.frame_id = cam_frame_id;
+  image_infrared_msg.header.frame_id = pub_cam_frame_id;
   cam_info.header = image_infrared_msg.header;
   
   mtx.lock();
   image_depth_pub.publish(image_depth_msg, cam_info, timestamp_ros);
   image_infrared_pub.publish(image_infrared_msg, cam_info, timestamp_ros);
   mtx.unlock();
-
-  // pcds_republished_++;
-  // std::cout<<"Pcd republished: "<<pcds_republished_<<std::endl;
 
   if(!is_first_pcd_republished) is_first_pcd_republished=true;
 
