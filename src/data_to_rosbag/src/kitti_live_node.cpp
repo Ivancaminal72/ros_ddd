@@ -103,10 +103,10 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
       nh_private_(nh_private),
       image_transport_(nh_),
       parser_(sequence_dir, true),
-      world_frame_id_("bag_world"),
-      imu_frame_id_("bag_imu"),
-      cam_frame_id_prefix_("bag_cam"),
-      lidar_frame_id_("bag_lidar"),
+      world_frame_id_("bag/world"),
+      imu_frame_id_("bag/imu"),
+      cam_frame_id_prefix_("bag/cam"),
+      lidar_frame_id_("bag/lidar"),
       current_entry_(0),
       publish_dt_ns_(0),
       current_timestamp_ns_(0) {
@@ -124,7 +124,7 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
   }
 
   // Advertise all the publishing topics for ROS live streaming.
-  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("bag_clock", 1, false);
+  clock_pub_ = nh_.advertise<rosgraph_msgs::Clock>("bag/clock", 1, false);
   pointcloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
       lidar_frame_id_, 10, false);
   // pose_pub_ =
@@ -137,6 +137,8 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
         image_transport_.advertiseCamera(getSensorFrameId(cam_frame_id_prefix_, cam_id), 1, false));
   }
   ROS_INFO("KittiToPng advertise topics: OK");
+
+  sleep(1); //Delay to allow subscribers to stablish connections
 }
 
 
@@ -190,14 +192,19 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   if (next_entry_timestamp_ns_ <= current_timestamp_ns_) 
   {
     std::cout << "Current entry: " << current_entry_ << std::endl;
-    if (!publishEntry(current_entry_, current_timestamp_ns_)) 
+    if (!publishEntry(current_entry_, next_entry_timestamp_ns_)) 
     {
       publish_timer_.stop();
       return;
     }
     current_entry_++;
     if(!parser_.loadNextTimestamp(fin_time_, next_entry_timestamp_ns_))
-            exit(0);
+    {
+      publish_timer_.stop();
+      // sleep(1); //Send last queued messages...
+      // exit(0);
+    }
+            
   }
 }
 
@@ -241,7 +248,8 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
 
   // Read images.
   cv::Mat rgb_img;
-  for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) {
+  // for (size_t cam_id = 0; cam_id < parser_.getNumCameras(); ++cam_id) { // WARN subscriber may mix camera info mesages...
+  for (size_t cam_id = 2; cam_id < 3; ++cam_id) {
     if (parser_.getImageAtEntry(entry, cam_id, &rgb_img)) {
       sensor_msgs::Image image_msg;
       imageToRos(rgb_img, &image_msg);
@@ -276,8 +284,9 @@ bool KittiToPng::publishEntry(uint64_t entry, uint64_t timestamp_ns) {
     //   if (parser_.projectPointcloud(cam_idx_proj_, &ddd_pts, &intensity_pts, &depth_img, &intensity_img))
     
     
-    // This value is in MICROSECONDS, not nanoseconds.
-    pointcloud.header.stamp = timestamp_ns / 1000;
+    // // This value should be in MICROSECONDS, not nanoseconds.
+    // pointcloud.header.stamp = timestamp_ns / 1000;
+    pointcloud.header.stamp = timestamp_ns;
     pointcloud.header.frame_id = lidar_frame_id_;
     pointcloud_pub_.publish(pointcloud);
   }
@@ -297,7 +306,7 @@ void KittiToPng::publishTf(uint64_t timestamp_ns) {
   
   // Ts_cam0_lidar.header.stamp = timestamp_ros;
   // Ts_cam0_lidar.header.frame_id = lidar_frame_id_;
-  // Ts_cam0_lidar.child_frame_id = "bag_"+getCameraFrameId(0);
+  // Ts_cam0_lidar.child_frame_id = "bag/"+getCameraFrameId(0);
   // Ts_cam0_lidar.transform = Ts_cam0_lidar.transform;
   // static_tf_broadcaster.sendTransform(Ts_cam0_lidar);
 

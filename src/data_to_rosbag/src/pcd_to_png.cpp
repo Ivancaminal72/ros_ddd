@@ -82,11 +82,18 @@ void tick_high_resolution(const std::chrono::high_resolution_clock::time_point& 
     elapsed_vec.push_back(elapsed);
 }
 
+uint64_t get_unsigned_difference(uint64_t first, uint64_t second) {
+    uint64_t abs_diff = (first > second) ? (first - second) : (second - first);
+    assert(abs_diff<=INT64_MAX);
+    return abs_diff;
+}
+
 namespace po = boost::program_options;
 
 //Constants
 const uint kPow2_16= pow(2,16);
 const uint kPow2_16_Minus1= pow(2,16)-1;
+const double depthScale = pow(2,16)/120;
 
 namespace adapt {
 
@@ -97,23 +104,28 @@ class PcdToPng {
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
-  void start();
-  void rePublishClock(const rosgraph_msgs::Clock &msg);
+  void startRePublishing(double rate_hz);
+  void timerCallback(const ros::WallTimerEvent& event);
+  bool loadNextSyncTimestamp();
+  void publishClock(uint64_t timestamp_ns);
+  bool rePublishEntry();
   void rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg);
   void rePublishColor(const sensor_msgs::ImageConstPtr& image_msg,
                       const sensor_msgs::CameraInfoConstPtr& info_msg);
 
-  static void projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
+  static void processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
                                 int width,
                                 int height,
                                 const Eigen::Affine3d T,
                                 const Eigen::Matrix<double, 3, 4> P,
                                 std::string pub_cam_frame_id,
                                 std::string lidar_frame_id,
-                                ros::Publisher& lidar_pub,
-                                image_transport::CameraPublisher& image_depth_pub,
-                                image_transport::CameraPublisher& image_infrared_pub,
-                                bool& is_first_pcd_republished);
+                                std::queue<pcl::PointCloud<pcl::PointXYZI>>& buffer_pcd_pub,
+                                std::queue<sensor_msgs::Image>& buffer_depth_pub,
+                                std::queue<sensor_msgs::CameraInfo>& buffer_depth_info_pub,
+                                std::queue<sensor_msgs::Image>& buffer_infrared_pub,
+                                std::queue<sensor_msgs::CameraInfo>& buffer_infrared_info_pub, 
+                                bool& is_first_pcd_processed);
 
  private:
 
@@ -140,8 +152,7 @@ class PcdToPng {
   image_transport::CameraPublisher image_depth_pub_;
   // std::vector<image_transport::CameraPublisher> image_pubs_;
 
-  // Decides the rate of publishing (TF is published at this rate).
-  // Call startPublishing() to turn this on.
+  ros::WallTimer publish_timer_;
 
   std::string world_frame_id_;
   std::string imu_frame_id_;
@@ -151,14 +162,20 @@ class PcdToPng {
   uint64_t current_entry_;
   uint64_t publish_dt_ns_;
   uint64_t current_timestamp_ns_;
+  uint64_t next_entry_timestamp_ns_;
 
-  std::queue<rosgraph_msgs::Clock> buffer_clock_;
-  std::queue<pcl::PointCloud<pcl::PointXYZI>> buffer_pcd_;
-  std::queue<sensor_msgs::Image> buffer_rgb_;
-  std::queue<sensor_msgs::CameraInfo> buffer_rgb_info_;
+  // std::queue<rosgraph_msgs::Clock> buffer_clock_;
+  std::queue<pcl::PointCloud<pcl::PointXYZI>> buffer_pcd_sub_;
+  std::queue<pcl::PointCloud<pcl::PointXYZI>> buffer_pcd_pub_;
+  std::queue<sensor_msgs::Image> buffer_rgb_pub_;
+  std::queue<sensor_msgs::CameraInfo> buffer_rgb_info_pub_;
+  std::queue<sensor_msgs::Image> buffer_depth_pub_;
+  std::queue<sensor_msgs::CameraInfo> buffer_depth_info_pub_;
+  std::queue<sensor_msgs::Image> buffer_infrared_pub_;
+  std::queue<sensor_msgs::CameraInfo> buffer_infrared_info_pub_;
   
   //Adaptation
-  std::string prefix_ = "bag_";
+  std::string prefix_ = "bag/";
   int cam_idx_proj_;
   std::map<std::string, int> width_;
   std::map<std::string, int> height_;
@@ -168,8 +185,9 @@ class PcdToPng {
   
   //Management
   bool is_tf_ready_;
-  bool is_first_pcd_republished_;
-  int pcds_republished_=0;
+  bool is_first_pcd_processed_;
+  int pcds_processed_=0;
+  const uint64_t kMaxMessageDesync = 1*1e9;
 
 };
 
@@ -190,15 +208,14 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
       current_timestamp_ns_(0),
       cam_idx_proj_(cam_idx_proj),
       is_tf_ready_(false),
-      is_first_pcd_republished_(false){
+      is_first_pcd_processed_(false){
 
   std::string sub_cam_frame_id = getSensorFrameId(prefix_+cam_frame_id_prefix_, cam_idx_proj_);
   std::string pub_cam_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
   
   // Subcribe to the node_live / rosbag topics
-  clock_sub_ = nh_sub_.subscribe(prefix_+"clock", 1, &PcdToPng::rePublishClock, this);
-  lidar_sub_ = nh_sub_.subscribe(prefix_+lidar_frame_id_, 1, &PcdToPng::rePublishLidar, this);
-  image_rgb_sub_ = image_transport_sub_.subscribeCamera(sub_cam_frame_id, 1, &PcdToPng::rePublishColor, this);
+  lidar_sub_ = nh_sub_.subscribe(prefix_+lidar_frame_id_, 20, &PcdToPng::rePublishLidar, this);
+  image_rgb_sub_ = image_transport_sub_.subscribeCamera(sub_cam_frame_id, 16, &PcdToPng::rePublishColor, this);
   ROS_INFO("Subscribed for bag topics");
    
   // Advertise all the publishing topics for ROS live streaming.
@@ -208,15 +225,14 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
   image_rgb_pub_ = image_transport_pub_.advertiseCamera(pub_cam_frame_id, 1);
   image_infrared_pub_ = image_transport_pub_.advertiseCamera(pub_cam_frame_id + "_infrared",1);
   image_depth_pub_ = image_transport_pub_.advertiseCamera(pub_cam_frame_id + "_depth",1);
+  image_depth_pub_.getInfoTopic();
   ROS_INFO("Advertized publishing topics");
   
   //     nh_pub_.advertise<geometry_msgs::PoseStamped>("pose_imu", 10, false);
   // transform_pub_ = nh_pub_.advertise<geometry_msgs::TransformStamped>(
   //     "transform_imu", 10, false);
-}
 
-void PcdToPng::start() {
-  
+  //Get transformation
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener transform_listener(tf_buffer);
   
@@ -238,8 +254,6 @@ void PcdToPng::start() {
     static tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
     
     //Publish identity T_cam_lidar 
-    Ts_cam_lidar.header.frame_id = lidar_frame_id_;
-    Ts_cam_lidar.child_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
     Ts_cam_lidar.transform.rotation.x=0;
     Ts_cam_lidar.transform.rotation.y=0;
     Ts_cam_lidar.transform.rotation.z=0;
@@ -247,6 +261,14 @@ void PcdToPng::start() {
     Ts_cam_lidar.transform.translation.x=0;
     Ts_cam_lidar.transform.translation.y=0;
     Ts_cam_lidar.transform.translation.z=0;
+    Ts_cam_lidar.header.frame_id = lidar_frame_id_;
+    Ts_cam_lidar.child_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
+    static_tf_broadcaster.sendTransform(Ts_cam_lidar);
+
+    Ts_cam_lidar.child_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_) + "_depth";
+    static_tf_broadcaster.sendTransform(Ts_cam_lidar);
+
+    Ts_cam_lidar.child_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_) + "_infrared";
     static_tf_broadcaster.sendTransform(Ts_cam_lidar);
 
     is_tf_ready_=true;
@@ -254,22 +276,154 @@ void PcdToPng::start() {
   }
 }
 
-void PcdToPng::rePublishClock(const rosgraph_msgs::Clock &msg) {
-  
-  buffer_clock_.push(msg);
-  
-  if(!is_first_pcd_republished_) return;
-  else
+void PcdToPng::startRePublishing(double rate_hz) 
+{
+  while (is_first_pcd_processed_ == false)
   {
-    clock_pub_.publish(buffer_clock_.front());
-    buffer_clock_.pop();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if(!nh_sub_.ok()) exit(1);
   }
   
+  while (loadNextSyncTimestamp() == false)
+  {
+    uint64_t difference = get_unsigned_difference(0, current_timestamp_ns_);
+    if (difference >= kMaxMessageDesync)
+    {
+      ROS_ERROR("Max message desync achieved");
+      exit(1);
+    }
+    double publish_dt_sec = 1.0 / rate_hz;
+    publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    current_timestamp_ns_ += 100e6;
+    if(!nh_sub_.ok()) exit(1);
+  }
+
+
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Delay to account for processing time differences
+
+
+
+
+  //Start republishing
+  double publish_dt_sec = 1.0 / rate_hz;
+  publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);  
+  current_timestamp_ns_=0;
+  // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
+  publish_timer_ = nh_pub_.createWallTimer(ros::WallDuration(publish_dt_sec),
+                                       &PcdToPng::timerCallback, this);  
+}
+
+void PcdToPng::timerCallback(const ros::WallTimerEvent& event) 
+{
+  // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
+  current_timestamp_ns_ += publish_dt_ns_;
+  publishClock(current_timestamp_ns_);
+  std::cout<<"Next: " << next_entry_timestamp_ns_<<std::endl;
+  std::cout<<"Curr: " <<current_timestamp_ns_<<std::endl;
+  uint64_t difference = get_unsigned_difference(next_entry_timestamp_ns_, current_timestamp_ns_);
+
+  if (difference >= kMaxMessageDesync)
+  {
+    std::cout<<"Diff: " <<difference<<std::endl;
+    ROS_ERROR("Max message desync achieved");
+    exit(1);
+  }
+  else if(!loadNextSyncTimestamp()) return;
+  else if (next_entry_timestamp_ns_ <= current_timestamp_ns_) 
+  {
+    std::cout << "Current entry: " << current_entry_ << std::endl;
+    if (!rePublishEntry()) 
+    {
+      ROS_ERROR("Could not republish entry");
+      exit(1);
+      return;
+    }
+    current_entry_++;
+  }
+}
+
+bool PcdToPng::loadNextSyncTimestamp()
+{
+  mtx.lock();
+  // // This value should be in MICROSECONDS, not nanoseconds.
+  // next_entry_timestamp_ns_ = buffer_pcd_pub_.front().header.stamp * 1000;
+  next_entry_timestamp_ns_ = buffer_pcd_pub_.front().header.stamp;
+  uint64_t b_rgb = (uint64_t) buffer_rgb_pub_.front().header.stamp.toNSec();
+  uint64_t b_rgb_info = (uint64_t) buffer_rgb_info_pub_.front().header.stamp.toNSec();
+  uint64_t b_depth = (uint64_t) buffer_depth_pub_.front().header.stamp.toNSec();
+  uint64_t b_depth_info = (uint64_t) buffer_depth_info_pub_.front().header.stamp.toNSec();
+  uint64_t b_infrared = (uint64_t) buffer_infrared_pub_.front().header.stamp.toNSec();
+  uint64_t b_infrared_info = (uint64_t) buffer_infrared_info_pub_.front().header.stamp.toNSec();
+  mtx.unlock();
+  
+  std::cout << std::setprecision (17)
+            <<"1: " << next_entry_timestamp_ns_ <<std::endl
+            <<"2: " << b_rgb <<std::endl
+            <<"3: " << b_rgb_info <<std::endl
+            <<"4: " << b_depth <<std::endl
+            <<"5: " << b_depth_info <<std::endl
+            <<"6: " << b_infrared <<std::endl
+            <<"7: " << b_infrared_info <<std::endl;
+  if (next_entry_timestamp_ns_ != b_rgb ||    
+      next_entry_timestamp_ns_ != b_rgb_info ||
+      next_entry_timestamp_ns_ != b_depth ||
+      next_entry_timestamp_ns_ != b_depth_info ||
+      next_entry_timestamp_ns_ != b_infrared ||
+      next_entry_timestamp_ns_ != b_infrared_info)
+      return false;
+      
+  else return true;
+}
+
+void PcdToPng::publishClock(uint64_t timestamp_ns) 
+{
+  ros::Time timestamp_ros;
+  timestampToRos(timestamp_ns, &timestamp_ros);
+  rosgraph_msgs::Clock clock_time;
+  clock_time.clock = timestamp_ros;
+  clock_pub_.publish(clock_time);
+}
+
+bool PcdToPng::rePublishEntry() 
+{
+  //Get messages
+  auto msg_pcd = buffer_pcd_pub_.front();
+  auto msg_rgb = buffer_rgb_pub_.front();
+  auto msg_rgb_info = buffer_rgb_info_pub_.front();
+  auto msg_depth = buffer_depth_pub_.front();
+  auto msg_depth_info = buffer_depth_info_pub_.front();
+  auto msg_infrared = buffer_infrared_pub_.front();
+  auto msg_infrared_info = buffer_infrared_info_pub_.front();
+  
+  //Modifications
+  msg_rgb.header.frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
+  msg_rgb_info.header.frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
+  
+  //Publish messages
+  lidar_pub_.publish(msg_pcd);
+  image_rgb_pub_.publish(msg_rgb, msg_rgb_info, msg_rgb.header.stamp);
+  image_depth_pub_.publish(msg_depth, msg_depth_info, msg_depth.header.stamp);
+  image_infrared_pub_.publish(msg_infrared, msg_infrared_info, msg_depth.header.stamp);
+
+  //Delete published messages from queues
+  mtx.lock();
+  buffer_pcd_pub_.pop();
+  buffer_rgb_pub_.pop();
+  buffer_rgb_info_pub_.pop();
+  buffer_depth_pub_.pop();
+  buffer_depth_info_pub_.pop();
+  buffer_infrared_pub_.pop();
+  buffer_infrared_info_pub_.pop();
+  mtx.unlock();
+
+  return true;
 }
 
 void PcdToPng::rePublishColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
                               const sensor_msgs::CameraInfoConstPtr& info_msg_ptr) {                              
-  
+  std::cout<<"COOOLOR INSIDE"<<std::endl;
   // //Start chrono ticking
   // std::chrono::duration<double> tick;
   // std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -277,8 +431,16 @@ void PcdToPng::rePublishColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
   // end_t = std::chrono::high_resolution_clock::now();
   // tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);                               
   
-  buffer_rgb_.push(*image_msg_ptr);
-  buffer_rgb_info_.push(*info_msg_ptr);
+  if(info_msg_ptr->header.frame_id != getSensorFrameId(prefix_+cam_frame_id_prefix_, cam_idx_proj_))
+  {
+    ROS_ERROR("Camera and info id not equal when processing callback");
+    exit(1);
+  }
+  else
+  {
+    buffer_rgb_pub_.push(*image_msg_ptr);
+    buffer_rgb_info_pub_.push(*info_msg_ptr);    
+  }
 
   if (width_.find(info_msg_ptr->header.frame_id) == width_.end())
   {
@@ -290,18 +452,9 @@ void PcdToPng::rePublishColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
         Proj_[info_msg_ptr->header.frame_id](i, j) = info_msg_ptr->P[4 * i + j];
       }
     }
+  }
 
-    info_msg_ptr->P;
-  }
-  else if(!is_first_pcd_republished_) return;
-  else
-  {
-    sensor_msgs::Image image_msg = buffer_rgb_.front();
-    image_msg.header.frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
-    image_rgb_pub_.publish(image_msg, buffer_rgb_info_.front(), image_msg.header.stamp);
-    buffer_rgb_info_.pop();
-    buffer_rgb_.pop();
-  }
+  std::cout<<"Color processed: "<<image_msg_ptr->header.stamp.toNSec()<<std::endl;
 
   // tick_high_resolution(start_t, tick, elapsed_callback_color);
   // printElapsed(elapsed_callback_color, "rePublishColor total");
@@ -311,6 +464,7 @@ void PcdToPng::rePublishColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
 }
 
 void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
+  std::cout<<"STAMPCD INSIDE"<<std::endl;
 
   // //Start chrono ticking
   // std::chrono::duration<double> tick;
@@ -319,20 +473,19 @@ void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
   // end_t = std::chrono::high_resolution_clock::now();
   // tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
-  buffer_pcd_.push(msg);
+  buffer_pcd_sub_.push(msg);
   std::string sub_cam_frame_id = getSensorFrameId(prefix_+cam_frame_id_prefix_, cam_idx_proj_);
   
   if(!is_tf_ready_) return;
-  else if (width_.find(sub_cam_frame_id) != width_.end() && 
-            height_.find(sub_cam_frame_id) != height_.end() &&
-              Proj_.find(sub_cam_frame_id) != Proj_.end())
+  else if (width_.find(sub_cam_frame_id) == width_.end() && 
+            height_.find(sub_cam_frame_id) == height_.end() &&
+              Proj_.find(sub_cam_frame_id) == Proj_.end()) return;
+  else
   {    
-    pcl::PointCloud<pcl::PointXYZI> pointcloud = buffer_pcd_.front();
-    buffer_pcd_.pop();
-    int width = width_[sub_cam_frame_id];
-    int height = height_[sub_cam_frame_id];
     std::string pub_cam_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
-    std::thread th(projectAndPublish, 
+    pcl::PointCloud<pcl::PointXYZI> pointcloud = buffer_pcd_sub_.front();
+    buffer_pcd_sub_.pop();
+    std::thread th(processPcd, 
                   pointcloud, 
                   width_[sub_cam_frame_id],
                   height_[sub_cam_frame_id],
@@ -340,13 +493,18 @@ void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
                   Proj_[sub_cam_frame_id],
                   pub_cam_frame_id,
                   lidar_frame_id_,
-                  std::ref(lidar_pub_),
-                  std::ref(image_depth_pub_),
-                  std::ref(image_infrared_pub_),
-                  std::ref(is_first_pcd_republished_));
+                  std::ref(buffer_pcd_pub_),
+                  std::ref(buffer_depth_pub_),
+                  std::ref(buffer_depth_info_pub_),
+                  std::ref(buffer_infrared_pub_),
+                  std::ref(buffer_infrared_info_pub_),
+                  std::ref(is_first_pcd_processed_));
+    width_.erase(sub_cam_frame_id);
+    height_.erase(sub_cam_frame_id);
+    Proj_.erase(sub_cam_frame_id);
     th.detach();
 
-    // projectAndPublish(pointcloud, 
+    // processPcd(pointcloud, 
     //                   width_[sub_cam_frame_id],
     //                   height_[sub_cam_frame_id],
     //                   T_cam0_lidar_,
@@ -356,10 +514,11 @@ void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
     //                   lidar_pub_,
     //                   image_depth_pub_,
     //                   image_infrared_pub_,
-    //                   is_first_pcd_republished_);
+    //                   is_first_pcd_processed_);
 
-    pcds_republished_++;
-    std::cout<<"Pcd republished: "<<pcds_republished_<<std::endl;
+    std::cout<<"STAMPCD: "<< std::setprecision (17) <<pointcloud.header.stamp<<std::endl;
+    std::cout<<"Pcd processed: "<<pcds_processed_<<std::endl;
+    pcds_processed_++;
     
     // tick_high_resolution(start_t, tick, elapsed_callback);
     // printElapsed(elapsed_callback, "Callback total");
@@ -367,17 +526,19 @@ void PcdToPng::rePublishLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
   }
 }
 
-void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
+void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
                                  int width,
                                  int height,
                                  Eigen::Affine3d T,
                                  Eigen::Matrix<double, 3, 4> P,
                                  std::string pub_cam_frame_id,
                                  std::string lidar_frame_id,
-                                 ros::Publisher& lidar_pub,
-                                 image_transport::CameraPublisher& image_depth_pub,
-                                 image_transport::CameraPublisher& image_infrared_pub,
-                                 bool& is_first_pcd_republished)
+                                 std::queue<pcl::PointCloud<pcl::PointXYZI>>& buffer_pcd_pub,
+                                 std::queue<sensor_msgs::Image>& buffer_depth_pub,
+                                 std::queue<sensor_msgs::CameraInfo>& buffer_depth_info_pub,
+                                 std::queue<sensor_msgs::Image>& buffer_infrared_pub,
+                                 std::queue<sensor_msgs::CameraInfo>& buffer_infrared_info_pub,                                 
+                                 bool& is_first_pcd_processed)
 {
   // //Start chrono ticking
   // std::chrono::duration<double> tick;
@@ -411,6 +572,7 @@ void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
   ddd_pts_p.row(0) /= ddd_pts_p.row(2);
   ddd_pts_p.row(1) /= ddd_pts_p.row(2);
   depth_pts = ddd_pts_h.row(2);
+  depth_pts = depth_pts*depthScale;
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
   infrared_img = cv::Mat::zeros(height, width, CV_16UC1);
   // tick_high_resolution(start_t, tick, elapsed_process_pcd);
@@ -457,15 +619,15 @@ void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
   }
   // tick_high_resolution(start_t, tick, elapsed_depth_store);
 
-  //Publish projected pointcloud
+  //Enqueue translated pointcloud messages
   pcd.header.frame_id = lidar_frame_id;
   mtx.lock();
-  lidar_pub.publish(pcd);
+  buffer_pcd_pub.push(pcd);
   mtx.unlock();      
 
-  //Publish depth/infrared images
+  //Enqueue depth/infrared image messages
   ros::Time timestamp_ros;
-  timestampToRos(pcd.header.stamp * 1000, &timestamp_ros);
+  timestampToRos(pcd.header.stamp, &timestamp_ros);
 
   sensor_msgs::Image image_depth_msg;
   sensor_msgs::Image image_infrared_msg;
@@ -479,19 +641,24 @@ void PcdToPng::projectAndPublish(pcl::PointCloud<pcl::PointXYZI> pcd,
   calibrationToRos(pub_cam_frame_id, cam_calib, &cam_info);
 
   image_depth_msg.header.stamp = timestamp_ros;
-  image_depth_msg.header.frame_id = pub_cam_frame_id;
+  image_depth_msg.header.frame_id = pub_cam_frame_id + "_depth";
   cam_info.header = image_depth_msg.header;
 
+  mtx.lock();
+  buffer_depth_pub.push(image_depth_msg);
+  buffer_depth_info_pub.push(cam_info);
+  mtx.unlock();
+
   image_infrared_msg.header.stamp = timestamp_ros;
-  image_infrared_msg.header.frame_id = pub_cam_frame_id;
+  image_infrared_msg.header.frame_id = pub_cam_frame_id + "_infrared";
   cam_info.header = image_infrared_msg.header;
   
   mtx.lock();
-  image_depth_pub.publish(image_depth_msg, cam_info, timestamp_ros);
-  image_infrared_pub.publish(image_infrared_msg, cam_info, timestamp_ros);
+  buffer_infrared_pub.push(image_infrared_msg);
+  buffer_infrared_info_pub.push(cam_info);
   mtx.unlock();
 
-  if(!is_first_pcd_republished) is_first_pcd_republished=true;
+  if(!is_first_pcd_processed) is_first_pcd_processed=true;
 
   // printElapsed(elapsed_load_pcd, "Load pcd");
   // printElapsed(elapsed_process_pcd, "Projection");
@@ -552,12 +719,46 @@ int main(int argc, char** argv) {
   nh_sub.setCallbackQueue(&sub_queue);
   nh_pub.setCallbackQueue(&pub_queue);
   adapt::PcdToPng node(nh_sub, nh_pub, nh_private, cam_idx_proj);
-  node.start();
 
   ros::AsyncSpinner spinner_sub(2, &sub_queue);
   ros::AsyncSpinner spinner_pub(1, &pub_queue);
   spinner_sub.start();
   spinner_pub.start();
-  ros::waitForShutdown();
+  node.startRePublishing(50.0);
 
+  // bool enable_sub = true;
+  // bool trigger_sub = true;
+
+  // // Loop with 100 Hz rate
+  // ros::Rate loop_rate(100);
+  // while (ros::ok())
+  // {
+  //   // Enable state changed
+  //   if (trigger_sub)
+  //   {
+  //     if (enable_sub)
+  //     {
+  //       // Clear old callback from the queue
+  //       sub_queue.clear();
+  //       // Start the spinner
+  //       spinner_sub.start();
+  //       ROS_INFO("Spinner enabled");
+  //     }
+  //     else
+  //     {
+  //       // Stop the spinner
+  //       spinner_sub.stop();
+  //       ROS_INFO("Spinner disabled");
+  //     }
+  //     // Reset trigger
+  //     trigger_sub = false;
+  //   }
+
+  //   // Process messages on global callback queue
+  //   sub_queue.callOne(ros::WallDuration());
+  //   loop_rate.sleep();
+  // }
+
+  // Wait for ROS threads to terminate
+  ros::waitForShutdown();
 }
