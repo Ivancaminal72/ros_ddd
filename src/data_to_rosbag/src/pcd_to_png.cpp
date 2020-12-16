@@ -320,8 +320,6 @@ void PcdToPng::timerCallback(const ros::WallTimerEvent& event)
   // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
   current_timestamp_ns_ += publish_dt_ns_;
   publishClock(current_timestamp_ns_);
-  std::cout<<"Next: " << next_entry_timestamp_ns_<<std::endl;
-  std::cout<<"Curr: " <<current_timestamp_ns_<<std::endl;
   uint64_t difference = get_unsigned_difference(next_entry_timestamp_ns_, current_timestamp_ns_);
 
   if (difference >= kMaxMessageDesync)
@@ -342,6 +340,12 @@ void PcdToPng::timerCallback(const ros::WallTimerEvent& event)
     }
     current_entry_++;
   }
+  else
+  {
+    std::cout<<"Next: "<< next_entry_timestamp_ns_<<std::endl;
+    std::cout<<"Curr: "<< current_timestamp_ns_<<std::endl;
+  }
+  
 }
 
 bool PcdToPng::loadNextSyncTimestamp()
@@ -358,7 +362,7 @@ bool PcdToPng::loadNextSyncTimestamp()
   uint64_t b_infrared_info = (uint64_t) buffer_infrared_info_pub_.front().header.stamp.toNSec();
   mtx.unlock();
   
-  std::cout << std::setprecision (17)
+  std::cout <<std::endl<< std::setprecision (17)
             <<"1: " << next_entry_timestamp_ns_ <<std::endl
             <<"2: " << b_rgb <<std::endl
             <<"3: " << b_rgb_info <<std::endl
