@@ -116,6 +116,8 @@ void imageToRos(const cv::Mat& image, sensor_msgs::Image* image_msg) {
     image_cv_bridge.encoding = "bgr8";
   } else if (image.type() == CV_16UC1) {
     image_cv_bridge.encoding = "mono16";
+  } else if (image.type() == CV_32FC1) {
+    image_cv_bridge.encoding = "32FC1";
   }
   image_cv_bridge.toImageMsg(*image_msg);
 }
