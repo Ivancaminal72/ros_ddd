@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "rtabmap_ros/Info.h"
 #include "rtabmap_ros/MapData.h"
 #include "rtabmap_ros/MapGraph.h"
+#include "rtabmap_ros/GetTrajectory.h"
 #include "rtabmap_ros/GetMap.h"
 #include "rtabmap_ros/PublishMap.h"
 #include "rtabmap_ros/Path.h"
@@ -559,6 +560,7 @@ void CoreWrapper::onInit()
 	backupDatabase_ = nh.advertiseService("backup", &CoreWrapper::backupDatabaseCallback, this);
 	setModeLocalizationSrv_ = nh.advertiseService("set_mode_localization", &CoreWrapper::setModeLocalizationCallback, this);
 	setModeMappingSrv_ = nh.advertiseService("set_mode_mapping", &CoreWrapper::setModeMappingCallback, this);
+	getTrajectorySrv_ = nh.advertiseService("get_trajectory_data", &CoreWrapper::getTrajectoryCallback, this);
 	getMapDataSrv_ = nh.advertiseService("get_map_data", &CoreWrapper::getMapDataCallback, this);
 	getMapSrv_ = nh.advertiseService("get_map", &CoreWrapper::getMapCallback, this);
 	getProbMapSrv_ = nh.advertiseService("get_prob_map", &CoreWrapper::getProbMapCallback, this);
@@ -2439,6 +2441,34 @@ bool CoreWrapper::setLogError(std_srvs::Empty::Request&, std_srvs::Empty::Respon
 	NODELET_INFO("rtabmap: Set log level to Error");
 	ULogger::setLevel(ULogger::kError);
 	return true;
+}
+
+bool CoreWrapper::getTrajectoryCallback(rtabmap_ros::GetTrajectory::Request& req,  rtabmap_ros::GetTrajectory::Response& res)
+{
+	NODELET_INFO("rtabmap: Getting trajectory (global=%s optimized=%s)...",
+			req.global?"true":"false",
+			req.optimized?"true":"false");
+	std::map<int, Signature> signatures;
+	std::map<int, Transform> poses;
+	std::multimap<int, rtabmap::Link> links;
+	std::map<int, double> stamps;
+
+	rtabmap_.getGraph(poses, links, req.optimized, req.global, &signatures);
+	for(std::map<int, Signature>::iterator iter=signatures.begin(); iter!=signatures.end(); ++iter)
+	{
+		stamps.insert(std::make_pair(iter->first, iter->second.getStamp()));
+	}
+	std::string pathTrajectory = req.path;
+	if(poses.size() && rtabmap::graph::exportPoses(pathTrajectory, 1, poses, links, stamps))
+	{
+		res.status = "Saving done!";
+		return true;
+	}
+	else
+	{
+		res.status = "Saving failed!";
+		return false;
+	}
 }
 
 bool CoreWrapper::getMapDataCallback(rtabmap_ros::GetMap::Request& req, rtabmap_ros::GetMap::Response& res)

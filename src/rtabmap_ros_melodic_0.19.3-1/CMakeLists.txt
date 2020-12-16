@@ -97,6 +97,7 @@ add_message_files(
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
+   GetTrajectory.srv
    GetMap.srv
    ListLabels.srv
    PublishMap.srv
