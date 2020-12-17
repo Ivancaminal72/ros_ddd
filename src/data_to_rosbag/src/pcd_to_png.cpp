@@ -283,7 +283,7 @@ void PcdToPng::startRePublishing(double rate_hz)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     if(!nh_sub_.ok()) exit(1);
   }
-  
+
   while (loadNextSyncTimestamp() == false)
   {
     uint64_t difference = get_unsigned_difference(0, current_timestamp_ns_);
@@ -292,8 +292,6 @@ void PcdToPng::startRePublishing(double rate_hz)
       ROS_ERROR("Max message desync achieved");
       exit(1);
     }
-    double publish_dt_sec = 1.0 / rate_hz;
-    publish_dt_ns_ = static_cast<uint64_t>(publish_dt_sec * 1e9);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     current_timestamp_ns_ += 100e6;
     if(!nh_sub_.ok()) exit(1);
@@ -328,7 +326,6 @@ void PcdToPng::timerCallback(const ros::WallTimerEvent& event)
     ROS_ERROR("Max message desync achieved");
     exit(1);
   }
-  else if(!loadNextSyncTimestamp()) return;
   else if (next_entry_timestamp_ns_ <= current_timestamp_ns_) 
   {
     std::cout << "Current entry: " << current_entry_ << std::endl;
@@ -336,16 +333,16 @@ void PcdToPng::timerCallback(const ros::WallTimerEvent& event)
     {
       ROS_ERROR("Could not republish entry");
       exit(1);
-      return;
     }
     current_entry_++;
-  }
-  else
-  {
+    if (!loadNextSyncTimestamp()) 
+    {
+      ROS_ERROR("Error reading next entry");
+      exit(1);
+    }
     std::cout<<"Next: "<< next_entry_timestamp_ns_<<std::endl;
     std::cout<<"Curr: "<< current_timestamp_ns_<<std::endl;
   }
-  
 }
 
 bool PcdToPng::loadNextSyncTimestamp()

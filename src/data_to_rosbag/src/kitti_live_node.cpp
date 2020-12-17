@@ -201,8 +201,8 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
     if(!parser_.loadNextTimestamp(fin_time_, next_entry_timestamp_ns_))
     {
       publish_timer_.stop();
-      // sleep(1); //Send last queued messages...
-      // exit(0);
+      sleep(1); //Send last queued messages...
+      exit(0);
     }
             
   }

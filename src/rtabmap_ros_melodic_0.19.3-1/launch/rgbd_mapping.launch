@@ -9,7 +9,7 @@
  
   <!-- Choose visualization -->
   <arg name="rviz"                    default="false" />
-  <arg name="rtabmapviz"              default="true" /> 
+  <arg name="rtabmapviz"              default="false" /> 
   
   <!-- Localization-only mode -->
   <arg name="localization"            default="false"/>
@@ -18,15 +18,37 @@
   <arg name="rtabmapviz_cfg"          default="~/.ros/rtabmap_gui.ini" />
   <arg name="rviz_cfg"                default="$(find rtabmap_ros)/launch/config/rgbd.rviz" />
   
-  <arg name="frame_id"                default="camera_link"/>   <!-- Fixed frame id, you may set "base_link" or "base_footprint" if they are published -->
-  <arg name="database_path"           default=""/>
-  <arg name="rtabmap_args"            default=""/>              <!-- delete_db_on_start, udebug -->
+  <arg name="frame_id"                default="lidar"/>   <!-- Fixed frame id, you may set "base_link" or "base_footprint" if they are published -->
+  <arg name="database_path"           default="/tmp/rtabmap.db"/>
+  <arg name="rtabmap_args"            default="
+                                              --delete_db_on_start 
+                                              --Rtabmap/PublishRAMUsage true 
+                                              --Rtabmap/DetectionRate 10 
+                                              --Rtabmap/CreateIntermediateNodes true 
+                                              --RGBD/LinearUpdate 0 
+                                              --Reg/Strategy 0 
+                                              --GFTT/QualityLevel 0.0005 
+                                              --GFTT/MinDistance 6 
+                                              --Odom/Strategy 0 
+                                              --OdomF2M/MaxSize 3000 
+                                              --Kp/MaxFeatures 750 
+                                              --Kp/DetectorStrategy 6 
+                                              --Vis/FeatureType 6 
+                                              --Vis/CorType 0 
+                                              --Vis/EstimationType 0 
+                                              --Vis/InlierDistance 2 
+                                              --Reg/Force3DoF false 
+                                              "/>              <!-- delete_db_on_start, udebug -->
+                                              
+                                              <!-- Mem/GenerateIds false -->
+
+  
   <arg name="launch_prefix"           default=""/>              <!-- for debugging purpose, it fills launch-prefix tag of the nodes -->
-  <arg name="approx_sync"             default="true"/>         <!-- if timestamps of the input topics are not synchronized -->
+  <arg name="approx_sync"             default="false"/>         <!-- if timestamps of the input topics are not synchronized -->
    
-  <arg name="rgb_topic"               default="/camera/rgb/image_rect_color" />
-  <arg name="depth_registered_topic"  default="/camera/depth_registered/image_raw" />
-  <arg name="camera_info_topic"       default="/camera/rgb/camera_info" />
+  <arg name="rgb_topic"               default="/cam02" />
+  <arg name="depth_registered_topic"  default="/cam02_depth" />
+  <arg name="camera_info_topic"       default="/camera_info" />
   <arg name="compressed"              default="false"/>
    
   <arg name="subscribe_scan"          default="false"/>         <!-- Assuming 2D scan if set, rtabmap will do 3DoF mapping instead of 6DoF -->

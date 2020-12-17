@@ -2459,7 +2459,7 @@ bool CoreWrapper::getTrajectoryCallback(rtabmap_ros::GetTrajectory::Request& req
 		stamps.insert(std::make_pair(iter->first, iter->second.getStamp()));
 	}
 	std::string pathTrajectory = req.path;
-	if(poses.size() && rtabmap::graph::exportPoses(pathTrajectory, 1, poses, links, stamps))
+	if(poses.size() && rtabmap::graph::exportPoses(pathTrajectory, 10, poses, links, stamps))
 	{
 		res.status = "Saving done!";
 		return true;

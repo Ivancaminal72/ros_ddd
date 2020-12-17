@@ -43,7 +43,7 @@
     
     <!-- Visual SLAM -->
     <!-- args: "delete_db_on_start" and "udebug" -->
-    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">
+    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start --params">
       <param name="subscribe_depth" type="bool" value="true"/>
      
       <param name="Rtabmap/StartNewMapOnLoopClosure" type="string" value="true"/>
