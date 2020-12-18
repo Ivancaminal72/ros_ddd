@@ -93,7 +93,7 @@ namespace po = boost::program_options;
 //Constants
 const uint kPow2_16= pow(2,16);
 const uint kPow2_16_Minus1= pow(2,16)-1;
-// const double depthScale = pow(2,16)/120;
+const double depthScale = pow(2,16)/120;
 
 namespace adapt {
 
@@ -299,7 +299,7 @@ void PcdToPng::startRePublishing(double rate_hz)
 
 
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(100)); //Delay to account for processing time differences
+  std::this_thread::sleep_for(std::chrono::milliseconds(26000)); //Delay to account for processing time differences
 
 
 
@@ -573,14 +573,14 @@ void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
   ddd_pts_p.row(0) /= ddd_pts_p.row(2);
   ddd_pts_p.row(1) /= ddd_pts_p.row(2);
   depth_pts = ddd_pts_h.row(2);
-  // depth_pts = depth_pts*depthScale;
-  depth_img = cv::Mat::zeros(height, width, CV_32FC1);
+  depth_pts = depth_pts*depthScale;
+  depth_img = cv::Mat::zeros(height, width, CV_16UC1);
   infrared_img = cv::Mat::zeros(height, width, CV_16UC1);
   // tick_high_resolution(start_t, tick, elapsed_process_pcd);
 
   // uint inside=0, outside=0, valid=0;
   int x, y;
-  float d;
+  ushort d;
   //Store valid depth values
   for(int i=0; i<numPts; i++)
   {
@@ -600,16 +600,16 @@ void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
         if(round(depth_pts(0,i))>0)
         {
           // valid+=1;
-          d = depth_pts(0,i);
+          d = (ushort) round(depth_pts(0,i));
           
           //pixel need to be initalized or updated with a smaller depth
-          if(depth_img.at<float>(y,x) == 0 || depth_img.at<float>(y,x) > d)
+          if(depth_img.at<ushort>(y,x) == 0 || depth_img.at<ushort>(y,x) > d)
           {
             //exceed established limit (save max)
-            if(d>=kPow2_16) depth_img.at<float>(y,x) = kPow2_16_Minus1;
+            if(d>=kPow2_16) depth_img.at<ushort>(y,x) = kPow2_16_Minus1;
             
             //inside limit (save the smaller sensed depth)
-            else depth_img.at<float>(y,x) = d; 
+            else depth_img.at<ushort>(y,x) = d; 
             
             //Save 16bit intensity
             infrared_img.at<ushort>(y,x) = (ushort) trunc(intensity_pts(0,i) * kPow2_16); 
@@ -721,7 +721,7 @@ int main(int argc, char** argv) {
   nh_pub.setCallbackQueue(&pub_queue);
   adapt::PcdToPng node(nh_sub, nh_pub, nh_private, cam_idx_proj);
 
-  ros::AsyncSpinner spinner_sub(2, &sub_queue);
+  ros::AsyncSpinner spinner_sub(4, &sub_queue);
   ros::AsyncSpinner spinner_pub(1, &pub_queue);
   spinner_sub.start();
   spinner_pub.start();
