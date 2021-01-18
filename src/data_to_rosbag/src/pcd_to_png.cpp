@@ -41,6 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/program_options.hpp>
 #include <queue>
 #include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <Eigen/StdVector>
 #include <chrono>
 #include <numeric>
@@ -394,7 +396,8 @@ void PcdToPng::publishClock(uint64_t timestamp_ns)
 bool PcdToPng::rePublishEntry() 
 {
   //Get messages
-  auto msg_pcd = buffer_pcd_pub_.front();
+  sensor_msgs::PointCloud2 msg_pcd;
+  pcl::toROSMsg(buffer_pcd_pub_.front(), msg_pcd);
   auto msg_rgb = buffer_rgb_pub_.front();
   auto msg_rgb_info = buffer_rgb_info_pub_.front();
   auto msg_depth = buffer_depth_pub_.front();
@@ -403,6 +406,7 @@ bool PcdToPng::rePublishEntry()
   //compute_intensity// auto msg_infrared_info = buffer_infrared_info_pub_.front();
   
   //Modifications
+  msg_pcd.header.stamp = msg_depth.header.stamp;
   msg_rgb.header.frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
   msg_rgb_info.header.frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
   
