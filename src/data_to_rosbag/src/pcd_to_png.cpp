@@ -56,9 +56,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 std::mutex mtx;
 
 //Chrono timmings
+std::vector<double> elapsed_load_pcd_msg;
 std::vector<double> elapsed_load_pcd;
 std::vector<double> elapsed_process_pcd;
 std::vector<double> elapsed_depth_store;
+std::vector<double> elapsed_msg_enqueue;
 std::vector<double> elapsed_callback;
 std::vector<double> elapsed_callback_color;
 
@@ -318,7 +320,7 @@ void PcdToPng::startRePublishing(double rate_hz)
 void PcdToPng::timerCallback(const ros::WallTimerEvent& event) 
 {
   // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
-  current_timestamp_ns_ += publish_dt_ns_;
+  current_timestamp_ns_ += publish_dt_ns_*0.3;
   publishClock(current_timestamp_ns_);
   uint64_t difference = get_unsigned_difference(next_entry_timestamp_ns_, current_timestamp_ns_);
 
@@ -494,44 +496,51 @@ void PcdToPng::processLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
     std::string pub_cam_frame_id = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
     pcl::PointCloud<pcl::PointXYZI> pointcloud = buffer_pcd_sub_.front();
     buffer_pcd_sub_.pop();
-    std::thread th(processPcd, 
-                  pointcloud, 
-                  width_[sub_cam_frame_id],
-                  height_[sub_cam_frame_id],
-                  T_cam0_lidar_,
-                  Proj_[sub_cam_frame_id],
-                  pub_cam_frame_id,
-                  lidar_frame_id_,
-                  std::ref(buffer_pcd_pub_),
-                  std::ref(buffer_depth_pub_),
-                  std::ref(buffer_depth_info_pub_),
-                  //compute_intensity// std::ref(buffer_infrared_pub_),
-                  //compute_intensity// std::ref(buffer_infrared_info_pub_),
-                  std::ref(is_first_pcd_processed_));
+
+    // tick_high_resolution(start_t, tick, elapsed_load_pcd_msg);
+    
+    // //Multi-core
+    // std::thread th(processPcd, 
+    //               pointcloud, 
+    //               width_[sub_cam_frame_id],
+    //               height_[sub_cam_frame_id],
+    //               T_cam0_lidar_,
+    //               Proj_[sub_cam_frame_id],
+    //               pub_cam_frame_id,
+    //               lidar_frame_id_,
+    //               std::ref(buffer_pcd_pub_),
+    //               std::ref(buffer_depth_pub_),
+    //               std::ref(buffer_depth_info_pub_),
+    //               //compute_intensity// std::ref(buffer_infrared_pub_),
+    //               //compute_intensity// std::ref(buffer_infrared_info_pub_),
+    //               std::ref(is_first_pcd_processed_));
+    // th.detach();
+
+    //Single-core
+    processPcd(pointcloud, 
+              width_[sub_cam_frame_id],
+              height_[sub_cam_frame_id],
+              T_cam0_lidar_,
+              Proj_[sub_cam_frame_id],
+              pub_cam_frame_id,
+              lidar_frame_id_,
+              std::ref(buffer_pcd_pub_),
+              std::ref(buffer_depth_pub_),
+              std::ref(buffer_depth_info_pub_),
+              //compute_intensity// std::ref(buffer_infrared_pub_),
+              //compute_intensity// std::ref(buffer_infrared_info_pub_),
+              std::ref(is_first_pcd_processed_));
+
     width_.erase(sub_cam_frame_id);
     height_.erase(sub_cam_frame_id);
     Proj_.erase(sub_cam_frame_id);
-    th.detach();
-
-    // processPcd(pointcloud, 
-    //                   width_[sub_cam_frame_id],
-    //                   height_[sub_cam_frame_id],
-    //                   T_cam0_lidar_,
-    //                   Proj_[sub_cam_frame_id],
-    //                   pub_cam_frame_id,
-    //                   lidar_frame_id_,
-    //                   lidar_pub_,
-    //                   image_depth_pub_,
-    //                   image_infrared_pub_,
-    //                   is_first_pcd_processed_);
-
     std::cout<<"STAMPCD: "<< std::setprecision (17) <<pointcloud.header.stamp<<std::endl;
     std::cout<<"Pcd processed: "<<pcds_processed_<<std::endl;
     pcds_processed_++;
     
     // tick_high_resolution(start_t, tick, elapsed_callback);
-    // printElapsed(elapsed_callback, "Callback total");
-    // std::cout<<std::endl;
+    // printElapsed(elapsed_load_pcd_msg, "Load pcd msg");
+    // printElapsed(elapsed_callback, "Callback total"); std::cout<<std::endl;
   }
 }
 
@@ -549,12 +558,12 @@ void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
                                  //compute_intensity// std::queue<sensor_msgs::CameraInfo>& buffer_infrared_info_pub,                                 
                                  bool& is_first_pcd_processed)
 {
-  // //Start chrono ticking
-  // std::chrono::duration<double> tick;
-  // std::chrono::high_resolution_clock::time_point end_t, start_t;
-  // start_t = std::chrono::high_resolution_clock::now();
-  // end_t = std::chrono::high_resolution_clock::now();
-  // tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+  //Start chrono ticking
+  std::chrono::duration<double> tick;
+  std::chrono::high_resolution_clock::time_point end_t, start_t;
+  start_t = std::chrono::high_resolution_clock::now();
+  end_t = std::chrono::high_resolution_clock::now();
+  tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
   cv::Mat depth_img;
   //compute_intensity// cv::Mat infrared_img;
@@ -670,10 +679,11 @@ void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
 
   if(!is_first_pcd_processed) is_first_pcd_processed=true;
 
+  // tick_high_resolution(start_t, tick, elapsed_msg_enqueue);
   // printElapsed(elapsed_load_pcd, "Load pcd");
   // printElapsed(elapsed_process_pcd, "Projection");
   // printElapsed(elapsed_depth_store, "Store depth");
-
+  // printElapsed(elapsed_msg_enqueue, "Enqueue msg");
 }
 
 

@@ -176,7 +176,7 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   }
 
   // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
-  current_timestamp_ns_ += publish_dt_ns_;
+  current_timestamp_ns_ += publish_dt_ns_*0.3;
   // std::cout << "Updated timestmap: " << current_timestamp_ns_ << std::endl;
   publishClock(current_timestamp_ns_);
   // if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
