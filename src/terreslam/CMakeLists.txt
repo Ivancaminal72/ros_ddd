@@ -33,10 +33,10 @@ cs_add_library(${PROJECT_NAME}
   src/comms/kitti_parser.cpp
   src/comms/kittiraw_common.cpp
   src/comms/kittiraw_ros_conversions.cpp
-  src/comms/util_msg.cpp
-  src/util_algebra.cpp
+  src/features/plane_detector.cpp
+  src/utils/util_msg.cpp
+  src/utils/util_algebra.cpp
   src/frontend.cpp
-  src/plane_detector.cpp
   src/camera_model.cpp
 )
 

@@ -1,12 +1,13 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-01-26 14:05:12
+ *    Last Modified: 2021-01-26 20:20:03
  */
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
-#include "terreslam/comms/util_msg.h"
+#include "terreslam/utils/util_msg.h"
+#include "terreslam/utils/util_algebra.h"
 
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
@@ -25,7 +26,6 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <Eigen/Geometry>
-#include <terreslam/util_algebra.h>
 
 namespace terreslam
 {

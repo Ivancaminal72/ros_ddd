@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-18 11:30:37
- *    Last Modified: 2021-01-26 10:08:53
+ *    Last Modified: 2021-01-26 20:18:23
  */
 
 #pragma once
@@ -9,7 +9,7 @@
 #include <ros/ros.h>
 #include <nodelet/nodelet.h>
 
-#include "terreslam/plane_detector.h"
+#include "terreslam/features/plane_detector.h"
 
 namespace terreslam
 {

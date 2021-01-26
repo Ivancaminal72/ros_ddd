@@ -1,12 +1,12 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 10:59:24
- *    Last Modified: 2021-01-26 11:49:34
+ *    Last Modified: 2021-01-26 20:15:40
  */
 
 #include <assert.h>
 
-#include "terreslam/util_algebra.h"
+#include "terreslam/utils/util_algebra.h"
 #include <rtabmap/utilite/UStl.h>
 
 namespace terreslam
