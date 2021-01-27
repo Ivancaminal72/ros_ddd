@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 20:38:17
- *    Last Modified: 2021-01-26 20:41:35
+ *    Last Modified: 2021-01-27 10:12:58
  */
 
 /***********************************************
@@ -17,7 +17,7 @@
 # Description: 
 #
 ************************************************/
-#include "terreslam/types/sunq_types.h"
+#include "terreslam/types/ulysses_types.h"
 
 namespace ulysses
 {

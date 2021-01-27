@@ -34,9 +34,9 @@ cs_add_library(${PROJECT_NAME}
   src/comms/kittiraw_common.cpp
   src/comms/kittiraw_ros_conversions.cpp
   src/features/plane_detector.cpp
-  src/features/sunq_plane_extraction.cpp
-  src/types/sunq_map.cpp
-  src/types/sunq_types.cpp
+  src/features/ulysses_plane_extraction.cpp
+  src/types/ulysses_map.cpp
+  src/types/ulysses_types.cpp
   src/utils/util_msg.cpp
   src/utils/util_algebra.cpp
   src/frontend.cpp

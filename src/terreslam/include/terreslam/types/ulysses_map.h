@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 20:38:34
- *    Last Modified: 2021-01-26 20:43:53
+ *    Last Modified: 2021-01-27 10:12:58
  */
 
 /***********************************************
@@ -21,7 +21,7 @@
 #ifndef _MAP_H_
 #define _MAP_H_
 
-#include "terreslam/types/sunq_types.h"
+#include "terreslam/types/ulysses_types.h"
 //#include "LBD/LineDescriptor.hh"
 //#include "LBD/PairwiseLineMatching.hh"
 

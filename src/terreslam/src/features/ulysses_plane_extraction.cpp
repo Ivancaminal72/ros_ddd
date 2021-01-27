@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 20:37:43
- *    Last Modified: 2021-01-26 20:43:07
+ *    Last Modified: 2021-01-27 10:12:58
  */
 
 /*==============================================
@@ -18,7 +18,7 @@
 #
 ===============================================*/
 
-#include "terreslam/features/sunq_plane_extraction.h"
+#include "terreslam/features/ulysses_plane_extraction.h"
 
 namespace ulysses
 {
