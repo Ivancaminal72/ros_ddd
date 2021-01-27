@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-01-26 20:20:03
+ *    Last Modified: 2021-01-27 11:33:58
  */
 
 #include "terreslam/frontend.h"
@@ -97,13 +97,13 @@ private:
 		Eigen::Vector4d point_eigen_backproj;
 		pcl::PointXYZ point_pcl_backproj;
 		Eigen::Matrix4d backproj_mat = cam_model.P().inverse().matrix();
-		for (int y = 0; y < depth_img.rows; ++y)
-			for (int x = 0; x < depth_img.cols; ++x)
+		for (int v = 0; v < depth_img.rows; ++v)
+			for (int u = 0; u < depth_img.cols; ++u)
 			{
-				double depth_yx = (double) depth_img.at<ushort>(y, x) / depthScale;
+				double depth_yx = (double) depth_img.at<ushort>(v, u) / depthScale;
 				if(depth_yx != 0)
 				{
-					point_eigen << (double) x * depth_yx, (double) y * depth_yx, (double) depth_yx, 1;
+					point_eigen << (double) u * depth_yx, (double) v * depth_yx, (double) depth_yx, 1;
 					point_eigen_backproj = backproj_mat * point_eigen;
 					point_pcl_backproj.x = (float) point_eigen_backproj(0);
 					point_pcl_backproj.y = (float) point_eigen_backproj(1);

@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 19:35:22
- *    Last Modified: 2021-01-26 19:46:13
+ *    Last Modified: 2021-01-27 11:31:58
  */
 
 #include "terreslam/frontend.h"
@@ -71,49 +71,7 @@ private:
 		const sensor_msgs::PointCloud2& lidar_msg,
 		const sensor_msgs::CameraInfoConstPtr& info_msg)
 	{
-		// std::cout << "Entry: " << entry_count_ << std::endl;
-		// // std::cout << rgb_msg->header.stamp << std::endl;
-		// // std::cout << depth_msg->header.stamp << std::endl;
-		// // std::cout << info_msg->header.stamp << std::endl;
 
-		// cv_bridge::CvImageConstPtr ptr_rgb = cv_bridge::toCvShare(rgb_msg);
-		// cv_bridge::CvImageConstPtr ptr_depth = cv_bridge::toCvShare(depth_msg);
-		// sensor_msgs::CameraInfo info = *info_msg;
-
-		// // initialize
-		// cv::Mat rgb_img = cv::Mat(rgb_msg->height, rgb_msg->width, ptr_rgb->image.type());
-		// cv::Mat depth_img = cv::Mat(depth_msg->height, depth_msg->width, ptr_depth->image.type());
-		// ptr_rgb->image.copyTo(cv::Mat(rgb_img, cv::Rect(0, 0, rgb_msg->width, rgb_msg->height)));
-		// ptr_depth->image.copyTo(cv::Mat(depth_img, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
-
-		// // backprojection
-		// CameraModel cam_model(info);
-		// // cam_model.printModel();
-
-		// pcl::PointCloud<pcl::PointXYZ> pcd;
-		// Eigen::Vector4d point_eigen;
-		// Eigen::Vector4d point_eigen_backproj;
-		// pcl::PointXYZ point_pcl_backproj;
-		// Eigen::Matrix4d backproj_mat = cam_model.P().inverse().matrix();
-		// for (int y = 0; y < depth_img.rows; ++y)
-		// 	for (int x = 0; x < depth_img.cols; ++x)
-		// 	{
-		// 		double depth_yx = (double) depth_img.at<ushort>(y, x) / depthScale;
-		// 		if(depth_yx != 0)
-		// 		{
-		// 			point_eigen << (double) x * depth_yx, (double) y * depth_yx, (double) depth_yx, 1;
-		// 			point_eigen_backproj = backproj_mat * point_eigen;
-		// 			point_pcl_backproj.x = (float) point_eigen_backproj(0);
-		// 			point_pcl_backproj.y = (float) point_eigen_backproj(1);
-		// 			point_pcl_backproj.z = (float) point_eigen_backproj(2);
-		// 			pcd.push_back(point_pcl_backproj);
-		// 		}
-		// 	}
-
-		// sensor_msgs::PointCloud2 msg_pcd;
-		// pcl::toROSMsg(pcd, msg_pcd);
-		// msg_pcd.header.frame_id = "/terreslam/cloud";
-		// lidar_pub_.publish(msg_pcd);
 
 		entry_count_++;
 	}
