@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 20:37:43
- *    Last Modified: 2021-01-27 10:12:58
+ *    Last Modified: 2021-02-10 19:41:20
  */
 
 /*==============================================
@@ -24,10 +24,9 @@ namespace ulysses
 {
 	void Cell::computeAttribute()
 	{
-		Eigen::Vector3d tmp;
 		if(isEmpty)
 			return;
-		// compute the expectation of position and color;
+		// compute the expectation of position and color
 		for(std::vector<Point>::iterator it=points.begin();it!=points.end();++it)
 		{
 			avg_pps=avg_pps+it->pps;
@@ -35,7 +34,9 @@ namespace ulysses
 		}
 		avg_pps=avg_pps*(1.0/points.size());
 		avg_rgb=avg_rgb*(1.0/points.size());
-		// compute the covariance of position and color;
+		
+		Eigen::Vector3d tmp;
+		// compute the covariance of position and color
 		for(std::vector<Point>::iterator it=points.begin();it!=points.end();++it)
 		{
 			tmp=it->pps;
@@ -125,24 +126,24 @@ namespace ulysses
 			   fabs(scan->points()->at(i).y)<1e-10 && 
 			   fabs(scan->points()->at(i).z)<1e-10)
 				continue;
-			// coordinate in RGB [0,1];
+			// coordinate in RGB [0,1]
 			point_tmp.rgb[0]=(double)scan->points()->at(i).r/255.0;
 			point_tmp.rgb[1]=(double)scan->points()->at(i).g/255.0;
 			point_tmp.rgb[2]=(double)scan->points()->at(i).b/255.0;
-			// coordinate in the camera coordinate system;
+			// coordinate in the camera coordinate system
 			point_tmp.xyz[0]=scan->points()->at(i).x;
 			point_tmp.xyz[1]=scan->points()->at(i).y;
 			point_tmp.xyz[2]=scan->points()->at(i).z;
-			// local plane normal;
+			// local plane normal
 			point_tmp.normal[0]=scan->normals()->at(i).normal_x;
 			point_tmp.normal[1]=scan->normals()->at(i).normal_y;
 			point_tmp.normal[2]=scan->normals()->at(i).normal_z;
-			// coordinate in the PPS, after Rotation_PCA; 
+			// coordinate in the PPS, after Rotation_PCA
 			point_tmp.Cartesian2PPS(Rotation_PCA);
-			// pixel coordinate;
-			point_tmp.u=scan->pixels()->at(i).x; // i/640;
-			point_tmp.v=scan->pixels()->at(i).y; // i%640;
-			// push the point into the corresponding cells;
+			// pixel coordinate
+			point_tmp.u=scan->pixels()->at(i).x; // i/640
+			point_tmp.v=scan->pixels()->at(i).y; // i%640
+			// push the point into the corresponding cells
 			cells_bottom->push_point(point_tmp,i);
 		}
 
@@ -226,7 +227,7 @@ namespace ulysses
 		// extracting planes;
 		while ( maxnum > min_plane_size && enough_plane == false )
 		{
-			// save points in cells[maxdir] to cloud_contain_plane;
+			// save points in cells[maxdir] to cloud_contain_plane
 			extract.setInputCloud (scan->points());
 			extract.setIndices (cells_bottom->getCell(maxdir)->indices);
 			extract.setNegative (false);
@@ -239,12 +240,12 @@ namespace ulysses
 //			if (!vis->updatePointCloud(cloud_contain_plane,color1,"tmp")) vis->addPointCloud(cloud_contain_plane,color1,"tmp");
 //			vis->spin();
 
-			// the corresponding normals() to cloud_contain_plane_normal;
+			// the corresponding normals() to cloud_contain_plane_normal
 			extract_normal.setInputCloud(scan->normals());
 			extract_normal.setIndices(cells_bottom->getCell(maxdir)->indices);
 			extract_normal.setNegative(false);
 			extract_normal.filter(*cloud_contain_plane_normal);
-			// the corresponding pixels() pixel to cloud_contain_plane_image;
+			// the corresponding pixels() pixel to cloud_contain_plane_image
 			extract_image.setInputCloud (scan->pixels());
 			extract_image.setIndices (cells_bottom->getCell(maxdir)->indices);
 			extract_image.setNegative (false);
@@ -513,8 +514,8 @@ namespace ulysses
 		double tmp_max=0,tmp_min=99999;
 		Eigen::Vector3d x,y,z;
 
-		// find the direction with least normal vectors;
-		// set this direction as the z axis;
+		// find the direction with least normal vectors
+		// set this direction as the z axis
 		for(int i=0;i<scan->normals()->size();i++)
 		{
 			if(std::isnan(scan->normals()->at(i).normal_x) && std::isnan(scan->normals()->at(i).normal_y) && std::isnan(scan->normals()->at(i).normal_z))
@@ -547,7 +548,7 @@ namespace ulysses
 		x.normalize();
 		// Rotation_PCA
 		// - rotation from the original coordinate to the coordinate where 
-		// - the z axis pointing to the direction with least normals();
+		// - the z axis pointing to the direction with least normals()
 		Rotation_PCA.block<1,3>(0,0)=x.transpose();
 		Rotation_PCA.block<1,3>(1,0)=y.transpose();
 		Rotation_PCA.block<1,3>(2,0)=z.transpose();
