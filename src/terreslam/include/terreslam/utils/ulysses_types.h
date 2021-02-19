@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 20:38:38
- *    Last Modified: 2021-01-26 20:39:10
+ *    Last Modified: 2021-02-17 11:53:48
  */
 
 /*==============================================
@@ -75,7 +75,7 @@
 
 namespace ulysses
 {
-	class Scan; 
+	class Scan;
 //	class Map;
 	class Feature;
 	class Landmark;

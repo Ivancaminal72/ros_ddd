@@ -1,13 +1,14 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-01-27 11:33:58
+ *    Last Modified: 2021-02-19 19:50:57
  */
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
 #include "terreslam/utils/util_msg.h"
 #include "terreslam/utils/util_algebra.h"
+#include "terreslam/features/plane_detector.h"
 
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
@@ -37,13 +38,14 @@ public:
 		Frontend(),
 		queue_size_(10)
 		{
-
+			std::cout << "Constructor rgb_depth_frontend..." << std::endl;
 		}
 
 private:
 
 	virtual void onFrontendInit()
 	{
+		std::cout << "Initalize rgb_depth_frontend..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
 
@@ -78,44 +80,57 @@ private:
 		// std::cout << depth_msg->header.stamp << std::endl;
 		// std::cout << info_msg->header.stamp << std::endl;
 
-		cv_bridge::CvImageConstPtr ptr_rgb = cv_bridge::toCvShare(rgb_msg);
-		cv_bridge::CvImageConstPtr ptr_depth = cv_bridge::toCvShare(depth_msg);
-		sensor_msgs::CameraInfo info = *info_msg;
+		// cv_bridge::CvImageConstPtr ptr_msg_rgb = cv_bridge::toCvShare(rgb_msg);
+		// cv_bridge::CvImageConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
+		// sensor_msgs::CameraInfo info = *info_msg;
 
-		// initialize
-		cv::Mat rgb_img = cv::Mat(rgb_msg->height, rgb_msg->width, ptr_rgb->image.type());
-		cv::Mat depth_img = cv::Mat(depth_msg->height, depth_msg->width, ptr_depth->image.type());
-		ptr_rgb->image.copyTo(cv::Mat(rgb_img, cv::Rect(0, 0, rgb_msg->width, rgb_msg->height)));
-		ptr_depth->image.copyTo(cv::Mat(depth_img, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
+		// // initialize
+		// cv::Mat img_rgb = cv::Mat(rgb_msg->height, rgb_msg->width, ptr_msg_rgb->image.type());
+		// cv::Mat img_depth = cv::Mat(depth_msg->height, depth_msg->width, ptr_msg_depth->image.type());
+		// ptr_msg_rgb->image.copyTo(cv::Mat(img_rgb, cv::Rect(0, 0, rgb_msg->width, rgb_msg->height)));
+		// ptr_msg_depth->image.copyTo(cv::Mat(img_depth, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
 
-		// backprojection
-		CameraModel cam_model(info);
-		// cam_model.printModel();
+		// // backprojection
+		// CameraModel cam_model(info);
+		// // cam_model.printModel();
 
-		pcl::PointCloud<pcl::PointXYZ> pcd;
-		Eigen::Vector4d point_eigen;
-		Eigen::Vector4d point_eigen_backproj;
-		pcl::PointXYZ point_pcl_backproj;
-		Eigen::Matrix4d backproj_mat = cam_model.P().inverse().matrix();
-		for (int v = 0; v < depth_img.rows; ++v)
-			for (int u = 0; u < depth_img.cols; ++u)
-			{
-				double depth_yx = (double) depth_img.at<ushort>(v, u) / depthScale;
-				if(depth_yx != 0)
-				{
-					point_eigen << (double) u * depth_yx, (double) v * depth_yx, (double) depth_yx, 1;
-					point_eigen_backproj = backproj_mat * point_eigen;
-					point_pcl_backproj.x = (float) point_eigen_backproj(0);
-					point_pcl_backproj.y = (float) point_eigen_backproj(1);
-					point_pcl_backproj.z = (float) point_eigen_backproj(2);
-					pcd.push_back(point_pcl_backproj);
-				}
-			}
+		// // pointer to the Mat data
+		// uint8_t *rgb_ptr;
+		// rgb_ptr=img_rgb.data;
 
-		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(pcd, msg_pcd);
-		msg_pcd.header.frame_id = "/terreslam/cloud";
-		cloud_pub_.publish(msg_pcd);
+		// pcl::PointCloud<pcl::PointXYZRGBA> point_cloud;
+		// pcl::PointCloud<pcl::Normal> normal_cloud;
+		// pcl::PointCloud<pcl::PointXY> pixel_cloud;
+		// Eigen::Vector4d point_eigen;
+		// Eigen::Vector4d point_eigen_backproj;
+		// Eigen::Matrix4d P_inv = cam_model.P().inverse().matrix();
+		// pcl::PointXYZRGBA point_pcl;
+		// for (int v = 0; v < img_depth.rows; ++v)
+		// 	for (int u = 0; u < img_depth.cols; ++u)
+		// 	{
+		// 		double depth_yx = (double) img_depth.at<ushort>(v, u) / depthScale;
+		// 		if(depth_yx != 0)
+		// 		{
+		// 			// 3 channels for one pixel in rgb image;
+		// 			point_pcl.b=*rgb_ptr;
+		// 			rgb_ptr++;
+		// 			point_pcl.g=*rgb_ptr;
+		// 			rgb_ptr++;
+		// 			point_pcl.r=*rgb_ptr;
+		// 			rgb_ptr++;
+		// 			point_eigen << (double) u * depth_yx, (double) v * depth_yx, (double) depth_yx, 1;
+		// 			point_eigen_backproj = P_inv * point_eigen;
+		// 			point_pcl.x = (float) point_eigen_backproj(0);
+		// 			point_pcl.y = (float) point_eigen_backproj(1);
+		// 			point_pcl.z = (float) point_eigen_backproj(2);
+		// 			point_cloud.push_back(point_pcl);
+		// 		}
+		// 	}
+
+		// sensor_msgs::PointCloud2 msg_pcd;
+		// pcl::toROSMsg(point_cloud, msg_pcd);
+		// msg_pcd.header.frame_id = "/terreslam/cloud";
+		// cloud_pub_.publish(msg_pcd);
 
 		entry_count_++;
 	}

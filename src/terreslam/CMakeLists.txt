@@ -7,7 +7,7 @@ catkin_simple(ALL_DEPS_REQUIRED)
 find_package(RTABMap REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core highgui imgcodecs)
 find_package(Boost REQUIRED COMPONENTS date_time filesystem system program_options)
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL REQUIRED)
 add_definitions(${PCL_DEFINITIONS}) # To include -march=native if set
 
 set(CMAKE_MACOSX_RPATH 0)
@@ -35,10 +35,12 @@ cs_add_library(${PROJECT_NAME}
   src/comms/kittiraw_ros_conversions.cpp
   src/features/plane_detector.cpp
   src/features/ulysses_plane_extraction.cpp
-  src/types/ulysses_map.cpp
-  src/types/ulysses_types.cpp
+  src/utils/ulysses_map.cpp
+  src/utils/ulysses_types.cpp
   src/utils/util_msg.cpp
   src/utils/util_algebra.cpp
+  src/utils/util_types.cpp
+  src/utils/util_map.cpp
   src/frontend.cpp
   src/camera_model.cpp
 )

@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 20:37:59
- *    Last Modified: 2021-02-11 11:23:21
+ *    Last Modified: 2021-02-12 13:27:52
  */
 
 /*==============================================
@@ -21,8 +21,8 @@
 #ifndef _PLANE_EXTRACTION_H_
 #define _PLANE_EXTRACTION_H_
 
-#include "terreslam/types/ulysses_map.h"
-#include "terreslam/types/ulysses_types.h"
+#include "terreslam/utils/ulysses_map.h"
+#include "terreslam/utils/ulysses_types.h"
 
 namespace ulysses
 {

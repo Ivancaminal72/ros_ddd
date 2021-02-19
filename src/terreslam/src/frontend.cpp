@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-14 11:11:27
- *    Last Modified: 2021-01-26 10:09:46
+ *    Last Modified: 2021-02-19 19:49:01
  */
 
 #include <sensor_msgs/Image.h>
@@ -25,10 +25,14 @@ Frontend::Frontend() :
 	sub_cam_frame_id_("/adapt/cam"),
 	sub_cam_depth_frame_id_("/adapt/cam_depth"),
 	sub_cam_info_frame_id_("/adapt/camera_info")
-{}
+{
+	std::cout << "Constructor frontend..." << std::endl;
+}
 
 void Frontend::onInit()
 {
+	std::cout << "onInit frontend:" << std::endl;
+	
 	ros::NodeHandle & nh = getNodeHandle();
 	ros::NodeHandle & pnh = getPrivateNodeHandle();
 	const nodelet::V_string & str_argv = getMyArgv();

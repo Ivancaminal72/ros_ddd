@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 20:38:10
- *    Last Modified: 2021-01-27 10:12:58
+ *    Last Modified: 2021-02-12 13:17:33
  */
 
 /***********************************************
@@ -18,7 +18,7 @@
 #
 ************************************************/
 
-#include "terreslam/types/ulysses_map.h"
+#include "terreslam/utils/ulysses_map.h"
 #include <pcl/filters/voxel_grid.h>
 
 namespace ulysses

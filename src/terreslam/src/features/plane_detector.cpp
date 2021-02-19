@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-21 11:44:08
- *    Last Modified: 2021-01-26 20:09:51
+ *    Last Modified: 2021-02-17 09:55:22
  */
 
 #include <iostream>
@@ -11,9 +11,7 @@
 namespace terreslam
 {
 
-PlaneDetector::PlaneDetector() {}
-
-void PlaneDetector::detect()
+void PlaneDetector::detectPlanes(Scan *scan)
 {
 	
 }
