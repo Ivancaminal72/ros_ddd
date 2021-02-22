@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-02-19 19:50:57
+ *    Last Modified: 2021-02-22 13:04:05
  */
 
 #include "terreslam/frontend.h"
@@ -80,77 +80,134 @@ private:
 		// std::cout << depth_msg->header.stamp << std::endl;
 		// std::cout << info_msg->header.stamp << std::endl;
 
-		// cv_bridge::CvImageConstPtr ptr_msg_rgb = cv_bridge::toCvShare(rgb_msg);
-		// cv_bridge::CvImageConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
-		// sensor_msgs::CameraInfo info = *info_msg;
+		cv_bridge::CvImageConstPtr ptr_msg_rgb = cv_bridge::toCvShare(rgb_msg);
+		cv_bridge::CvImageConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
+		sensor_msgs::CameraInfo info = *info_msg;
 
-		// // initialize
-		// cv::Mat img_rgb = cv::Mat(rgb_msg->height, rgb_msg->width, ptr_msg_rgb->image.type());
-		// cv::Mat img_depth = cv::Mat(depth_msg->height, depth_msg->width, ptr_msg_depth->image.type());
-		// ptr_msg_rgb->image.copyTo(cv::Mat(img_rgb, cv::Rect(0, 0, rgb_msg->width, rgb_msg->height)));
-		// ptr_msg_depth->image.copyTo(cv::Mat(img_depth, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
+		// INITALIZATION
+		uint32_t height, width;
+		if (rgb_msg->height == depth_msg->height) height = rgb_msg->height; else {skipFrame("Different img height"); return;}
+		if (rgb_msg->width == depth_msg->width) width = rgb_msg->width; else {skipFrame("Different img width"); return;}
+		cv::Mat img_rgb = cv::Mat(rgb_msg->height, rgb_msg->width, ptr_msg_rgb->image.type());
+		cv::Mat img_depth = cv::Mat(depth_msg->height, depth_msg->width, ptr_msg_depth->image.type());
+		ptr_msg_rgb->image.copyTo(cv::Mat(img_rgb, cv::Rect(0, 0, rgb_msg->width, rgb_msg->height)));
+		ptr_msg_depth->image.copyTo(cv::Mat(img_depth, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
 
-		// // backprojection
-		// CameraModel cam_model(info);
-		// // cam_model.printModel();
+		// BACKPROJECTION
+		CameraModel cam_model(info);
+		// cam_model.printModel();
 
-		// // pointer to the Mat data
-		// uint8_t *rgb_ptr;
-		// rgb_ptr=img_rgb.data;
+		// pointer to the Mat data
+		uint8_t *rgb_ptr;
+		rgb_ptr=img_rgb.data;
 
-		// pcl::PointCloud<pcl::PointXYZRGBA> point_cloud;
-		// pcl::PointCloud<pcl::Normal> normal_cloud;
-		// pcl::PointCloud<pcl::PointXY> pixel_cloud;
-		// Eigen::Vector4d point_eigen;
-		// Eigen::Vector4d point_eigen_backproj;
-		// Eigen::Matrix4d P_inv = cam_model.P().inverse().matrix();
-		// pcl::PointXYZRGBA point_pcl;
-		// for (int v = 0; v < img_depth.rows; ++v)
-		// 	for (int u = 0; u < img_depth.cols; ++u)
-		// 	{
-		// 		double depth_yx = (double) img_depth.at<ushort>(v, u) / depthScale;
-		// 		if(depth_yx != 0)
-		// 		{
-		// 			// 3 channels for one pixel in rgb image;
-		// 			point_pcl.b=*rgb_ptr;
-		// 			rgb_ptr++;
-		// 			point_pcl.g=*rgb_ptr;
-		// 			rgb_ptr++;
-		// 			point_pcl.r=*rgb_ptr;
-		// 			rgb_ptr++;
-		// 			point_eigen << (double) u * depth_yx, (double) v * depth_yx, (double) depth_yx, 1;
-		// 			point_eigen_backproj = P_inv * point_eigen;
-		// 			point_pcl.x = (float) point_eigen_backproj(0);
-		// 			point_pcl.y = (float) point_eigen_backproj(1);
-		// 			point_pcl.z = (float) point_eigen_backproj(2);
-		// 			point_cloud.push_back(point_pcl);
-		// 		}
-		// 	}
+		point_cloud=pcl::PointCloud<pcl::PointXYZRGBA>::Ptr (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		normal_cloud=pcl::PointCloud<pcl::Normal>::Ptr (new pcl::PointCloud<pcl::Normal>);
+		pixel_cloud=pcl::PointCloud<pcl::PointXY>::Ptr (new pcl::PointCloud<pcl::PointXY>);
+		Eigen::Vector4d point_eigen;
+		Eigen::Vector4d point_eigen_backproj;
+		Eigen::Matrix4d P_inv = cam_model.P().inverse().matrix();
+		pcl::PointXYZRGBA point_pcl;
+		pcl::PointXY tmp_pointxy;
+		// clear the pointcloud 
+		// the allocated memory does not release
+		// the newly pushed elements cover the old ones
+		point_cloud->clear();
+		normal_cloud->clear();
+		pixel_cloud->clear();
+		
+		for (int v = 0; v < img_depth.rows; ++v)
+			for (int u = 0; u < img_depth.cols; ++u)
+			{
+				double depth_yx = (double) img_depth.at<ushort>(v, u) / depthScale;
+				if(depth_yx != 0)
+				{
+					// 3 channels for one pixel in rgb image;
+					point_pcl.b=*rgb_ptr;
+					rgb_ptr++;
+					point_pcl.g=*rgb_ptr;
+					rgb_ptr++;
+					point_pcl.r=*rgb_ptr;
+					rgb_ptr++;
+					tmp_pointxy.x=u;
+					tmp_pointxy.y=v;
+					point_eigen << (double) u * depth_yx, (double) v * depth_yx, (double) depth_yx, 1;
+					point_eigen_backproj = P_inv * point_eigen;
+					point_pcl.x = (float) point_eigen_backproj(0);
+					point_pcl.y = (float) point_eigen_backproj(1);
+					point_pcl.z = (float) point_eigen_backproj(2);
+					point_cloud->push_back(point_pcl);
+					pixel_cloud->push_back(tmp_pointxy);
+				}
+				else if (use_normal_integral_)
+				{
+					// 3 channels for one pixel in rgb image
+					point_pcl.b=*rgb_ptr;
+					rgb_ptr++;
+					point_pcl.g=*rgb_ptr;
+					rgb_ptr++;
+					point_pcl.r=*rgb_ptr;
+					rgb_ptr++;
+					point_pcl.x = point_pcl.y = point_pcl.z = bad_point;
+					point_cloud->push_back(point_pcl);
+				}
+				else rgb_ptr+=3;
+			}
 
-		// sensor_msgs::PointCloud2 msg_pcd;
-		// pcl::toROSMsg(point_cloud, msg_pcd);
-		// msg_pcd.header.frame_id = "/terreslam/cloud";
-		// cloud_pub_.publish(msg_pcd);
+		// NORMALS
+		if(use_normal_integral_)
+		{
+			// organize the point_cloud for the normal estimation
+			point_cloud->width=width;
+			point_cloud->height=height;
+			// generate the normal_cloud
+			// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
+			normal_estimate_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
+			normal_estimate_integral.setDepthDependentSmoothing(true);
+			normal_estimate_integral.setNormalSmoothingSize(40.0);
+			normal_estimate_integral.setInputCloud(point_cloud);
+			normal_estimate_integral.compute (*normal_cloud);
+		}
+
+		// PUBLISH
+		sensor_msgs::PointCloud2 msg_pcd;
+		pcl::toROSMsg(*point_cloud, msg_pcd);
+		msg_pcd.header.frame_id = "/terreslam/cloud";
+		cloud_pub_.publish(msg_pcd);
 
 		entry_count_++;
 	}
 
+	void skipFrame(std::string msg)
+	{
+		std::cerr<<msg<<std::endl;
+		entry_count_++;
+	}
+
 private:
+	//Constants
+	const double depthScale = pow(2,16)/120;
+	const float bad_point = std::numeric_limits<float>::quiet_NaN();
+
+	//Variables
+	int queue_size_;
+	int entry_count_ = 0;
+	bool use_normal_integral_ = true;
+	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr point_cloud;
+	pcl::PointCloud<pcl::Normal>::Ptr normal_cloud;
+	pcl::PointCloud<pcl::PointXY>::Ptr pixel_cloud;
+	pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> normal_estimate_integral;
+
+	//Comms
 	image_transport::SubscriberFilter rgb_sub_;
 	image_transport::SubscriberFilter depth_sub_;
 	message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub_;
-	int entry_count_ = 0;
-
+	
 	typedef message_filters::sync_policies::ExactTime
 		<sensor_msgs::Image,
 		sensor_msgs::Image,
 		sensor_msgs::CameraInfo> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
-
-	//Constants
-	const double depthScale = pow(2,16)/120;
-
-	int queue_size_;
 };
 
 PLUGINLIB_EXPORT_CLASS(terreslam::RGBDepthFrontend, nodelet::Nodelet);
