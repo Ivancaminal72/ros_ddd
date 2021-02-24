@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-18 11:30:37
- *    Last Modified: 2021-02-24 12:03:46
+ *    Last Modified: 2021-02-24 15:19:30
  */
 
 #pragma once
@@ -11,6 +11,7 @@
 
 #include "terreslam/features/plane_detector.h"
 #include "terreslam/visualizer.h"
+#include "terreslam/io_disk.h"
 
 namespace terreslam
 {
@@ -37,6 +38,9 @@ protected:
 
 	// pcl_viewer
 	Visualizer Vis_;
+
+	// read/write to disk
+	IoDisk Disk_;
 
 private:
 	virtual void onInit();

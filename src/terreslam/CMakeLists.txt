@@ -48,6 +48,7 @@ cs_add_library(${PROJECT_NAME}
   src/frontend.cpp
   src/camera_model.cpp
   src/visualizer.cpp
+  src/io_disk.cpp
 )
 
 cs_add_library(${PROJECT_NAME}_plugins

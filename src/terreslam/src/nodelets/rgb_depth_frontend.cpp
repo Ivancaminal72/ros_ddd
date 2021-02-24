@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-02-24 12:04:08
+ *    Last Modified: 2021-02-24 15:32:05
  */
 
 #include "terreslam/frontend.h"
@@ -169,13 +169,18 @@ private:
 		}
 
 		//Visualize normals
-		Vis_.NormalView1(point_cloud, normal_cloud);
+		// Vis_.NormalView1(point_cloud, normal_cloud);
+
+		//Write normals
+
 
 		// PLANE DETECTOR
 		
 
 		
 		// PUBLISH
+		// pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointNormal>);
+		// pcl::concatenateFields (*point_cloud, *normal_cloud, *cloud_with_normals);
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*point_cloud, msg_pcd);
 		msg_pcd.header.frame_id = "/terreslam/cloud";
