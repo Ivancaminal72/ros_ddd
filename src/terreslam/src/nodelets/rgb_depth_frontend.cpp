@@ -1,14 +1,13 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-02-22 13:04:05
+ *    Last Modified: 2021-02-24 12:04:08
  */
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
 #include "terreslam/utils/util_msg.h"
 #include "terreslam/utils/util_algebra.h"
-#include "terreslam/features/plane_detector.h"
 
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
@@ -169,6 +168,13 @@ private:
 			normal_estimate_integral.compute (*normal_cloud);
 		}
 
+		//Visualize normals
+		Vis_.NormalView1(point_cloud, normal_cloud);
+
+		// PLANE DETECTOR
+		
+
+		
 		// PUBLISH
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*point_cloud, msg_pcd);

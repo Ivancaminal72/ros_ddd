@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-18 11:30:37
- *    Last Modified: 2021-01-26 20:18:23
+ *    Last Modified: 2021-02-24 12:03:46
  */
 
 #pragma once
@@ -10,6 +10,7 @@
 #include <nodelet/nodelet.h>
 
 #include "terreslam/features/plane_detector.h"
+#include "terreslam/visualizer.h"
 
 namespace terreslam
 {
@@ -34,8 +35,13 @@ protected:
 	// blocks
 	PlaneDetector PD_;
 
+	// pcl_viewer
+	Visualizer Vis_;
+
 private:
 	virtual void onInit();
 	virtual void onFrontendInit() = 0;
+	
 };
+
 }

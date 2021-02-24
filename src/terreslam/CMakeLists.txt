@@ -7,11 +7,11 @@ catkin_simple(ALL_DEPS_REQUIRED)
 find_package(RTABMap REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core highgui imgcodecs)
 find_package(Boost REQUIRED COMPONENTS date_time filesystem system program_options)
-find_package(PCL REQUIRED)
-add_definitions(${PCL_DEFINITIONS}) # To include -march=native if set
+find_package(PCL 1.8 REQUIRED)
 
 set(CMAKE_MACOSX_RPATH 0)
 add_definitions(-std=c++11)
+add_definitions(${PCL_DEFINITIONS}) # To include -march=native if set
 
 ###########
 ## Build ##
@@ -24,6 +24,7 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
+link_directories(${PCL_LIBRARY_DIRS})
 
 #############
 # LIBRARIES #
@@ -46,20 +47,21 @@ cs_add_library(${PROJECT_NAME}
   src/utils/util_map.cpp
   src/frontend.cpp
   src/camera_model.cpp
+  src/visualizer.cpp
 )
 
 cs_add_library(${PROJECT_NAME}_plugins
   src/nodelets/rgb_depth_frontend.cpp
 )
 
-target_link_libraries(${PROJECT_NAME}_plugins ${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME}_plugins ${PROJECT_NAME} ${PCL_LIBRARIES})
 
 ############
 # BINARIES #
 ############
 
 cs_add_executable(terreslam_rgb_depth_frontend src/nodelets/z_rgb_depth_frontend.cpp)
-target_link_libraries(terreslam_rgb_depth_frontend)
+target_link_libraries(terreslam_rgb_depth_frontend ${PCL_LIBRARIES})
 set_target_properties(terreslam_rgb_depth_frontend PROPERTIES OUTPUT_NAME "rgb_depth_frontend")
 
 
