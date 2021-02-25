@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-02-24 15:32:05
+ *    Last Modified: 2021-02-25 14:36:04
  */
 
 #include "terreslam/frontend.h"
@@ -161,26 +161,32 @@ private:
 			point_cloud->height=height;
 			// generate the normal_cloud
 			// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
-			normal_estimate_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
-			normal_estimate_integral.setDepthDependentSmoothing(true);
-			normal_estimate_integral.setNormalSmoothingSize(40.0);
-			normal_estimate_integral.setInputCloud(point_cloud);
-			normal_estimate_integral.compute (*normal_cloud);
+			ne_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
+			ne_integral.setDepthDependentSmoothing(true);
+			ne_integral.setNormalSmoothingSize(40.0);
+			ne_integral.setInputCloud(point_cloud);
+			ne_integral.compute(*normal_cloud);
+		}
+		else
+		{
+			ne.setInputCloud(point_cloud);
+			tree=pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr (new pcl::search::KdTree<pcl::PointXYZRGBA>());
+  		ne.setSearchMethod(tree);
+			ne.setRadiusSearch(1);
+			ne.compute(*normal_cloud);
 		}
 
 		//Visualize normals
 		// Vis_.NormalView1(point_cloud, normal_cloud);
 
 		//Write normals
-
+		// if(entry_count_ == 0) Disk_.WriteNormals(point_cloud, normal_cloud);
 
 		// PLANE DETECTOR
 		
 
 		
-		// PUBLISH
-		// pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointNormal>);
-		// pcl::concatenateFields (*point_cloud, *normal_cloud, *cloud_with_normals);
+		// // PUBLISH
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*point_cloud, msg_pcd);
 		msg_pcd.header.frame_id = "/terreslam/cloud";
@@ -203,11 +209,13 @@ private:
 	//Variables
 	int queue_size_;
 	int entry_count_ = 0;
-	bool use_normal_integral_ = true;
+	bool use_normal_integral_ = false;
 	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr point_cloud;
 	pcl::PointCloud<pcl::Normal>::Ptr normal_cloud;
 	pcl::PointCloud<pcl::PointXY>::Ptr pixel_cloud;
-	pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> normal_estimate_integral;
+	pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree;
+	pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne_integral;
+	pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
 
 	//Comms
 	image_transport::SubscriberFilter rgb_sub_;
