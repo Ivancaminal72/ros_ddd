@@ -45,11 +45,14 @@ cs_add_library(${PROJECT_NAME}
   src/utils/util_algebra.cpp
   src/utils/util_types.cpp
   src/utils/util_map.cpp
+  src/utils/util_pcd.cpp
   src/frontend.cpp
   src/camera_model.cpp
   src/visualizer.cpp
   src/io_disk.cpp
 )
+
+target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES})
 
 cs_add_library(${PROJECT_NAME}_plugins
   src/nodelets/rgb_depth_frontend.cpp
