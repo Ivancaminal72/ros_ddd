@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-12 13:05:35
- *    Last Modified: 2021-02-16 13:18:39
+ *    Last Modified: 2021-03-01 14:47:07
  */
 
 #pragma once
@@ -64,13 +64,13 @@ namespace terreslam
 
 
 
-// 	class Scan; 
+	class Scan; 
 // //	class Map;
-// 	class Feature;
-// 	class Landmark;
-// 	struct Plane;
+	class Feature;
+	class Landmark;
+	struct Plane;
 // 	struct Line;
-// 	struct PlaneLM;
+	struct PlaneLM;
 // 	struct LineLM;
 
 	typedef pcl::PointCloud<pcl::PointXYZRGBA>::Ptr ptrPointCloud;
@@ -82,7 +82,7 @@ namespace terreslam
 
 	typedef Eigen::Matrix<double,6,1> Vector6d;
 	typedef Eigen::Matrix<double,6,6> Matrix6d;
-// 	enum FEATURE_TYPE {PLANE, LINE};
+	enum FEATURE_TYPE {PLANE, LINE};
 
 // 	// CameraIntrinsic 
 // 	struct CameraIntrinsic
@@ -552,61 +552,61 @@ namespace terreslam
 // 		Eigen::Vector3d point_cur,point_ref;
 // 	};
 
-// 	struct Plane
-// 	{
-// 		Plane() : id("plane_") {} // for slam;
-// 		Plane(const PlaneLM *lm, const Transform &Tcw, double sigma); // for simulateion;
-// 		Plane(const PlaneLM *lm); // for relocalizing;
-// 		Plane(const PlaneLM *lm, const Transform &Tcw); // for labeling;
-// 		Plane(Eigen::Vector3d nn, double dd) : id("plane_"), n(nn), d(dd) {} // for loading data;
+	struct Plane
+	{
+		Plane() : id("plane_") {} // for slam;
+		// Plane(const PlaneLM *lm, const Transform &Tcw, double sigma); // for simulateion;
+		// Plane(const PlaneLM *lm); // for relocalizing;
+		// Plane(const PlaneLM *lm, const Transform &Tcw); // for labeling;
+		Plane(Eigen::Vector3d nn, double dd) : id("plane_"), n(nn), d(dd) {} // for loading data;
 
-// 		std::string id;
-// 		Eigen::Vector3d n;
-// 		double d;
+		std::string id;
+		Eigen::Vector3d n;
+		double d;
 
-// 		Eigen::Vector3d direction() const {return n;}
-// 		Eigen::Vector3d distance() const {return Eigen::Vector3d(d,0.0,0.0);}
+		Eigen::Vector3d direction() const {return n;}
+		Eigen::Vector3d distance() const {return Eigen::Vector3d(d,0.0,0.0);}
 
-// 		// indices 
-// 		// scan->point_cloud->at(indices[i]);
-// 		std::vector<int> indices;
-// 		ptrPointCloud ptr_points;
-// 		ptrNormalCloud ptr_normals;
-// 		ptrPixelCloud ptr_pixels;
+		// indices 
+		// scan->point_cloud->at(indices[i]);
+		std::vector<int> indices;
+		ptrPointCloud ptr_points;
+		ptrNormalCloud ptr_normals;
+		ptrPixelCloud ptr_pixels;
 
-// 		// weights 
-// 		// used in the probabilistic plane fitting;
-// 		std::vector<double> weights;
+		// weights 
+		// used in the probabilistic plane fitting;
+		std::vector<double> weights;
 
-// 		// centroid and scatter matrix 
-// 		// for the points on plane and their colors;
-// 		Eigen::Vector3d centroid_point, centroid_color;
-// 		Eigen::Matrix3d scatter_point, scatter_color;
+		// centroid and scatter matrix 
+		// for the points on plane and their colors;
+		Eigen::Vector3d centroid_point, centroid_color;
+		Eigen::Matrix3d scatter_point, scatter_color;
 
-// 		// covariance and information matrix 
-// 		// for the plane parameters [n,d];
-// 		Eigen::Matrix4d cov, info, sqrt_info;
+		// covariance and information matrix 
+		// for the plane parameters [n,d];
+		Eigen::Matrix4d cov, info, sqrt_info;
 
-// 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-// 		friend std::ostream & operator << (std::ostream &os, const Plane *p)
-// 		{
-// 			os<<p->n.transpose()<<" "<<p->d;
-// 			return os;
-// 		}
+		friend std::ostream & operator << (std::ostream &os, const Plane *p)
+		{
+			os<<p->n.transpose()<<" "<<p->d;
+			return os;
+		}
 
-// 		double dist2point(Eigen::Vector3d p)
-// 		{
-// 			return fabs(n.dot(p)+d);
-// 		}
+		double dist2point(Eigen::Vector3d p)
+		{
+			return fabs(n.dot(p)+d);
+		}
 
-// 		double dist2plane(Plane *p);
+		double dist2plane(Plane *p);
 
-// 		bool in_map;
-// 		unsigned char red,grn,blu;
-// 		void colorPlane(unsigned char r, unsigned char g, unsigned char b);
+		bool in_map;
+		unsigned char red,grn,blu;
+		void colorPlane(unsigned char r, unsigned char g, unsigned char b);
 
-// 	};
+	};
 
 // 	struct Line
 // 	{
@@ -660,207 +660,207 @@ namespace terreslam
 // 		int idx_lbd;
 // 	};
 
-// //	template<class F, class L> 
-// 	class Feature 
-// 	{
-// 	public:
-// 		// for slam;
-// 		Feature(Plane *p) : plane_(p), type(PLANE), id(p->id), ptr(0), 
-// 					ptr_indices(&p->indices), ptr_ptr_points(&p->ptr_points) {p->in_map=false;}
-// 		Feature(Line *l) : line_(l), type(LINE), id(l->id), ptr(0),
-// 					ptr_indices(&l->indices), ptr_ptr_points(&l->ptr_points) {}
+//	template<class F, class L> 
+	class Feature 
+	{
+	public:
+		/// for slam
+		Feature(Plane *p) : plane_(p), type(PLANE), id(p->id), ptr(0), 
+					ptr_indices(&p->indices), ptr_ptr_points(&p->ptr_points) {p->in_map=false;}
+		// Feature(Line *l) : line_(l), type(LINE), id(l->id), ptr(0),
+		// 			ptr_indices(&l->indices), ptr_ptr_points(&l->ptr_points) {}
 
-// //		// for simulation;
-// //		Feature(Landmark *lm, const Transform &Tcw, double sigma); // ptr(lm)
-// //
-// //		// for relocalizing;
-// //		Feature(Landmark *lm); // ptr(lm)
-// //		// for labeling;
-// //		Feature(Landmark *lm, const Transform &Tcw); // ptr(lm)
+		// /// for simulation
+		// Feature(Landmark *lm, const Transform &Tcw, double sigma); // ptr(lm)
 
-// 		// for loading data;
-// 		Feature(std::string s, Eigen::Vector3d n, double d) : id(s), type(PLANE), plane_(new Plane(n,d)), 
-// 									  ptr(0), ptr_indices(&plane_->indices), ptr_ptr_points(&plane_->ptr_points) {}
-// 		Feature(std::string s, Eigen::Vector3d u, Eigen::Vector3d v) : id(s), type(LINE), line_(new Line(u,v)), 
-// 									   ptr(0), ptr_indices(&line_->indices), ptr_ptr_points(&line_->ptr_points) {}
+		// /// for relocalizing
+		// Feature(Landmark *lm); // ptr(lm)
+		// /// for labeling
+		// Feature(Landmark *lm, const Transform &Tcw); // ptr(lm)
 
-// 		~Feature() 
-// 		{
-// 			if(type==PLANE) delete plane_;
-// 			else if(type==LINE) delete line_;
-// 		}
+		// for loading data
+		Feature(std::string s, Eigen::Vector3d n, double d) : id(s), type(PLANE), plane_(new Plane(n,d)), 
+									  ptr(0), ptr_indices(&plane_->indices), ptr_ptr_points(&plane_->ptr_points) {}
+		// Feature(std::string s, Eigen::Vector3d u, Eigen::Vector3d v) : id(s), type(LINE), line_(new Line(u,v)), 
+		// 							   ptr(0), ptr_indices(&line_->indices), ptr_ptr_points(&line_->ptr_points) {}
 
-// 		void release()
-// 		{
-// 			if(type==PLANE) plane_->ptr_points.reset();
-// 			else if(type==LINE) line_->ptr_points.reset();
-// 		}
+		~Feature() 
+		{
+			if(type==PLANE) delete plane_;
+			// else if(type==LINE) delete line_;
+		}
 
-// 		friend std::ostream & operator << (std::ostream &os, const Feature *f)
-// 		{
-// 			if(f->type==PLANE) os<<f->id<<" "<<f->plane_;
-// 			else if(f->type==LINE) os<<f->id<<" "<<f->line_;
-// //			os<<f->ptr_indices->size()<<std::endl;
-// //			for(int i=0;i<f->ptr_indices->size();i++) { os<<(*f->ptr_indices)[i]<<" "; }
-// //			os<<std::endl;
-// 			return os;
-// 		}
+		void release()
+		{
+			if(type==PLANE) plane_->ptr_points.reset();
+			// else if(type==LINE) line_->ptr_points.reset();
+		}
 
-// 		// f->indices are available;
-// 		double dist(Feature *f)
-// 		{
-// 			if(type!=f->Type()) return -1;
-// 			if(type==PLANE) return plane_->dist2plane(f->plane());
-// 			else if(type==LINE) return line_->dist2line(f->line());
-// 		}
+		friend std::ostream & operator << (std::ostream &os, const Feature *f)
+		{
+			if(f->type==PLANE) os<<f->id<<" "<<f->plane_;
+			// else if(f->type==LINE) os<<f->id<<" "<<f->line_;
+			// os<<f->ptr_indices->size()<<std::endl;
+			// for(int i=0;i<f->ptr_indices->size();i++) { os<<(*f->ptr_indices)[i]<<" "; }
+			// os<<std::endl;
+			return os;
+		}
 
-// 		void print(std::ostream &os)
-// 		{
-// 			if(type==PLANE) os<<id<<" "<<plane_<<std::endl;
-// 			else if(type==LINE) os<<id<<" "<<line_<<std::endl;
-// 			os<<ptr_indices->size()<<std::endl;
-// 			for(int i=0;i<ptr_indices->size();i++) os<<(*ptr_indices)[i]<<std::endl;
-// 		}
+		// f->indices are available;
+		double dist(Feature *f)
+		{
+			if(type!=f->Type()) return -1;
+			if(type==PLANE) return plane_->dist2plane(f->plane());
+			// else if(type==LINE) return line_->dist2line(f->line());
+		}
 
-// 		std::string ID() const {return id;}
-// 		FEATURE_TYPE Type() const  {return type;}
+		void print(std::ostream &os)
+		{
+			if(type==PLANE) os<<id<<" "<<plane_<<std::endl;
+			// else if(type==LINE) os<<id<<" "<<line_<<std::endl;
+			os<<ptr_indices->size()<<std::endl;
+			for(int i=0;i<ptr_indices->size();i++) os<<(*ptr_indices)[i]<<std::endl;
+		}
 
-// 		Plane*& plane() {return plane_;}
-// 		Line*& line() {return line_;}
-// 		Landmark*& ptrLandmark() {return ptr;}
+		std::string ID() const {return id;}
+		FEATURE_TYPE Type() const  {return type;}
 
-// 		void setID(int i) 
-// 		{
-// 			if(std::to_string(i).size()==1) id=id+"00"+std::to_string(i);
-// 			else if(std::to_string(i).size()==2) id=id+"0"+std::to_string(i);
-// 			else if(std::to_string(i).size()==3) id=id+std::to_string(i);
-// 		}
+		Plane*& plane() {return plane_;}
+		// Line*& line() {return line_;}
+		Landmark*& ptrLandmark() {return ptr;}
 
-// 		Eigen::Vector3d getDirection() const 
-// 		{
-// 			if(type==PLANE) return plane_->direction();
-// 			else if(type==LINE) return line_->direction();
-// 		}
+		void setID(int i) 
+		{
+			if(std::to_string(i).size()==1) id=id+"00"+std::to_string(i);
+			else if(std::to_string(i).size()==2) id=id+"0"+std::to_string(i);
+			else if(std::to_string(i).size()==3) id=id+std::to_string(i);
+		}
 
-// 		Eigen::Vector3d getDistance() const 
-// 		{
-// 			if(type==PLANE) return plane_->distance();
-// 			else if(type==LINE) return line_->distance();
-// 		}
+		Eigen::Vector3d getDirection() const 
+		{
+			if(type==PLANE) return plane_->direction();
+			// else if(type==LINE) return line_->direction();
+		}
 
-// 		double delta_dir(const Feature *f) const 
-// 		{
-// 			Eigen::Vector3d delta=getDirection().cross(f->getDirection());
-// 			return delta.norm();
-// 		}
+		Eigen::Vector3d getDistance() const 
+		{
+			if(type==PLANE) return plane_->distance();
+			// else if(type==LINE) return line_->distance();
+		}
 
-// 		double delta_dist(const Feature *f) const 
-// 		{
-// 			Eigen::Vector3d delta=getDistance()-f->getDistance();
-// 			return delta.norm();
-// 		}
+		double delta_dir(const Feature *f) const 
+		{
+			Eigen::Vector3d delta=getDirection().cross(f->getDirection());
+			return delta.norm();
+		}
 
-// 		// f <- T(this)
-// 		template<class F>
-// 		double point2featureDistance(const F *f, Transform T) const
-// 		{
-// 			if(type!=f->Type()) return -1;
-// 			ptrPointCloud ptr_points=*ptr_ptr_points;
-// 			double dist=0;
-// 			if(type==PLANE)
-// 			{
-// 				Eigen::Vector3d n=f->getDirection();
-// 				double d=f->getDistance()(0);
-// 				for(int i=0;i<ptr_indices->size();i++)
-// 				{
-// 					int idx=(*ptr_indices)[i];
-// 					Eigen::Vector3d pt;
-// 					pt(0)=ptr_points->at(idx).x;
-// 					pt(1)=ptr_points->at(idx).y;
-// 					pt(2)=ptr_points->at(idx).z;
-// 					pt=T.transformPoint(pt);
-// 					dist+=fabs(n.dot(pt)+d);
-// 				}
-// 				dist/=ptr_indices->size();
-// 			}
-// 			else if(type==LINE)
-// 			{
-// 				Eigen::Vector3d v=f->getDirection();
-// 				Eigen::Vector3d u=f->getDistance();
-// 				for(int i=0;i<ptr_indices->size();i++)
-// 				{
-// 					int idx=(*ptr_indices)[i];
-// 					Eigen::Vector3d pt;
-// 					pt(0)=ptr_points->at(idx).x;
-// 					pt(1)=ptr_points->at(idx).y;
-// 					pt(2)=ptr_points->at(idx).z;
-// 					pt=T.transformPoint(pt);
-// 					pt=v.cross(pt)+u;
-// 					dist+=pt.norm();
-// 				}
-// 				dist/=ptr_indices->size();
-// 			}
-// 			return dist;
-// 		}
-// //		double point2landmarkDistance(const Landmark *l, Transform T) const;
+		double delta_dist(const Feature *f) const 
+		{
+			Eigen::Vector3d delta=getDistance()-f->getDistance();
+			return delta.norm();
+		}
 
-// 		void pushIndex(int i) {ptr_indices->push_back(i);}
-// 		void setPtrPoints(ptrPointCloud p) {*ptr_ptr_points=p;}
+		// f <- T(this)
+		template<class F>
+		double point2featureDistance(const F *f, Transform T) const
+		{
+			if(type!=f->Type()) return -1;
+			ptrPointCloud ptr_points=*ptr_ptr_points;
+			double dist=0;
+			if(type==PLANE)
+			{
+				Eigen::Vector3d n=f->getDirection();
+				double d=f->getDistance()(0);
+				for(int i=0;i<ptr_indices->size();i++)
+				{
+					int idx=(*ptr_indices)[i];
+					Eigen::Vector3d pt;
+					pt(0)=ptr_points->at(idx).x;
+					pt(1)=ptr_points->at(idx).y;
+					pt(2)=ptr_points->at(idx).z;
+					pt=T.transformPoint(pt);
+					dist+=fabs(n.dot(pt)+d);
+				}
+				dist/=ptr_indices->size();
+			}
+			// else if(type==LINE)
+			// {
+			// 	Eigen::Vector3d v=f->getDirection();
+			// 	Eigen::Vector3d u=f->getDistance();
+			// 	for(int i=0;i<ptr_indices->size();i++)
+			// 	{
+			// 		int idx=(*ptr_indices)[i];
+			// 		Eigen::Vector3d pt;
+			// 		pt(0)=ptr_points->at(idx).x;
+			// 		pt(1)=ptr_points->at(idx).y;
+			// 		pt(2)=ptr_points->at(idx).z;
+			// 		pt=T.transformPoint(pt);
+			// 		pt=v.cross(pt)+u;
+			// 		dist+=pt.norm();
+			// 	}
+			// 	dist/=ptr_indices->size();
+			// }
+			return dist;
+		}
+		// double point2landmarkDistance(const Landmark *l, Transform T) const;
 
-// 		void vis(boost::shared_ptr<pcl::visualization::PCLVisualizer> v, 
-// 				 unsigned char r, unsigned char g, unsigned char b, std::string id_pre="", Transform Tcw=Transform::Identity());
-// //		void vis(boost::shared_ptr<pcl::visualization::PCLVisualizer> v, std::string id_pre="", Transform Tcw=Transform::Identity());
+		void pushIndex(int i) {ptr_indices->push_back(i);}
+		void setPtrPoints(ptrPointCloud p) {*ptr_ptr_points=p;}
 
-// 		std::vector<int>* ptrIndices() {return ptr_indices;}
-// 		ptrPointCloud ptrPoints() {return *ptr_ptr_points;}
+		void vis(boost::shared_ptr<pcl::visualization::PCLVisualizer> v, 
+				 unsigned char r, unsigned char g, unsigned char b, std::string id_pre="", Transform Tcw=Transform::Identity());
+		// void vis(boost::shared_ptr<pcl::visualization::PCLVisualizer> v, std::string id_pre="", Transform Tcw=Transform::Identity());
 
-// 	private:
+		std::vector<int>* ptrIndices() {return ptr_indices;}
+		ptrPointCloud ptrPoints() {return *ptr_ptr_points;}
 
-// 		std::string id;
-// 		FEATURE_TYPE type;
-// //		F *feature;
-// 		Plane *plane_;
-// 		Line *line_;
-// 		Landmark *ptr;
-// 		std::vector<int> *ptr_indices;
-// 		ptrPointCloud *ptr_ptr_points;
+	private:
 
-// 	};
+		std::string id;
+		FEATURE_TYPE type;
+		// F *feature;
+		Plane *plane_;
+		// Line *line_;
+		Landmark *ptr;
+		std::vector<int> *ptr_indices;
+		ptrPointCloud *ptr_ptr_points;
 
-// 	struct PlaneLM
-// 	{
-// 		PlaneLM(Plane *plane, Transform Tcg) // for slam;
-// 		{
-// 			id="map_plane_";
-// 			Transform Tgc(Tcg.inv());
-// 			Eigen::Vector4d pln;
-// 			pln.block<3,1>(0,0)=plane->n;
-// 			pln(3)=plane->d;
-// 			pi=Tgc.getPlaneTransform()*pln;
-// 			pi.normalize();
-// 		}
-// 		PlaneLM(Eigen::Vector4d p) // for simulation
-// 		{	
-// 			id="map_plane_";
-// 			pi=p.normalized();
-// 		}
-// 		PlaneLM() {}
+	};
 
-// 		~PlaneLM() {}
+	struct PlaneLM
+	{
+		PlaneLM(Plane *plane, Transform Tcg) // for slam
+		{
+			id="map_plane_";
+			Transform Tgc(Tcg.inv());
+			Eigen::Vector4d pln;
+			pln.block<3,1>(0,0)=plane->n;
+			pln(3)=plane->d;
+			pi=Tgc.getPlaneTransform()*pln;
+			pi.normalize();
+		}
+		PlaneLM(Eigen::Vector4d p) // for simulation
+		{	
+			id="map_plane_";
+			pi=p.normalized();
+		}
+		PlaneLM() {}
 
-// 		Eigen::Vector4d pi;
-// 		std::string id;
+		~PlaneLM() {}
+
+		Eigen::Vector4d pi;
+		std::string id;
 		
-// //		std::vector<int> indices_cameras;
+//		std::vector<int> indices_cameras;
 
-// 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-// 		friend std::ostream & operator << (std::ostream &os, const PlaneLM *p)
-// 		{
-// 			os<<p->pi.transpose();
-// 			return os;
-// 		}
-// 	};
+		friend std::ostream & operator << (std::ostream &os, const PlaneLM *p)
+		{
+			os<<p->pi.transpose();
+			return os;
+		}
+	};
 
 // 	struct LineLM
 // 	{
@@ -899,152 +899,152 @@ namespace terreslam
 
 
 
-// //	template<class L, class F> 
-// 	class Landmark
-// 	{
-// 	public:
+//	template<class L, class F> 
+	class Landmark
+	{
+	public:
 
-// //		// for simulation;
-// //		Landmark(PlaneLM *p) : planelm_(p), type(PLANE), id(p->id) {}
-// //		Landmark(LineLM *l) : linelm_(l), type(LINE), id(l->id) {}
-// //		Landmark(Landmark *l) : type(l->Type()), id(l->ID()) 
-// //		{
-// //			if(l->Type()==PLANE) 
-// //			{
-// //				planelm_=new PlaneLM();
-// //				*planelm_=*l->planelm();
-// //			}
-// //			else if(l->Type()==LINE) 
-// //			{
-// //				linelm_=new LineLM();
-// //				*linelm_=*l->linelm();
-// //			}
-// //		} 
+//		// for simulation;
+//		Landmark(PlaneLM *p) : planelm_(p), type(PLANE), id(p->id) {}
+//		Landmark(LineLM *l) : linelm_(l), type(LINE), id(l->id) {}
+//		Landmark(Landmark *l) : type(l->Type()), id(l->ID()) 
+//		{
+//			if(l->Type()==PLANE) 
+//			{
+//				planelm_=new PlaneLM();
+//				*planelm_=*l->planelm();
+//			}
+//			else if(l->Type()==LINE) 
+//			{
+//				linelm_=new LineLM();
+//				*linelm_=*l->linelm();
+//			}
+//		} 
 		
-// 		// for slam;
-// 		Landmark(Feature *f, Transform Tcg) 
-// 		{
-// 			if(f->Type()==PLANE) planelm_=new PlaneLM(f->plane(),Tcg);
-// 			else if(f->Type()==LINE) linelm_=new LineLM(f->line(),Tcg);
-// //			landmark=new L(f->feature,Tcg);
-// 			type=f->Type();
-// 			id="map_"+f->ID().substr(0,6);
-// 			f->ptrLandmark()=this;
-// //			landmark->ptr=this;
-// 		}
+		/// for slam
+		Landmark(Feature *f, Transform Tcg) 
+		{
+			if(f->Type()==PLANE) planelm_=new PlaneLM(f->plane(),Tcg);
+			// else if(f->Type()==LINE) linelm_=new LineLM(f->line(),Tcg);
+			// landmark=new L(f->feature,Tcg);
+			type=f->Type();
+			id="map_"+f->ID().substr(0,6);
+			f->ptrLandmark()=this;
+			// landmark->ptr=this;
+		}
 
-// 		// for loading data;
-// 		Landmark(std::string s, Eigen::Vector4d p) : id(s), planelm_(new PlaneLM(p)), type(PLANE) {}
-// 		Landmark(std::string s, Vector6d l) : id(s), linelm_(new LineLM(l)), type(LINE) {}
+		/// for loading data
+		Landmark(std::string s, Eigen::Vector4d p) : id(s), planelm_(new PlaneLM(p)), type(PLANE) {}
+		// Landmark(std::string s, Vector6d l) : id(s), linelm_(new LineLM(l)), type(LINE) {}
 
-// 		~Landmark()
-// 		{
-// //			point_cloud.reset();
-// 			if(type==PLANE) delete planelm_;
-// 			else if(type==LINE) delete linelm_;
-// 		}
+		~Landmark()
+		{
+			// point_cloud.reset();
+			if(type==PLANE) delete planelm_;
+			// else if(type==LINE) delete linelm_;
+		}
 
-// 		friend std::ostream & operator << (std::ostream &os, const Landmark *l)
-// 		{
-// 			os.precision(6); os<<std::fixed;
-// 			if(l->type==PLANE) os<<l->id<<" "<<l->planelm_;
-// 			else if(l->type==LINE) os<<l->id<<" "<<l->linelm_;
+		// friend std::ostream & operator << (std::ostream &os, const Landmark *l)
+		// {
+		// 	os.precision(6); os<<std::fixed;
+		// 	if(l->type==PLANE) os<<l->id<<" "<<l->planelm_;
+		// 	// else if(l->type==LINE) os<<l->id<<" "<<l->linelm_;
 
-// 			os<<std::endl<<l->sizeObserv();
-// 			for(const_iterObserv it=l->observs.begin();it!=l->observs.end();it++)
-// 			{
-// 				for(int i=0;i<it->second.size();i++)
-// 				{
-// 					os<<"\t"<<it->first<<"\t"<<it->second[i]<<std::endl;
-// 				}
-// 			}
-// 			return os;
-// 		}
+		// 	os<<std::endl<<l->sizeObserv();
+		// 	for(const_iterObserv it=l->observs.begin();it!=l->observs.end();it++)
+		// 	{
+		// 		for(int i=0;i<it->second.size();i++)
+		// 		{
+		// 			os<<"\t"<<it->first<<"\t"<<it->second[i]<<std::endl;
+		// 		}
+		// 	}
+		// 	return os;
+		// }
 
-// 		std::string ID() const {return id;}
-// 		FEATURE_TYPE Type() const {return type;}
+		std::string ID() const {return id;}
+		FEATURE_TYPE Type() const {return type;}
 
-// 		PlaneLM*& planelm() {return planelm_;}
-// 		LineLM*& linelm() {return linelm_;}
+		PlaneLM*& planelm() {return planelm_;}
+		// LineLM*& linelm() {return linelm_;}
 
-// 		Eigen::Vector3d getDirection() const
-// 		{
-// 			if(type==PLANE) return planelm_->pi.block<3,1>(0,0).normalized();
-// 			else if(type==LINE) return linelm_->L.block<3,1>(3,0).normalized();
-// 		}
+		Eigen::Vector3d getDirection() const
+		{
+			if(type==PLANE) return planelm_->pi.block<3,1>(0,0).normalized();
+			// else if(type==LINE) return linelm_->L.block<3,1>(3,0).normalized();
+		}
 
-// 		Eigen::Vector3d getDistance() const 
-// 		{
-// 			if(type==PLANE)
-// 			{
-// 				Eigen::Vector3d n=planelm_->pi.block<3,1>(0,0);
-// 				double d=planelm_->pi(3)/n.norm();
-// 				return Eigen::Vector3d(d,0.0,0.0);
-// 			}
-// 			else if(type==LINE)
-// 			{
-// 				Eigen::Vector3d v=linelm_->L.block<3,1>(3,0);
-// 				Eigen::Vector3d u=linelm_->L.block<3,1>(0,0)/v.norm();
-// 				return u;
-// 			}
-// 		}
+		Eigen::Vector3d getDistance() const 
+		{
+			if(type==PLANE)
+			{
+				Eigen::Vector3d n=planelm_->pi.block<3,1>(0,0);
+				double d=planelm_->pi(3)/n.norm();
+				return Eigen::Vector3d(d,0.0,0.0);
+			}
+			// else if(type==LINE)
+			// {
+			// 	Eigen::Vector3d v=linelm_->L.block<3,1>(3,0);
+			// 	Eigen::Vector3d u=linelm_->L.block<3,1>(0,0)/v.norm();
+			// 	return u;
+			// }
+		}
 
-// 		void setID(int i)
-// 		{
-// 			if(std::to_string(i).size()==1) id=id+"00"+std::to_string(i);
-// 			else if(std::to_string(i).size()==2) id=id+"0"+std::to_string(i);
-// 			else if(std::to_string(i).size()==3) id=id+std::to_string(i);
-// 		}
+		void setID(int i)
+		{
+			if(std::to_string(i).size()==1) id=id+"00"+std::to_string(i);
+			else if(std::to_string(i).size()==2) id=id+"0"+std::to_string(i);
+			else if(std::to_string(i).size()==3) id=id+std::to_string(i);
+		}
 
-// 		void pushObserv(const double time, const std::string &n)//{observ_time.push_back(time);observ_id.push_back(n);}
-// 		{
-// 			iterObserv it=observs.find(time);
-// 			if(it==observs.end())
-// 			{
-// 				observs.insert(std::pair<double,std::vector<std::string> >(time, std::vector<std::string>(1,n)));
-// 			}
-// 			else 
-// 			{
-// 				observs[time].push_back(n);
-// 			}
-// 		}
+		// void pushObserv(const double time, const std::string &n)//{observ_time.push_back(time);observ_id.push_back(n);}
+		// {
+		// 	iterObserv it=observs.find(time);
+		// 	if(it==observs.end())
+		// 	{
+		// 		observs.insert(std::pair<double,std::vector<std::string> >(time, std::vector<std::string>(1,n)));
+		// 	}
+		// 	else 
+		// 	{
+		// 		observs[time].push_back(n);
+		// 	}
+		// }
 
-// 		std::vector<std::string> Observ(double t) 
-// 		{
-// 			iterObserv it=observs.find(t);
-// 			if(it==observs.end()) return std::vector<std::string>();
-// 			else return it->second;
-// 		}
+		// std::vector<std::string> Observ(double t) 
+		// {
+		// 	iterObserv it=observs.find(t);
+		// 	if(it==observs.end()) return std::vector<std::string>();
+		// 	else return it->second;
+		// }
 
-// //		double observTime(int i) const {return observ_time[i];}
-// //		std::string observID(int i) const {return observ_id[i];}
-// 		int sizeObserv() const
-// 		{
-// 			int num=0;
-// 			for(const_iterObserv it=observs.begin();it!=observs.end();it++) 
-// 			{ for(int i=0;i<it->second.size();i++) { num++; } }
-// 			return num;
-// //			return observ_time.size();
-// 		}
-// 		iterObserv beginObserv() {return observs.begin();}
-// 		iterObserv endObserv() {return observs.end();}
+		// double observTime(int i) const {return observ_time[i];}
+		// std::string observID(int i) const {return observ_id[i];}
+		// int sizeObserv() const
+		// {
+		// 	int num=0;
+		// 	for(const_iterObserv it=observs.begin();it!=observs.end();it++) 
+		// 	{ for(int i=0;i<it->second.size();i++) { num++; } }
+		// 	return num;
+		// 	// return observ_time.size();
+		// }
+		// iterObserv beginObserv() {return observs.begin();}
+		// iterObserv endObserv() {return observs.end();}
 
-// //		ptrPointCloud& points() {return point_cloud;}
+//		ptrPointCloud& points() {return point_cloud;}
 
-// 		void merge(Landmark *lm);
+		void merge(Landmark *lm);
 
-// 	private:
+	private:
 		
-// 		std::string id;
-// 		FEATURE_TYPE type;
-// //		L *landmark;
-// 		PlaneLM *planelm_;
-// 		LineLM *linelm_;
-// //		std::vector<double> observ_time;
-// //		std::vector<std::string> observ_id;
-// 		std::map<double,std::vector<std::string> > observs;
+		std::string id;
+		FEATURE_TYPE type;
+//		L *landmark;
+		PlaneLM *planelm_;
+		// LineLM *linelm_;
+//		std::vector<double> observ_time;
+//		std::vector<std::string> observ_id;
+		std::map<double,std::vector<std::string> > observs;
 
-// //		ptrPointCloud point_cloud;
-// 	};
+//		ptrPointCloud point_cloud;
+	};
 
 }

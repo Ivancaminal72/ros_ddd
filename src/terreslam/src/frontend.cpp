@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-14 11:11:27
- *    Last Modified: 2021-02-19 19:49:01
+ *    Last Modified: 2021-03-04 12:18:39
  */
 
 #include <sensor_msgs/Image.h>
@@ -21,6 +21,7 @@ Frontend::Frontend() :
 	frame_id_("base_link"),
 	odom_frame_id_("/terreslam/odom"),
 	cloud_frame_id_("/terreslam/cloud"),
+	plane_frame_id_("/terreslam/cloud/plane"),
 	sub_lidar_frame_id_("/adapt/lidar"),
 	sub_cam_frame_id_("/adapt/cam"),
 	sub_cam_depth_frame_id_("/adapt/cam_depth"),
@@ -39,7 +40,8 @@ void Frontend::onInit()
 
 	// Publishers
 	odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_frame_id_, 1);
-	cloud_pub_ = pnh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id_, 10);
+	cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id_, 10);
+	plane_pub_ = nh.advertise<sensor_msgs::PointCloud2>(plane_frame_id_, 10);
 	// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
 	//Publish identity T_cam_cloud
@@ -54,6 +56,8 @@ void Frontend::onInit()
 	Ts_cloud_lidar.transform.translation.z = 0;
 	Ts_cloud_lidar.header.frame_id = sub_lidar_frame_id_;
 	Ts_cloud_lidar.child_frame_id = cloud_frame_id_;
+	static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
+	Ts_cloud_lidar.child_frame_id = plane_frame_id_;
 	static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
 
 	onFrontendInit();

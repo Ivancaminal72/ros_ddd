@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-18 11:30:37
- *    Last Modified: 2021-02-24 15:19:30
+ *    Last Modified: 2021-03-04 12:12:01
  */
 
 #pragma once
@@ -26,18 +26,20 @@ protected:
 	std::string frame_id_;
 	std::string odom_frame_id_;
 	std::string cloud_frame_id_;
+	std::string plane_frame_id_;
 	std::string sub_lidar_frame_id_;
 	std::string sub_cam_frame_id_;
 	std::string sub_cam_depth_frame_id_;
 	std::string sub_cam_info_frame_id_;
 	ros::Publisher odom_pub_;
 	ros::Publisher cloud_pub_;
+	ros::Publisher plane_pub_;
 
 	// blocks
 	PlaneDetector PD_;
 
 	// pcl_viewer
-	Visualizer Vis_;
+	// Visualizer Vis_;
 
 	// read/write to disk
 	IoDisk Disk_;

@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-12 13:23:42
- *    Last Modified: 2021-02-17 19:29:27
+ *    Last Modified: 2021-03-01 14:56:08
  */
 
 #ifndef _MAP_H_
@@ -13,8 +13,8 @@
 
 namespace terreslam
 {
-// 	typedef std::map<std::string,Feature*>::iterator iterFeature;
-// 	typedef std::map<std::string,Feature*>::const_iterator const_iterFeature;
+	typedef std::map<std::string,Feature*>::iterator iterFeature;
+	typedef std::map<std::string,Feature*>::const_iterator const_iterFeature;
 
 // 	typedef std::map<std::string,Landmark*>::iterator iterLandmark;
 // 	typedef std::map<std::string,Landmark*>::const_iterator const_iterLandmark;
@@ -47,7 +47,7 @@ namespace terreslam
 
 // 		int findFeature(std::string id);
 // //		std::string findLandmark(std::string id);
-// //
+
 // 		Matrix6d Psi() {return Psi_pi;}
 // 		bool computePsi(Transform Tcr);
 
@@ -199,16 +199,16 @@ namespace terreslam
 		// FeatureAssociation*& association_map() {return landmark_association;}
 		// // FeatureAssociation*& association_sim() {return feature_association_sim;}
 
-		// void addFeature(Feature *f);
-		// Feature* findFeature(std::string id);
+		void addFeature(Feature *f);
+		Feature* findFeature(std::string id);
 
-		// int sizeFeature() {return features.size();}
-		// iterFeature beginFeature() {return features.begin();}
-		// iterFeature endFeature() {return features.end();}
-		// iterFeature eraseFeature(iterFeature it) {return features.erase(it);}
-		// iterFeature eraseFeature(std::string id);
+		int sizeFeature() {return features.size();}
+		iterFeature beginFeature() {return features.begin();}
+		iterFeature endFeature() {return features.end();}
+		iterFeature eraseFeature(iterFeature it) {return features.erase(it);}
+		iterFeature eraseFeature(std::string id);
 
-		// void printFeatures(std::ostream &os);
+		void printFeatures(std::ostream &os);
 		// void saveFeatures(const std::string &folder);
 		// void saveAssociations(const std::string &folder);
 		// // void saveAssociationsMap(const std::string &folder);
@@ -235,8 +235,8 @@ namespace terreslam
 		cv::Mat& imgRGB() {return img_rgb;}
 		cv::Mat& imgDepth() {return img_depth;}
 
-		// file_rgb, file_depth - full path;
-		void loadScan(const double &time, const std::string &file_depth, const std::string &file_rgb);
+		// // file_rgb, file_depth - full path;
+		// void loadScan(const double &time, const std::string &file_depth, const std::string &file_rgb);
 
 		// void addEdgePoint(int i);
 		// int sizeEdgePoint() const {return edge_points.size();}
@@ -264,7 +264,7 @@ namespace terreslam
 		// FeatureAssociation *landmark_association;
 		// // FeatureAssociation *feature_association_sim;
 		// // std::vector<Feature*> features;
-		// std::map<std::string,Feature*> features;
+		std::map<std::string,Feature*> features;
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr point_cloud;
 		pcl::PointCloud<pcl::Normal>::Ptr normal_cloud;

@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-12 13:19:07
- *    Last Modified: 2021-02-19 12:46:03
+ *    Last Modified: 2021-03-01 14:56:29
  */
 
 #include "terreslam/utils/util_map.h"
@@ -924,7 +924,7 @@ namespace terreslam
 		pixel_cloud.reset();
 		if(!img_rgb.empty()) img_rgb.release();
 		if(!img_depth.empty()) img_depth.release();
-		// for(iterFeature it=features.begin();it!=features.end();it++) {delete it->second;}
+		for(iterFeature it=features.begin();it!=features.end();it++) {delete it->second;}
 		// for(size_t i=0;i<edge_points.size();i++) delete edge_points[i];
 		// if(feature_association!=0) delete feature_association;
 		// if(landmark_association!=0) delete landmark_association;
@@ -935,7 +935,7 @@ namespace terreslam
 		point_cloud.reset();
 		normal_cloud.reset();
 		pixel_cloud.reset();
-		// for(iterFeature it=features.begin();it!=features.end();it++) {it->second->release();}
+		for(iterFeature it=features.begin();it!=features.end();it++) {it->second->release();}
 		// for(size_t i=0;i<edge_points.size();i++) 
 		// { delete edge_points[i]; }
 		// edge_points.resize(0);
@@ -953,42 +953,42 @@ namespace terreslam
 		// }
 	}
 
-	// void Scan::addFeature(Feature *f)
-	// {
-	// 	f->setID(features.size());
-	// 	features.insert(std::pair<std::string,Feature*>(f->ID(),f));
-	// }
+	void Scan::addFeature(Feature *f)
+	{
+		f->setID(features.size());
+		features.insert(std::pair<std::string,Feature*>(f->ID(),f));
+	}
 
-	// Feature* Scan::findFeature(std::string id) 
-	// {
-	// 	iterFeature it=features.find(id);
-	// 	if(it==features.end()) 
-	// 	{
-	// 		// std::cout<<"cannot find "<<id<<std::endl;
-	// 		return 0;
-	// 	}
-	// 	return it->second;
-	// }
+	Feature* Scan::findFeature(std::string id) 
+	{
+		iterFeature it=features.find(id);
+		if(it==features.end()) 
+		{
+			// std::cout<<"cannot find "<<id<<std::endl;
+			return 0;
+		}
+		return it->second;
+	}
 
-	// iterFeature Scan::eraseFeature(std::string id)
-	// {
-	// 	iterFeature it=features.find(id);
-	// 	if(it!=features.end()) 
-	// 	{
-	// 		it=features.erase(it);
-	// 	}
-	// 	return it;
-	// }
+	iterFeature Scan::eraseFeature(std::string id)
+	{
+		iterFeature it=features.find(id);
+		if(it!=features.end()) 
+		{
+			it=features.erase(it);
+		}
+		return it;
+	}
 
-	// void Scan::printFeatures(std::ostream &os)
-	// {
-	// 		// printPlanes(os);
-	// 		// printLines(os);
-	// 	for(iterFeature it=features.begin();it!=features.end();it++)
-	// 	{
-	// 		os<<it->second<<std::endl;
-	// 	}
-	// }
+	void Scan::printFeatures(std::ostream &os)
+	{
+			// printPlanes(os);
+			// printLines(os);
+		for(iterFeature it=features.begin();it!=features.end();it++)
+		{
+			os<<it->second<<std::endl;
+		}
+	}
 
 	// void Scan::saveFeatures(const std::string &folder)
 	// {

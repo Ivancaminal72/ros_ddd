@@ -1,7 +1,7 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-21 11:44:23
- *    Last Modified: 2021-02-17 13:03:06
+ *    Last Modified: 2021-03-04 14:10:02
  */
 
 #pragma once
@@ -216,14 +216,15 @@ class PlaneDetector
 public:
 	PlaneDetector()
 	{
-		cells_bottom=new Cells_bottom(9,18,1);
-		max_plane=99;
-		debug = false;
-		min_plane_size = 10e3;
-		thres_angle*=M_PI/180.0;
+		std::cout<<"Constructor plane_detector...\n";
+		cells_bottom = new Cells_bottom(9,18,1);
+		max_plane = 99;
+		debug = true;
+		min_plane_size = 800;
+		thres_angle = 15*M_PI/180.0;
 		thres_dist = 0.5;
 		// thres_color = ??;
-		remove("plane_extraction.txt");
+		remove("/home/icaminal/outputs/unorganized/plane_detector/log_plane_detector.txt");
 	}
 
 	~PlaneDetector()
@@ -248,6 +249,33 @@ private:
 	Cells_bottom *cells_bottom;
 
 	Eigen::Matrix3d Rotation_PCA;
+
+	bool loadPoints(Scan *scan);
+
+	void computeRotationPCA(Scan *scan);
+
+	void unifyPlaneDir(pcl::ModelCoefficients::Ptr plane);
+
+	void fusePlanes(Plane *cur, Plane *fuse);
+
+	void extractIndices(const std::vector<int> &indices_extr, std::vector<int> &indices, std::vector<int> &indices_plane)
+	{
+		indices_plane.clear();
+		for(int i=0;i<indices_extr.size();i++)
+		{
+			int idx=indices_extr[i];
+			indices_plane.push_back(indices[idx]);
+			indices[idx]=-1;
+		}
+		std::vector<int> indices_rest;
+		for(int i=0;i<indices.size();i++)
+		{
+			if(indices[i]==-1) continue;
+			indices_rest.push_back(indices[i]);
+		}
+		indices.clear();
+		indices=indices_rest;
+	}
 
 };
 }

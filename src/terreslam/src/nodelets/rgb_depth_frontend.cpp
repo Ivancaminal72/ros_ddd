@@ -1,12 +1,13 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-02-25 14:36:04
+ *    Last Modified: 2021-03-04 12:56:28
  */
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
 #include "terreslam/utils/util_msg.h"
+#include "terreslam/utils/util_map.h"
 #include "terreslam/utils/util_algebra.h"
 
 #include "nodelet/nodelet.h"
@@ -83,7 +84,7 @@ private:
 		cv_bridge::CvImageConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
 		sensor_msgs::CameraInfo info = *info_msg;
 
-		// INITALIZATION
+		/// INITALIZATION
 		uint32_t height, width;
 		if (rgb_msg->height == depth_msg->height) height = rgb_msg->height; else {skipFrame("Different img height"); return;}
 		if (rgb_msg->width == depth_msg->width) width = rgb_msg->width; else {skipFrame("Different img width"); return;}
@@ -92,28 +93,29 @@ private:
 		ptr_msg_rgb->image.copyTo(cv::Mat(img_rgb, cv::Rect(0, 0, rgb_msg->width, rgb_msg->height)));
 		ptr_msg_depth->image.copyTo(cv::Mat(img_depth, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
 
-		// BACKPROJECTION
+		/// BACKPROJECTION
 		CameraModel cam_model(info);
 		// cam_model.printModel();
 
-		// pointer to the Mat data
+		/// Pointer to the Mat data
 		uint8_t *rgb_ptr;
 		rgb_ptr=img_rgb.data;
 
-		point_cloud=pcl::PointCloud<pcl::PointXYZRGBA>::Ptr (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		normal_cloud=pcl::PointCloud<pcl::Normal>::Ptr (new pcl::PointCloud<pcl::Normal>);
-		pixel_cloud=pcl::PointCloud<pcl::PointXY>::Ptr (new pcl::PointCloud<pcl::PointXY>);
+		scan_ = new Scan();
+		scan_->points() = ptrPointCloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		scan_->normals() = ptrNormalCloud (new pcl::PointCloud<pcl::Normal>);
+		scan_->pixels() = ptrPixelCloud (new pcl::PointCloud<pcl::PointXY>);
 		Eigen::Vector4d point_eigen;
 		Eigen::Vector4d point_eigen_backproj;
 		Eigen::Matrix4d P_inv = cam_model.P().inverse().matrix();
 		pcl::PointXYZRGBA point_pcl;
 		pcl::PointXY tmp_pointxy;
-		// clear the pointcloud 
-		// the allocated memory does not release
-		// the newly pushed elements cover the old ones
-		point_cloud->clear();
-		normal_cloud->clear();
-		pixel_cloud->clear();
+		/// clear the pointcloud 
+		/// the allocated memory does not release
+		/// the newly pushed elements cover the old ones
+		scan_->points()->clear();
+		scan_->normals()->clear();
+		scan_->pixels()->clear();
 		
 		for (int v = 0; v < img_depth.rows; ++v)
 			for (int u = 0; u < img_depth.cols; ++u)
@@ -121,7 +123,7 @@ private:
 				double depth_yx = (double) img_depth.at<ushort>(v, u) / depthScale;
 				if(depth_yx != 0)
 				{
-					// 3 channels for one pixel in rgb image;
+					/// 3 channels for one pixel in rgb image;
 					point_pcl.b=*rgb_ptr;
 					rgb_ptr++;
 					point_pcl.g=*rgb_ptr;
@@ -135,12 +137,12 @@ private:
 					point_pcl.x = (float) point_eigen_backproj(0);
 					point_pcl.y = (float) point_eigen_backproj(1);
 					point_pcl.z = (float) point_eigen_backproj(2);
-					point_cloud->push_back(point_pcl);
-					pixel_cloud->push_back(tmp_pointxy);
+					scan_->points()->push_back(point_pcl);
+					scan_->pixels()->push_back(tmp_pointxy);
 				}
 				else if (use_normal_integral_)
 				{
-					// 3 channels for one pixel in rgb image
+					/// 3 channels for one pixel in rgb image
 					point_pcl.b=*rgb_ptr;
 					rgb_ptr++;
 					point_pcl.g=*rgb_ptr;
@@ -148,47 +150,68 @@ private:
 					point_pcl.r=*rgb_ptr;
 					rgb_ptr++;
 					point_pcl.x = point_pcl.y = point_pcl.z = bad_point;
-					point_cloud->push_back(point_pcl);
+					scan_->points()->push_back(point_pcl);
 				}
 				else rgb_ptr+=3;
 			}
 
-		// NORMALS
+		/// NORMALS
 		if(use_normal_integral_)
 		{
-			// organize the point_cloud for the normal estimation
-			point_cloud->width=width;
-			point_cloud->height=height;
-			// generate the normal_cloud
-			// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
+			/// Organize the point_cloud for the normal estimation
+			scan_->points()->width=width;
+			scan_->points()->height=height;
+			/// Generate the normal_cloud
+			/// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
 			ne_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
 			ne_integral.setDepthDependentSmoothing(true);
 			ne_integral.setNormalSmoothingSize(40.0);
-			ne_integral.setInputCloud(point_cloud);
-			ne_integral.compute(*normal_cloud);
+			ne_integral.setInputCloud(scan_->points());
+			ne_integral.compute(*scan_->normals());
 		}
 		else
 		{
-			ne.setInputCloud(point_cloud);
+			ne.setInputCloud(scan_->points());
 			tree=pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr (new pcl::search::KdTree<pcl::PointXYZRGBA>());
   		ne.setSearchMethod(tree);
 			ne.setRadiusSearch(1);
-			ne.compute(*normal_cloud);
+			ne.compute(*scan_->normals());
 		}
 
-		//Visualize normals
+		/// Visualize normals
 		// Vis_.NormalView1(point_cloud, normal_cloud);
 
-		//Write normals
+		/// Write normals
 		// if(entry_count_ == 0) Disk_.WriteNormals(point_cloud, normal_cloud);
 
-		// PLANE DETECTOR
+		/// PLANE DETECTOR
+		PD_.detectPlanes(scan_);
 		
 
-		
-		// // PUBLISH
+		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr scan_planes (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		for(iterFeature it=scan_->beginFeature();it!=scan_->endFeature();it++)
+		{
+			if(it->second->Type()!=PLANE) continue;
+			pcl::copyPointCloud(*it->second->ptrPoints(),*it->second->ptrIndices(),*tmp_plane);
+			// pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBA> color(tmp_plane,0,255,0);
+			// uint8_t r = 255;
+			// uint8_t g = 0;
+			// uint8_t b = 0;
+			// int32_t rgb = (r << 16) | (g << 8) | b; 
+			// for(auto &p: tmp_plane->points) p.rgb=rgb;
+			*scan_planes += *tmp_plane;
+		}
+
+		/// PUBLISH
+		/// - Planes
 		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*point_cloud, msg_pcd);
+		pcl::toROSMsg(*scan_planes, msg_pcd);
+		msg_pcd.header.frame_id = "/terreslam/cloud/plane";
+		plane_pub_.publish(msg_pcd);
+
+		/// - Cloud
+		pcl::toROSMsg(*scan_->points(), msg_pcd);
 		msg_pcd.header.frame_id = "/terreslam/cloud";
 		cloud_pub_.publish(msg_pcd);
 
@@ -202,22 +225,20 @@ private:
 	}
 
 private:
-	//Constants
+	/// Constants
 	const double depthScale = pow(2,16)/120;
 	const float bad_point = std::numeric_limits<float>::quiet_NaN();
 
-	//Variables
+	/// Variables
 	int queue_size_;
 	int entry_count_ = 0;
 	bool use_normal_integral_ = false;
-	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr point_cloud;
-	pcl::PointCloud<pcl::Normal>::Ptr normal_cloud;
-	pcl::PointCloud<pcl::PointXY>::Ptr pixel_cloud;
+	Scan* scan_;
 	pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree;
 	pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne_integral;
 	pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
 
-	//Comms
+	/// Comms
 	image_transport::SubscriberFilter rgb_sub_;
 	image_transport::SubscriberFilter depth_sub_;
 	message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub_;
