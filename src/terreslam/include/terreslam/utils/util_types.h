@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-12 13:05:35
- *    Last Modified: 2021-03-01 14:47:07
  */
 
 #pragma once

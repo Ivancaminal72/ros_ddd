@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-12 13:09:08
- *    Last Modified: 2021-02-12 13:23:24
  */
 
 #include "terreslam/utils/util_types.h"

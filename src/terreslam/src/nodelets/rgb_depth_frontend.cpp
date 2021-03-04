@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-19 11:47:07
- *    Last Modified: 2021-03-04 12:56:28
  */
 
 #include "terreslam/frontend.h"

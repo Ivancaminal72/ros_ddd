@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-25 13:25:42
- *    Last Modified: 2021-02-25 13:59:10
  */
 
 #include <pcl/filters/extract_indices.h>

@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-12 13:23:42
- *    Last Modified: 2021-03-01 14:56:08
  */
 
 #ifndef _MAP_H_

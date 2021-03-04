@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-14 11:11:27
- *    Last Modified: 2021-03-04 12:18:39
  */
 
 #include <sensor_msgs/Image.h>

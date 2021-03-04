@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-26 19:35:30
- *    Last Modified: 2021-01-26 19:36:28
  */
 
 #include "ros/ros.h"

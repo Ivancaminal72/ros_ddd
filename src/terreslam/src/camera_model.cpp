@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-01-21 17:22:47
- *    Last Modified: 2021-01-26 10:23:44
  */
 
 #include <iostream>

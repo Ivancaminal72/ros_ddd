@@ -1,7 +1,6 @@
 /*
  *    Author: Ivan Caminal
  *    Created Date: 2021-02-24 15:12:40
- *    Last Modified: 2021-02-25 14:24:00
  */
 
 #include "terreslam/io_disk.h"
