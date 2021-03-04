@@ -39,8 +39,8 @@ cs_add_library(${PROJECT_NAME}
   # src/features/ulysses_plane_extraction.cpp
   # src/utils/ulysses_map.cpp
   # src/utils/ulysses_types.cpp
-  # src/types/sunq_map.cpp
-  # src/types/sunq_types.cpp
+  # src/utils/sunq_map.cpp
+  # src/utils/sunq_types.cpp
   src/utils/util_msg.cpp
   src/utils/util_algebra.cpp
   src/utils/util_types.cpp
