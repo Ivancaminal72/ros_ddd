@@ -39,6 +39,7 @@ void Frontend::onInit()
 
 	/// Parameters
 	nh.getParam("/terreslam/logsdir", logs_dir);
+	nh.getParam("/terreslam/max_depth", max_depth);
 	
 	/// - Plane detector
 	nh.getParam("/terreslam/PD/debug", PD_debug);
@@ -51,15 +52,16 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/PD/thres_dist", PD_thres_dist);
 	// nh.getParam("/PD/thres_color", PD_thres_color);
 
-	PD = new PlaneDetector(logs_dir,
-													PD_debug,
+	PD = new PlaneDetector (PD_debug,
 													PD_theta,
 													PD_phi,
 													PD_d,
 													PD_max_plane,
 													PD_min_plane_size,
 													PD_thres_angle,
-													PD_thres_dist);
+													PD_thres_dist,
+													max_depth,
+													logs_dir);
 
 	// Publishers
 	odom_pub = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);

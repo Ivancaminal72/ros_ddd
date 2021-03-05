@@ -31,6 +31,8 @@ protected:
 	std::string sub_cam_depth_frame_id;
 	std::string sub_cam_info_frame_id;
 	std::string logs_dir;
+	double max_depth;
+
 	bool PD_debug;
 	int PD_theta;
 	int PD_phi;

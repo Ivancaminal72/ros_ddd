@@ -143,14 +143,14 @@ class Cells_bottom
 {
 public:
 
-	Cells_bottom(int theta, int phy, int d) 
+	Cells_bottom(int theta, int phy, int d, double max_depth) 
 	{
 		bins_theta=theta;
 		bins_phy=phy;
 		bins_d=d;
 		delta_theta=M_PI/bins_theta;
 		delta_phy=M_PI*2/bins_phy;
-		delta_d=6.0/bins_d;
+		delta_d=max_depth/bins_d;
 		// cells are allocated here;
 		cells.resize(bins_theta*bins_phy*bins_d);
 		for(size_t i=0;i<cells.size();i++)
@@ -214,7 +214,6 @@ class PlaneDetector
 {
 public:
 	PlaneDetector(
-		std::string logs_dir,
 		bool debug,
 		int theta,
 		int phi,
@@ -222,7 +221,9 @@ public:
 		int max_plane,
 		int min_plane_size,
 		double thres_angle,
-		double thres_dist)
+		double thres_dist,
+		double max_depth,
+		std::string logs_dir)
 	:
 		logs_path_(logs_dir + "/log_plane_detector.txt"),
 		debug_(debug),
@@ -232,7 +233,7 @@ public:
 		thres_dist_(thres_dist)
 	{
 		std::cout<<"Constructor plane_detector...\n";
-		cells_bottom_ = new Cells_bottom(theta,phi,d);
+		cells_bottom_ = new Cells_bottom(theta,phi,d, max_depth);
 		thres_angle_ *= M_PI/180.0;
 		remove(logs_path_.c_str());
 	}

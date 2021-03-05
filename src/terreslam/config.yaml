@@ -2,6 +2,7 @@
 
 # General
 /terreslam/logsdir: "/home/icaminal/outputs/unorganized/terreslam"
+/terreslam/max_depth: 120.0  #for Kinect 6.0
 
 # Comms
 /terreslam/frame_id: "base_link"
@@ -20,7 +21,7 @@
 /terreslam/PD/d: 1
 /terreslam/PD/max_plane: 99
 /terreslam/PD/min_plane_size: 800
-/terreslam/PD/thres_angle: 15
+/terreslam/PD/thres_angle: 15.0
 /terreslam/PD/thres_dist: 0.5
 # /terreslam/PD/thres_color: 
 
