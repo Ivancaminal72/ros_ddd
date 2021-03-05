@@ -60,9 +60,9 @@ private:
 		image_transport::TransportHints hintsDepth("raw", ros::TransportHints(), depth_pnh);
 
 		/// Subscribers
-		rgb_sub_.subscribe(rgb_it, sub_cam_frame_id_, 1, hintsRgb);
-		depth_sub_.subscribe(depth_it, sub_cam_depth_frame_id_, 1, hintsDepth);
-		info_sub_.subscribe(rgb_nh, sub_cam_info_frame_id_, 1);
+		rgb_sub_.subscribe(rgb_it, sub_cam_frame_id, 1, hintsRgb);
+		depth_sub_.subscribe(depth_it, sub_cam_depth_frame_id, 1, hintsDepth);
+		info_sub_.subscribe(rgb_nh, sub_cam_info_frame_id, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), rgb_sub_, depth_sub_, info_sub_);
@@ -181,10 +181,10 @@ private:
 		// Vis_.NormalView1(point_cloud, normal_cloud);
 
 		/// Write normals
-		// if(entry_count_ == 0) Disk_.WriteNormals(point_cloud, normal_cloud);
+		// if(entry_count_ == 0) Disk.WriteNormals(point_cloud, normal_cloud);
 
 		/// PLANE DETECTOR
-		PD_->detectPlanes(scan_);
+		PD->detectPlanes(scan_);
 		
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -207,12 +207,12 @@ private:
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*scan_planes, msg_pcd);
 		msg_pcd.header.frame_id = "/terreslam/cloud/plane";
-		plane_pub_.publish(msg_pcd);
+		plane_pub.publish(msg_pcd);
 
 		/// - Cloud
 		pcl::toROSMsg(*scan_->points(), msg_pcd);
 		msg_pcd.header.frame_id = "/terreslam/cloud";
-		cloud_pub_.publish(msg_pcd);
+		cloud_pub.publish(msg_pcd);
 
 		entry_count_++;
 	}

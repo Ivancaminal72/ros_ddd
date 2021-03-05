@@ -1,12 +1,28 @@
-#YAML configuration of Terreslam
+# YAML configuration of Terreslam
 
-#Plane Detector
-/PD/debug: true
-/PD/theta: 9
-/PD/phi: 18
-/PD/d: 1
-/PD/max_plane: 99
-/PD/min_plane_size: 800
-/PD/thres_angle: 15
-/PD/thres_dist: 0.5
-# /PD/thres_color: 
+# General
+/terreslam/logsdir: "/home/icaminal/outputs/unorganized/terreslam"
+
+# Comms
+/terreslam/frame_id: "base_link"
+/terreslam/odom_frame_id: "/terreslam/odom"
+/terreslam/cloud_frame_id: "/terreslam/cloud"
+/terreslam/plane_frame_id: "/terreslam/cloud/plane"
+/terreslam/sub_lidar_frame_id: "/adapt/lidar"
+/terreslam/sub_cam_frame_id: "/adapt/cam"
+/terreslam/sub_cam_depth_frame_id: "/adapt/cam_depth"
+/terreslam/sub_cam_info_frame_id: "/adapt/camera_info"
+
+# Plane Detector
+/terreslam/PD/debug: true
+/terreslam/PD/theta: 9
+/terreslam/PD/phi: 18
+/terreslam/PD/d: 1
+/terreslam/PD/max_plane: 99
+/terreslam/PD/min_plane_size: 800
+/terreslam/PD/thres_angle: 15
+/terreslam/PD/thres_dist: 0.5
+# /terreslam/PD/thres_color: 
+
+# Plane Processor
+/terreslam/PP/debug: true

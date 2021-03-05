@@ -22,14 +22,15 @@ public:
 
 protected:
 	// Parameters
-	std::string frame_id_;
-	std::string odom_frame_id_;
-	std::string cloud_frame_id_;
-	std::string plane_frame_id_;
-	std::string sub_lidar_frame_id_;
-	std::string sub_cam_frame_id_;
-	std::string sub_cam_depth_frame_id_;
-	std::string sub_cam_info_frame_id_;
+	std::string frame_id;
+	std::string odom_frame_id;
+	std::string cloud_frame_id;
+	std::string plane_frame_id;
+	std::string sub_lidar_frame_id;
+	std::string sub_cam_frame_id;
+	std::string sub_cam_depth_frame_id;
+	std::string sub_cam_info_frame_id;
+	std::string logs_dir;
 	bool PD_debug;
 	int PD_theta;
 	int PD_phi;
@@ -41,18 +42,18 @@ protected:
 	// double PD_thres_color;
 	
 	/// Variables
-	ros::Publisher odom_pub_;
-	ros::Publisher cloud_pub_;
-	ros::Publisher plane_pub_;
+	ros::Publisher odom_pub;
+	ros::Publisher cloud_pub;
+	ros::Publisher plane_pub;
 
 	// blocks
-	PlaneDetector *PD_;
+	PlaneDetector *PD;
 
 	// pcl_viewer
 	// Visualizer Vis_;
 
 	// read/write to disk
-	IoDisk Disk_;
+	IoDisk Disk;
 
 private:
 	virtual void onInit();

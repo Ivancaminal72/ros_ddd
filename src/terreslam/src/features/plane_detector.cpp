@@ -140,7 +140,7 @@ bool PlaneDetector::loadPoints(Scan *scan)
 
 void PlaneDetector::detectPlanes(Scan *scan)
 {
-	fp_.open("/home/icaminal/outputs/unorganized/plane_detector/log_plane_detector.txt", std::ios::app);
+	fp_.open(logs_path_, std::ios::app);
 	if(debug_)
 	{
 		fp_<<"*****************extractPlanes**************************************"<<std::endl;
@@ -538,10 +538,11 @@ void PlaneDetector::computeRotationPCA(Scan *scan)
 		Rotation_PCA.block<1,3>(2,0)=z.transpose();
 	}
 
-/// unifyPlaneDir
-/// - make the plane normal point to the origin
 void PlaneDetector::unifyPlaneDir(pcl::ModelCoefficients::Ptr plane)
 {
+	/// unifyPlaneDir
+	/// - make the plane normal point to the origin
+	
 	double a=plane->values[0];
 	double b=plane->values[1];
 	double c=plane->values[2];

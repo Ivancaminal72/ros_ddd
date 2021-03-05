@@ -17,14 +17,14 @@ namespace terreslam
 {
 
 Frontend::Frontend() : 
-	frame_id_("base_link"),
-	odom_frame_id_("/terreslam/odom"),
-	cloud_frame_id_("/terreslam/cloud"),
-	plane_frame_id_("/terreslam/cloud/plane"),
-	sub_lidar_frame_id_("/adapt/lidar"),
-	sub_cam_frame_id_("/adapt/cam"),
-	sub_cam_depth_frame_id_("/adapt/cam_depth"),
-	sub_cam_info_frame_id_("/adapt/camera_info")
+	frame_id("base_link"),
+	odom_frame_id("/terreslam/odom"),
+	cloud_frame_id("/terreslam/cloud"),
+	plane_frame_id("/terreslam/cloud/plane"),
+	sub_lidar_frame_id("/adapt/lidar"),
+	sub_cam_frame_id("/adapt/cam"),
+	sub_cam_depth_frame_id("/adapt/cam_depth"),
+	sub_cam_info_frame_id("/adapt/camera_info")
 {
 	std::cout << "Constructor frontend..." << std::endl;
 }
@@ -38,17 +38,21 @@ void Frontend::onInit()
 	const nodelet::V_string & str_argv = getMyArgv();
 
 	/// Parameters
-	nh.getParam("/PD/debug", PD_debug);
-	nh.getParam("/PD/theta", PD_theta);
-	nh.getParam("/PD/phi", PD_phi);
-	nh.getParam("/PD/d", PD_d);
-	nh.getParam("/PD/max_plane", PD_max_plane);
-	nh.getParam("/PD/min_plane_size", PD_min_plane_size);
-	nh.getParam("/PD/thres_angle", PD_thres_angle);
-	nh.getParam("/PD/thres_dist", PD_thres_dist);
+	nh.getParam("/terreslam/logsdir", logs_dir);
+	
+	/// - Plane detector
+	nh.getParam("/terreslam/PD/debug", PD_debug);
+	nh.getParam("/terreslam/PD/theta", PD_theta);
+	nh.getParam("/terreslam/PD/phi", PD_phi);
+	nh.getParam("/terreslam/PD/d", PD_d);
+	nh.getParam("/terreslam/PD/max_plane", PD_max_plane);
+	nh.getParam("/terreslam/PD/min_plane_size", PD_min_plane_size);
+	nh.getParam("/terreslam/PD/thres_angle", PD_thres_angle);
+	nh.getParam("/terreslam/PD/thres_dist", PD_thres_dist);
 	// nh.getParam("/PD/thres_color", PD_thres_color);
 
-	PD_ = new PlaneDetector(PD_debug,
+	PD = new PlaneDetector(logs_dir,
+													PD_debug,
 													PD_theta,
 													PD_phi,
 													PD_d,
@@ -58,9 +62,9 @@ void Frontend::onInit()
 													PD_thres_dist);
 
 	// Publishers
-	odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_frame_id_, 1);
-	cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id_, 10);
-	plane_pub_ = nh.advertise<sensor_msgs::PointCloud2>(plane_frame_id_, 10);
+	odom_pub = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);
+	cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id, 10);
+	plane_pub = nh.advertise<sensor_msgs::PointCloud2>(plane_frame_id, 10);
 	// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
 	//Publish identity T_cam_cloud
@@ -73,10 +77,10 @@ void Frontend::onInit()
 	Ts_cloud_lidar.transform.translation.x = 0;
 	Ts_cloud_lidar.transform.translation.y = 0;
 	Ts_cloud_lidar.transform.translation.z = 0;
-	Ts_cloud_lidar.header.frame_id = sub_lidar_frame_id_;
-	Ts_cloud_lidar.child_frame_id = cloud_frame_id_;
+	Ts_cloud_lidar.header.frame_id = sub_lidar_frame_id;
+	Ts_cloud_lidar.child_frame_id = cloud_frame_id;
 	static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
-	Ts_cloud_lidar.child_frame_id = plane_frame_id_;
+	Ts_cloud_lidar.child_frame_id = plane_frame_id;
 	static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
 
 	onFrontendInit();

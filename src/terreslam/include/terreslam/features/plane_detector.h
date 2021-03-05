@@ -214,6 +214,7 @@ class PlaneDetector
 {
 public:
 	PlaneDetector(
+		std::string logs_dir,
 		bool debug,
 		int theta,
 		int phi,
@@ -223,19 +224,17 @@ public:
 		double thres_angle,
 		double thres_dist)
 	:
+		logs_path_(logs_dir + "/log_plane_detector.txt"),
 		debug_(debug),
-		theta_(theta),
-		phi_(phi),
-		d_(d),
 		max_plane_(max_plane),
 		min_plane_size_(min_plane_size),
 		thres_angle_(thres_angle),
 		thres_dist_(thres_dist)
 	{
 		std::cout<<"Constructor plane_detector...\n";
-		cells_bottom_ = new Cells_bottom(theta_,phi_,d_);
+		cells_bottom_ = new Cells_bottom(theta,phi,d);
 		thres_angle_ *= M_PI/180.0;
-		remove("/home/icaminal/outputs/unorganized/plane_detector/log_plane_detector.txt");
+		remove(logs_path_.c_str());
 	}
 
 	~PlaneDetector()
@@ -249,13 +248,13 @@ public:
 
 private:
 
+	std::string logs_path_;
 	bool debug_;
 	std::ofstream fp_;
 
 	double maxdist_point2plane;
 	int max_plane_;
 	int min_plane_size_;
-	int theta_, phi_, d_;
 	double thres_angle_, thres_dist_, thres_color_;
 
 	Cells_bottom *cells_bottom_;
