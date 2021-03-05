@@ -37,6 +37,26 @@ void Frontend::onInit()
 	ros::NodeHandle & pnh = getPrivateNodeHandle();
 	const nodelet::V_string & str_argv = getMyArgv();
 
+	/// Parameters
+	nh.getParam("/PD/debug", PD_debug);
+	nh.getParam("/PD/theta", PD_theta);
+	nh.getParam("/PD/phi", PD_phi);
+	nh.getParam("/PD/d", PD_d);
+	nh.getParam("/PD/max_plane", PD_max_plane);
+	nh.getParam("/PD/min_plane_size", PD_min_plane_size);
+	nh.getParam("/PD/thres_angle", PD_thres_angle);
+	nh.getParam("/PD/thres_dist", PD_thres_dist);
+	// nh.getParam("/PD/thres_color", PD_thres_color);
+
+	PD_ = new PlaneDetector(PD_debug,
+													PD_theta,
+													PD_phi,
+													PD_d,
+													PD_max_plane,
+													PD_min_plane_size,
+													PD_thres_angle,
+													PD_thres_dist);
+
 	// Publishers
 	odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_frame_id_, 1);
 	cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id_, 10);

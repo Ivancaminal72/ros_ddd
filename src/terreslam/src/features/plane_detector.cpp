@@ -89,13 +89,13 @@ bool PlaneDetector::loadPoints(Scan *scan)
 			return false;
 		}
 
-		cells_bottom->clear();
+		cells_bottom_->clear();
 
 		computeRotationPCA(scan);
-		if(debug)
+		if(debug_)
 		{
-			fp<<"RotationPCA - "<<std::endl;
-			fp<<Rotation_PCA<<std::endl;
+			fp_<<"RotationPCA - "<<std::endl;
+			fp_<<Rotation_PCA<<std::endl;
 		}
 
 		Point point_tmp;
@@ -127,23 +127,23 @@ bool PlaneDetector::loadPoints(Scan *scan)
 			point_tmp.u=scan->pixels()->at(i).x; // i/width
 			point_tmp.v=scan->pixels()->at(i).y; // i%height
 			// push the point into the corresponding cells
-			cells_bottom->push_point(point_tmp,i);
+			cells_bottom_->push_point(point_tmp,i);
 		}
 
-		cells_bottom->computeCellAttributes();
+		cells_bottom_->computeCellAttributes();
 
-		cells_bottom->SortCells();
+		cells_bottom_->SortCells();
 
-//		fp.close();
+//		fp_.close();
 		return true;
 }
 
 void PlaneDetector::detectPlanes(Scan *scan)
 {
-	fp.open("/home/icaminal/outputs/unorganized/plane_detector/log_plane_detector.txt", std::ios::app);
-	if(debug)
+	fp_.open("/home/icaminal/outputs/unorganized/plane_detector/log_plane_detector.txt", std::ios::app);
+	if(debug_)
 	{
-		fp<<"*****************extractPlanes**************************************"<<std::endl;
+		fp_<<"*****************extractPlanes**************************************"<<std::endl;
 	}
 
 	loadPoints(scan);
@@ -163,7 +163,7 @@ void PlaneDetector::detectPlanes(Scan *scan)
 	bool have_same_plane=false;
 	bool had_parallel_plane=false;
 
-	// std::cout<<"cells_bottom "<<cells_bottom->size()<<std::endl;
+	// std::cout<<"cells_bottom "<<cells_bottom_->size()<<std::endl;
 	// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr allplane (new pcl::PointCloud<pcl::PointXYZRGBA>);
 	
 	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_contain_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -191,32 +191,32 @@ void PlaneDetector::detectPlanes(Scan *scan)
 	seg.setMaxIterations(120);
 	seg.setDistanceThreshold(0.02); //0.01
 
-	// std::cout<<"cells_bottom "<<cells_bottom->size()<<std::endl;
+	// std::cout<<"cells_bottom "<<cells_bottom_->size()<<std::endl;
 
 	/// Find the cell with the most points inside
-	std::vector<Sorted_Cell>::iterator iter_sorted_cells=cells_bottom->getHighestCell();
+	std::vector<Sorted_Cell>::iterator iter_sorted_cells=cells_bottom_->getHighestCell();
 	int maxdir = 0;
 	int maxnum = 0;
 	maxdir=iter_sorted_cells->index;
 	maxnum=iter_sorted_cells->num_point;
-	if(debug)
+	if(debug_)
 	{
-		fp<<"maxdir = "<<maxdir<<", maxnum = "<<maxnum<<std::endl;
+		fp_<<"maxdir = "<<maxdir<<", maxnum = "<<maxnum<<std::endl;
 	}
 
 	cloud_rest_final->clear();
 	// scan->observed_planes.clear(); //ivan: I think that should be deleted
 	
 	/// Extracting planes
-	while ( maxnum > min_plane_size && enough_plane == false )
+	while ( maxnum > min_plane_size_ && enough_plane == false )
 	{
 		/// Save points in cells[maxdir] to cloud_contain_plane
 		extract.setInputCloud (scan->points());
-		extract.setIndices (cells_bottom->getCell(maxdir)->indices);
+		extract.setIndices (cells_bottom_->getCell(maxdir)->indices);
 		extract.setNegative (false);
 		extract.filter (*cloud_contain_plane);
 
-		indices_cloud_contain_plane=cells_bottom->getCell(maxdir)->indices->indices;
+		indices_cloud_contain_plane=cells_bottom_->getCell(maxdir)->indices->indices;
 
 		// cout<<"vis - cloud_contain_plane"<<endl;
 		// pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBA> color1(cloud_contain_plane,255,0,0);
@@ -225,21 +225,21 @@ void PlaneDetector::detectPlanes(Scan *scan)
 
 		/// The corresponding normals() to cloud_contain_plane_normal
 		extract_normal.setInputCloud(scan->normals());
-		extract_normal.setIndices(cells_bottom->getCell(maxdir)->indices);
+		extract_normal.setIndices(cells_bottom_->getCell(maxdir)->indices);
 		extract_normal.setNegative(false);
 		extract_normal.filter(*cloud_contain_plane_normal);
 		/// The corresponding pixels() pixel to cloud_contain_plane_image
 		extract_image.setInputCloud (scan->pixels());
-		extract_image.setIndices (cells_bottom->getCell(maxdir)->indices);
+		extract_image.setIndices (cells_bottom_->getCell(maxdir)->indices);
 		extract_image.setNegative (false);
 		extract_image.filter (*cloud_contain_plane_image);
 		/// Enough points in the cells[maxdir]
-		if(debug)
+		if(debug_)
 		{
-			fp<<"================================================="<<std::endl;
-			fp<<"maxdir="<<maxdir<<", maxnum="<<maxnum<<std::endl;
+			fp_<<"================================================="<<std::endl;
+			fp_<<"maxdir="<<maxdir<<", maxnum="<<maxnum<<std::endl;
 		}
-		if (cloud_contain_plane->size() > min_plane_size)
+		if (cloud_contain_plane->size() > min_plane_size_)
 		{
 			/// Estimate plane parameters using cells[maxdir]
 			seg.setInputCloud(cloud_contain_plane);
@@ -287,12 +287,12 @@ void PlaneDetector::detectPlanes(Scan *scan)
 
 			have_same_plane=false;
 
-			if(debug)
+			if(debug_)
 			{
-				fp<<"Plane size="<<plane->size()<<std::endl;
+				fp_<<"Plane size="<<plane->size()<<std::endl;
 			}
 
-			if(plane->size()<=min_plane_size)
+			if(plane->size()<=min_plane_size_)
 			{
 				/// if the extracted plane is not large enough
 				/// then the following "while" will not be activated
@@ -300,9 +300,9 @@ void PlaneDetector::detectPlanes(Scan *scan)
 				*cloud_rest_final=*cloud_rest_final+*plane;
 			}
 
-			while(plane->size() > min_plane_size && enough_plane == false)
+			while(plane->size() > min_plane_size_ && enough_plane == false)
 			{
-				if (scan->sizeFeature() < max_plane)
+				if (scan->sizeFeature() < max_plane_)
 				{
 					/// tmp_plane
 					/// - allocate a new plane feaure
@@ -329,12 +329,12 @@ void PlaneDetector::detectPlanes(Scan *scan)
 
 					// vis->spin();
 
-					if(debug)
+					if(debug_)
 					{
-						fp<<"allocate a new plane - "<<std::endl;
-						fp<<"\tnormal="<<tmp_plane->n.transpose()<<std::endl;
-						fp<<"\td="<<tmp_plane->d<<std::endl;
-						fp<<"\tplane size - "<<tmp_plane->indices.size()<<std::endl;
+						fp_<<"allocate a new plane - "<<std::endl;
+						fp_<<"\tnormal="<<tmp_plane->n.transpose()<<std::endl;
+						fp_<<"\td="<<tmp_plane->d<<std::endl;
+						fp_<<"\tplane size - "<<tmp_plane->indices.size()<<std::endl;
 					}
 				
 					/// if "planes" are not empty, i.e., there are already extracted planes
@@ -346,22 +346,22 @@ void PlaneDetector::detectPlanes(Scan *scan)
 						for(iterFeature it=scan->beginFeature();it!=scan->endFeature();it++)
 						{
 							if(it->second->Type()!=PLANE) continue;
-							// angle(n1,n2)<thres_angle, |d1-d2|<thres_dist, delta_color<thres_color;
+							// angle(n1,n2)<thres_angle_, |d1-d2|<thres_dist_, delta_color<thres_color;
 							double tmp_cos_angle=tmp_plane->n.transpose()*it->second->plane()->n;
 							if(tmp_cos_angle>0.9999)
 							{
 								tmp_cos_angle=1.0;
 							}
 							// Eigen::Vector3d tmp_delta_rgb=tmp_plane->centroid_color-scan->observed_planes[i_plane]->centroid_color;
-							if(debug)
+							if(debug_)
 							{
-								fp<<"\tsimilarity with "<<it->second->ID()<<" - "<<tmp_cos_angle<<", "<<acos(tmp_cos_angle)<<", "
+								fp_<<"\tsimilarity with "<<it->second->ID()<<" - "<<tmp_cos_angle<<", "<<acos(tmp_cos_angle)<<", "
 												<<fabs(tmp_plane->d-it->second->plane()->d)
 											 	// <<", "<<tmp_delta_rgb.norm()
 											<<std::endl;
 							}
-							if(acos(tmp_cos_angle)<thres_angle 
-									&& fabs(tmp_plane->d-it->second->plane()->d)<thres_dist) 
+							if(acos(tmp_cos_angle)<thres_angle_ 
+									&& fabs(tmp_plane->d-it->second->plane()->d)<thres_dist_) 
 								 	// && tmp_delta_rgb.norm()<thres_color)
 							{
 								have_same_plane=true;
@@ -369,12 +369,12 @@ void PlaneDetector::detectPlanes(Scan *scan)
 								// tmp_plane->release();
 								delete tmp_plane;
 								// *allplane = *plane + *allplane;
-								if(debug)
+								if(debug_)
 								{
-									fp<<"\tsame with "<<it->second->ID()<<", after fusion:"<<std::endl;
-									fp<<"\t\tnormal="<<it->second->plane()->n.transpose()<<std::endl;
-									fp<<"\t\td="<<it->second->plane()->d<<std::endl;
-									fp<<"\t\tsize="<<it->second->plane()->indices.size()<<std::endl;
+									fp_<<"\tsame with "<<it->second->ID()<<", after fusion:"<<std::endl;
+									fp_<<"\t\tnormal="<<it->second->plane()->n.transpose()<<std::endl;
+									fp_<<"\t\td="<<it->second->plane()->d<<std::endl;
+									fp_<<"\t\tsize="<<it->second->plane()->indices.size()<<std::endl;
 								}
 								break;
 							}
@@ -390,18 +390,18 @@ void PlaneDetector::detectPlanes(Scan *scan)
 						Feature *feature=new Feature(tmp_plane);
 						scan->addFeature(feature);
 						// *allplane = *plane + *allplane;
-						if(debug)
+						if(debug_)
 						{
-							fp<<"the "<<scan->sizeFeature()-1<<"th plane:"<<std::endl;
-							fp<<"\tnormal="<<tmp_plane->n.transpose()<<std::endl;
-							fp<<"\td="<<tmp_plane->d<<std::endl;
-							fp<<"\tplane size - "<<tmp_plane->indices.size()<<std::endl;
+							fp_<<"the "<<scan->sizeFeature()-1<<"th plane:"<<std::endl;
+							fp_<<"\tnormal="<<tmp_plane->n.transpose()<<std::endl;
+							fp_<<"\td="<<tmp_plane->d<<std::endl;
+							fp_<<"\tplane size - "<<tmp_plane->indices.size()<<std::endl;
 						}
 					}
 
 					/// if there are a lot of points left in the cloud_contain_plane
 					/// then more planes may be extracted
-					if (cloud_contain_plane->size() > min_plane_size)
+					if (cloud_contain_plane->size() > min_plane_size_)
 					{
 						seg.setInputCloud(cloud_contain_plane);
 						seg.segment(*inliers_plane, *coefficients_plane);
@@ -431,7 +431,7 @@ void PlaneDetector::detectPlanes(Scan *scan)
 
 						have_same_plane=false;
 
-						if (plane->size() > min_plane_size)
+						if (plane->size() > min_plane_size_)
 						{
 							// had_parallel_plane = true;
 						}
@@ -464,14 +464,14 @@ void PlaneDetector::detectPlanes(Scan *scan)
 			maxnum=iter_sorted_cells->num_point;
 		}
 	}
-	if(debug)
+	if(debug_)
 	{
-		fp<<"extracted "<<scan->sizeFeature()<<" planes"<<std::endl;
+		fp_<<"extracted "<<scan->sizeFeature()<<" planes"<<std::endl;
 		// for(int i=0;i<scan->observed_planes.size();i++)
 		for(iterFeature it=scan->beginFeature();it!=scan->endFeature();it++)
 		{
-			fp<<"\tnormal="<<it->second->plane()->n.transpose();
-			fp<<", d="<<it->second->plane()->d<<std::endl;
+			fp_<<"\tnormal="<<it->second->plane()->n.transpose();
+			fp_<<", d="<<it->second->plane()->d<<std::endl;
 		}
 	}
 
@@ -480,13 +480,13 @@ void PlaneDetector::detectPlanes(Scan *scan)
 	// 	fitPlaneModel(scan->observed_planes[i]);
 	// }
 
-	// if(debug)
+	// if(debug_)
 	// {
 	// 	visPlanes(scan,vis);
 	// 	vis->spin();
 	// }
 
-	fp.close();
+	fp_.close();
 
 }
 

@@ -1,0 +1,12 @@
+#YAML configuration of Terreslam
+
+#Plane Detector
+/PD/debug: true
+/PD/theta: 9
+/PD/phi: 18
+/PD/d: 1
+/PD/max_plane: 99
+/PD/min_plane_size: 800
+/PD/thres_angle: 15
+/PD/thres_dist: 0.5
+# /PD/thres_color: 

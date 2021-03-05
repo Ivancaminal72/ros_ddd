@@ -21,7 +21,7 @@ public:
 	Frontend();
 
 protected:
-	// parameters
+	// Parameters
 	std::string frame_id_;
 	std::string odom_frame_id_;
 	std::string cloud_frame_id_;
@@ -30,12 +30,23 @@ protected:
 	std::string sub_cam_frame_id_;
 	std::string sub_cam_depth_frame_id_;
 	std::string sub_cam_info_frame_id_;
+	bool PD_debug;
+	int PD_theta;
+	int PD_phi;
+	int PD_d;
+	int PD_max_plane;
+	int PD_min_plane_size;
+	double PD_thres_angle;
+	double PD_thres_dist;
+	// double PD_thres_color;
+	
+	/// Variables
 	ros::Publisher odom_pub_;
 	ros::Publisher cloud_pub_;
 	ros::Publisher plane_pub_;
 
 	// blocks
-	PlaneDetector PD_;
+	PlaneDetector *PD_;
 
 	// pcl_viewer
 	// Visualizer Vis_;

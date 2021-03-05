@@ -47,7 +47,7 @@ private:
 		std::cout << "Initalize rgb_depth_frontend..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
-
+		
 		std::string subscribedTopicsMsg;
 
 		ros::NodeHandle rgb_nh(nh, "rgb_img");
@@ -59,7 +59,7 @@ private:
 		image_transport::TransportHints hintsRgb("raw", ros::TransportHints(), rgb_pnh);
 		image_transport::TransportHints hintsDepth("raw", ros::TransportHints(), depth_pnh);
 
-		//Subscribers
+		/// Subscribers
 		rgb_sub_.subscribe(rgb_it, sub_cam_frame_id_, 1, hintsRgb);
 		depth_sub_.subscribe(depth_it, sub_cam_depth_frame_id_, 1, hintsDepth);
 		info_sub_.subscribe(rgb_nh, sub_cam_info_frame_id_, 1);
@@ -184,7 +184,7 @@ private:
 		// if(entry_count_ == 0) Disk_.WriteNormals(point_cloud, normal_cloud);
 
 		/// PLANE DETECTOR
-		PD_.detectPlanes(scan_);
+		PD_->detectPlanes(scan_);
 		
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);

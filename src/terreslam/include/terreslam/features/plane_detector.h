@@ -213,39 +213,52 @@ private:
 class PlaneDetector
 {
 public:
-	PlaneDetector()
+	PlaneDetector(
+		bool debug,
+		int theta,
+		int phi,
+		int d,
+		int max_plane,
+		int min_plane_size,
+		double thres_angle,
+		double thres_dist)
+	:
+		debug_(debug),
+		theta_(theta),
+		phi_(phi),
+		d_(d),
+		max_plane_(max_plane),
+		min_plane_size_(min_plane_size),
+		thres_angle_(thres_angle),
+		thres_dist_(thres_dist)
 	{
 		std::cout<<"Constructor plane_detector...\n";
-		cells_bottom = new Cells_bottom(9,18,1);
-		max_plane = 99;
-		debug = true;
-		min_plane_size = 800;
-		thres_angle = 15*M_PI/180.0;
-		thres_dist = 0.5;
-		// thres_color = ??;
+		cells_bottom_ = new Cells_bottom(theta_,phi_,d_);
+		thres_angle_ *= M_PI/180.0;
 		remove("/home/icaminal/outputs/unorganized/plane_detector/log_plane_detector.txt");
 	}
 
 	~PlaneDetector()
 	{
-		delete cells_bottom;
+		delete cells_bottom_;
 	}
 
-	void setDebug(bool d) {debug=d;}
+	void setDebug(bool d) {debug_=d;}
 
 	void detectPlanes(Scan *scan);
 
 private:
 
-	bool debug;
-	std::ofstream fp;
+	bool debug_;
+	std::ofstream fp_;
 
 	double maxdist_point2plane;
-	int max_plane;
-	int min_plane_size;
-	double thres_angle, thres_dist, thres_color;
+	int max_plane_;
+	int min_plane_size_;
+	int theta_, phi_, d_;
+	double thres_angle_, thres_dist_, thres_color_;
 
-	Cells_bottom *cells_bottom;
+	Cells_bottom *cells_bottom_;
 
 	Eigen::Matrix3d Rotation_PCA;
 
