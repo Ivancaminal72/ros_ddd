@@ -5,7 +5,7 @@
 
 #include "terreslam/utils/util_types.h"
 
-namespace ulysses
+namespace terreslam
 {
 // 	void Transform::vis(boost::shared_ptr<pcl::visualization::PCLVisualizer> v, double time)
 // 	{
@@ -474,20 +474,20 @@ namespace ulysses
 // ////		}
 // //	}
 
-// 	void Landmark::merge(Landmark *lm)
-// 	{
-// 		if(type!=lm->Type()) 
-// 		{
-// 			std::cout<<"landmark merge error"<<std::endl;
-// 			return;
-// 		}
-// 		for(iterObserv it=lm->beginObserv();it!=lm->endObserv();it++)
-// 		{
-// 			for(int i=0;i<it->second.size();i++)
-// 			{
-// 				pushObserv(it->first,it->second[i]);
-// 			}
-// 		}
-// 	}
+	void Landmark::merge(Landmark *lm)
+	{
+		if(type!=lm->Type()) 
+		{
+			std::cout<<"landmark merge error"<<std::endl;
+			return;
+		}
+		for(iterObserv it=lm->beginObserv();it!=lm->endObserv();it++)
+		{
+			for(int i=0;i<it->second.size();i++)
+			{
+				pushObserv(it->first,it->second[i]);
+			}
+		}
+	}
 
 }

@@ -138,7 +138,32 @@ bool PlaneDetector::loadPoints(Scan *scan)
 		return true;
 }
 
-void PlaneDetector::detectPlanes(Scan *scan)
+bool PlaneDetector::computeNormals(Scan *scan, bool use_normal_integral)
+{
+	if(use_normal_integral)
+	{
+		/// Generate the normal_cloud
+		/// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
+		pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne_integral;
+		ne_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
+		ne_integral.setDepthDependentSmoothing(true);
+		ne_integral.setNormalSmoothingSize(40.0);
+		ne_integral.setInputCloud(scan->points());
+		ne_integral.compute(*scan->normals());
+	}
+	else
+	{
+		pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
+		pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree;
+		ne.setInputCloud(scan->points());
+		tree=pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr (new pcl::search::KdTree<pcl::PointXYZRGBA>());
+		ne.setSearchMethod(tree);
+		ne.setRadiusSearch(1);
+		ne.compute(*scan->normals());
+	}
+}
+
+void PlaneDetector::detectPlanes(Scan *scan, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest, bool use_normal_integral)
 {
 	fp_.open(logs_path_, std::ios::app);
 	if(debug_)
@@ -146,6 +171,7 @@ void PlaneDetector::detectPlanes(Scan *scan)
 		fp_<<"*****************extractPlanes**************************************"<<std::endl;
 	}
 
+	computeNormals(scan, use_normal_integral);
 	loadPoints(scan);
 
 	// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -177,7 +203,6 @@ void PlaneDetector::detectPlanes(Scan *scan)
 	std::vector<int> indices_plane;
 
 	// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest (new pcl::PointCloud<pcl::PointXYZRGBA>);
-	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest_final (new pcl::PointCloud<pcl::PointXYZRGBA>);
 	// std::vector<int> indices_rest;
 	
 	pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
@@ -204,7 +229,7 @@ void PlaneDetector::detectPlanes(Scan *scan)
 		fp_<<"maxdir = "<<maxdir<<", maxnum = "<<maxnum<<std::endl;
 	}
 
-	cloud_rest_final->clear();
+	cloud_rest->clear();
 	// scan->observed_planes.clear(); //ivan: I think that should be deleted
 	
 	/// Extracting planes
@@ -224,10 +249,10 @@ void PlaneDetector::detectPlanes(Scan *scan)
 		// vis->spin();
 
 		/// The corresponding normals() to cloud_contain_plane_normal
-		extract_normal.setInputCloud(scan->normals());
-		extract_normal.setIndices(cells_bottom_->getCell(maxdir)->indices);
-		extract_normal.setNegative(false);
-		extract_normal.filter(*cloud_contain_plane_normal);
+		extract_normal.setInputCloud (scan->normals());
+		extract_normal.setIndices (cells_bottom_->getCell(maxdir)->indices);
+		extract_normal.setNegative (false);
+		extract_normal.filter (*cloud_contain_plane_normal);
 		/// The corresponding pixels() pixel to cloud_contain_plane_image
 		extract_image.setInputCloud (scan->pixels());
 		extract_image.setIndices (cells_bottom_->getCell(maxdir)->indices);
@@ -296,8 +321,8 @@ void PlaneDetector::detectPlanes(Scan *scan)
 			{
 				/// if the extracted plane is not large enough
 				/// then the following "while" will not be activated
-				*cloud_rest_final=*cloud_rest_final+*cloud_contain_plane;
-				*cloud_rest_final=*cloud_rest_final+*plane;
+				*cloud_rest=*cloud_rest+*cloud_contain_plane;
+				*cloud_rest=*cloud_rest+*plane;
 			}
 
 			while(plane->size() > min_plane_size_ && enough_plane == false)
@@ -437,13 +462,13 @@ void PlaneDetector::detectPlanes(Scan *scan)
 						}
 						else
 						{
-							*cloud_rest_final=*cloud_rest_final+*plane;
-							*cloud_rest_final = *cloud_rest_final + *cloud_contain_plane;
+							*cloud_rest = *cloud_rest + *plane;
+							*cloud_rest = *cloud_rest + *cloud_contain_plane;
 						}
 					}
 					else
 					{
-						*cloud_rest_final = *cloud_rest_final + *cloud_contain_plane;
+						*cloud_rest = *cloud_rest + *cloud_contain_plane;
 						plane->clear();
 					}
 				}
@@ -455,7 +480,7 @@ void PlaneDetector::detectPlanes(Scan *scan)
 		}
 		else
 		{
-			*cloud_rest_final=*cloud_rest_final+*cloud_contain_plane;
+			*cloud_rest=*cloud_rest+*cloud_contain_plane;
 		}
 		if( enough_plane == false )
 		{
@@ -464,27 +489,16 @@ void PlaneDetector::detectPlanes(Scan *scan)
 			maxnum=iter_sorted_cells->num_point;
 		}
 	}
+
 	if(debug_)
 	{
 		fp_<<"extracted "<<scan->sizeFeature()<<" planes"<<std::endl;
-		// for(int i=0;i<scan->observed_planes.size();i++)
 		for(iterFeature it=scan->beginFeature();it!=scan->endFeature();it++)
 		{
 			fp_<<"\tnormal="<<it->second->plane()->n.transpose();
 			fp_<<", d="<<it->second->plane()->d<<std::endl;
 		}
 	}
-
-	// for(int i=0;i<scan->observed_planes.size();i++)
-	// {
-	// 	fitPlaneModel(scan->observed_planes[i]);
-	// }
-
-	// if(debug_)
-	// {
-	// 	visPlanes(scan,vis);
-	// 	vis->spin();
-	// }
 
 	fp_.close();
 

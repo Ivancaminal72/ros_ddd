@@ -76,8 +76,8 @@ namespace terreslam
 	typedef pcl::PointCloud<pcl::Normal>::Ptr ptrNormalCloud;
 	typedef pcl::PointCloud<pcl::PointXY>::Ptr ptrPixelCloud;
 
-// 	typedef std::map<double,std::vector<std::string> >::iterator iterObserv;
-// 	typedef std::map<double,std::vector<std::string> >::const_iterator const_iterObserv;
+	typedef std::map<double,std::vector<std::string> >::iterator iterObserv;
+	typedef std::map<double,std::vector<std::string> >::const_iterator const_iterObserv;
 
 	typedef Eigen::Matrix<double,6,1> Vector6d;
 	typedef Eigen::Matrix<double,6,6> Matrix6d;
@@ -995,18 +995,18 @@ namespace terreslam
 			else if(std::to_string(i).size()==3) id=id+std::to_string(i);
 		}
 
-		// void pushObserv(const double time, const std::string &n)//{observ_time.push_back(time);observ_id.push_back(n);}
-		// {
-		// 	iterObserv it=observs.find(time);
-		// 	if(it==observs.end())
-		// 	{
-		// 		observs.insert(std::pair<double,std::vector<std::string> >(time, std::vector<std::string>(1,n)));
-		// 	}
-		// 	else 
-		// 	{
-		// 		observs[time].push_back(n);
-		// 	}
-		// }
+		void pushObserv(const double time, const std::string &n)//{observ_time.push_back(time);observ_id.push_back(n);}
+		{
+			iterObserv it=observs.find(time);
+			if(it==observs.end())
+			{
+				observs.insert(std::pair<double,std::vector<std::string> >(time, std::vector<std::string>(1,n)));
+			}
+			else 
+			{
+				observs[time].push_back(n);
+			}
+		}
 
 		// std::vector<std::string> Observ(double t) 
 		// {
@@ -1025,8 +1025,8 @@ namespace terreslam
 		// 	return num;
 		// 	// return observ_time.size();
 		// }
-		// iterObserv beginObserv() {return observs.begin();}
-		// iterObserv endObserv() {return observs.end();}
+		iterObserv beginObserv() {return observs.begin();}
+		iterObserv endObserv() {return observs.end();}
 
 //		ptrPointCloud& points() {return point_cloud;}
 
