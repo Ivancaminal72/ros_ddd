@@ -13,6 +13,28 @@ namespace terreslam
 namespace util
 {
 
+	void curvatureFilter(Scan *scan, float thresh, bool high_pass)
+ {
+	std::vector<int> inidices;
+	// Reserve enough space for the indices
+	inidices.resize(scan->points()->size());
+  
+	int j = 0;
+	for (int i = 0; i < static_cast<int>(scan->points()->size()); ++i)
+	{
+		if(high_pass && scan->normals()->at(i).curvature < thresh) 
+			continue;
+		inidices[j] = i;
+		j++;
+	}
+	if (j != static_cast<int> (scan->points()->size()))
+	{
+		// Resize to the correct size
+		inidices.resize (j);
+	}
+	scan->filter(inidices);
+ }
+
 	void printEigenMatrix(Eigen::MatrixXd mat)
 	{
 		std::cout << std::endl << std::endl;
@@ -21,20 +43,20 @@ namespace util
 		std::cout << mat.matrix().format(CleanFmt) << std::endl;
 		std::cout << std::endl << std::endl;
 	}
-
-	void subtractPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const std::vector<int>& indices)
+	
+	template <typename PointT> 
+	void pointType<PointT>::subtractPoints(typename pcl::PointCloud<PointT>::Ptr cloud, const std::vector<int>& indices)
 	{
 		pcl::PointIndices::Ptr fIndices (new pcl::PointIndices);
 
 		fIndices->indices = indices;
 
-		pcl::ExtractIndices<pcl::PointXYZ> extract;
+		pcl::ExtractIndices<PointT> extract;
 		extract.setInputCloud (cloud);
 		extract.setIndices (fIndices);
 		extract.setNegative(false);
 		extract.filter(*cloud);
 	}
-
 }
 
 }

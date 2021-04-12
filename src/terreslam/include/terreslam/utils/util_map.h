@@ -199,6 +199,7 @@ namespace terreslam
 		// FeatureAssociation*& association_sim() {return feature_association_sim;}
 
 		void addFeature(Feature *f);
+		void filter(std::vector<int>& inidices);
 		Feature* findFeature(std::string id);
 
 		int sizeFeature() {return features.size();}

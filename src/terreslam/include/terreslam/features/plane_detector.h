@@ -244,7 +244,7 @@ public:
 	}
 
 	void setDebug(bool d) {debug_=d;}
-	void detectPlanes(Scan *scan, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest, bool use_normal_integral);
+	void detectPlanes(Scan *scan);
 
 private:
 
@@ -262,8 +262,6 @@ private:
 	Eigen::Matrix3d Rotation_PCA;
 
 	bool loadPoints(Scan *scan);
-
-	bool computeNormals(Scan *scan, bool use_normal_integral);
 
 	void computeRotationPCA(Scan *scan);
 

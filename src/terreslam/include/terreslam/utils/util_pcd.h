@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "terreslam/utils/util_map.h"
+
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 
@@ -13,10 +15,13 @@ namespace terreslam
 
 namespace util
 {
-
+	void curvatureFilter(Scan *scan, float thresh, bool high_pass=true);
 	void printEigenMatrix(Eigen::MatrixXd mat);
-	void subtractPoints(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const std::vector<int>& inliers);
-
+	template <typename PointT> 
+	struct pointType
+	{
+		void subtractPoints(typename pcl::PointCloud<PointT>::Ptr cloud, const std::vector<int>& indices);
+	};
 }
 
 }

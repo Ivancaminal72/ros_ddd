@@ -7,6 +7,7 @@
 #include "terreslam/camera_model.h"
 #include "terreslam/utils/util_msg.h"
 #include "terreslam/utils/util_map.h"
+#include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_algebra.h"
 
 #include "nodelet/nodelet.h"
@@ -162,9 +163,34 @@ private:
 			scan_->points()->height=height;
 		}
 
+		///NORMALS
+		if(use_normal_integral_)
+		{
+			/// Generate the normal_cloud
+			/// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
+			pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne_integral;
+			ne_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
+			ne_integral.setDepthDependentSmoothing(true);
+			ne_integral.setNormalSmoothingSize(40.0);
+			ne_integral.setInputCloud(scan_->points());
+			ne_integral.compute(*scan_->normals());
+		}
+		else
+		{
+			pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
+			pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree;
+			ne.setInputCloud(scan_->points());
+			tree=pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr (new pcl::search::KdTree<pcl::PointXYZRGBA>());
+			ne.setSearchMethod(tree);
+			ne.setRadiusSearch(1);
+			ne.compute(*scan_->normals());
+		}
+
+		/// Eliminate points with low curvature
+		util::curvatureFilter(scan_, 0.14);
+
 		/// PLANE DETECTOR
-		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		PD->detectPlanes(scan_, cloud_rest, use_normal_integral_);
+		// PD->detectPlanes(scan_);
 
 		/// Visualize normals
 		// Vis_.NormalView1(scan_->points(), scan_->normals());
@@ -193,7 +219,7 @@ private:
 		/// PUBLISH
 		/// - Planes
 		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*cloud_rest, msg_pcd);
+		pcl::toROSMsg(*scan_planes, msg_pcd);
 		msg_pcd.header.frame_id = "/terreslam/cloud/plane";
 		plane_pub.publish(msg_pcd);
 

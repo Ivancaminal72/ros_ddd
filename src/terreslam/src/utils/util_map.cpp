@@ -4,6 +4,8 @@
  */
 
 #include "terreslam/utils/util_map.h"
+#include "terreslam/utils/util_pcd.h"
+
 #include <pcl/filters/voxel_grid.h>
 
 namespace terreslam
@@ -950,6 +952,16 @@ namespace terreslam
 		// 	delete landmark_association;
 		// 	landmark_association=0;
 		// }
+	}
+
+	void Scan::filter(std::vector<int>& inidices)
+	{
+		util::pointType<pcl::PointXYZRGBA> pointTypeXYZRGBA;
+		util::pointType<pcl::Normal> pointTypeNormal;
+		util::pointType<pcl::PointXY> pointTypeXY;
+		pointTypeXYZRGBA.subtractPoints(point_cloud, inidices);
+		pointTypeNormal.subtractPoints(normal_cloud, inidices);
+		pointTypeXY.subtractPoints(pixel_cloud, inidices);
 	}
 
 	void Scan::addFeature(Feature *f)

@@ -138,40 +138,14 @@ bool PlaneDetector::loadPoints(Scan *scan)
 		return true;
 }
 
-bool PlaneDetector::computeNormals(Scan *scan, bool use_normal_integral)
-{
-	if(use_normal_integral)
-	{
-		/// Generate the normal_cloud
-		/// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
-		pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne_integral;
-		ne_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
-		ne_integral.setDepthDependentSmoothing(true);
-		ne_integral.setNormalSmoothingSize(40.0);
-		ne_integral.setInputCloud(scan->points());
-		ne_integral.compute(*scan->normals());
-	}
-	else
-	{
-		pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
-		pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree;
-		ne.setInputCloud(scan->points());
-		tree=pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr (new pcl::search::KdTree<pcl::PointXYZRGBA>());
-		ne.setSearchMethod(tree);
-		ne.setRadiusSearch(1);
-		ne.compute(*scan->normals());
-	}
-}
-
-void PlaneDetector::detectPlanes(Scan *scan, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest, bool use_normal_integral)
+void PlaneDetector::detectPlanes(Scan *scan)
 {
 	fp_.open(logs_path_, std::ios::app);
 	if(debug_)
 	{
 		fp_<<"*****************extractPlanes**************************************"<<std::endl;
 	}
-
-	computeNormals(scan, use_normal_integral);
+	
 	loadPoints(scan);
 
 	// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -202,7 +176,7 @@ void PlaneDetector::detectPlanes(Scan *scan, pcl::PointCloud<pcl::PointXYZRGBA>:
 	pcl::PointCloud<pcl::PointXY>::Ptr plane_image (new pcl::PointCloud<pcl::PointXY>);
 	std::vector<int> indices_plane;
 
-	// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest (new pcl::PointCloud<pcl::PointXYZRGBA>);
+	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_rest (new pcl::PointCloud<pcl::PointXYZRGBA>);
 	// std::vector<int> indices_rest;
 	
 	pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
