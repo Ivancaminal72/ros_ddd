@@ -1,6 +1,6 @@
 /*
  *    Author: Ivan Caminal
- *    Created Date: 2021-03-04 14:45:06
+ *    Created Date: 2021-04-23 10:32:49
  */
 
 #pragma once
@@ -11,28 +11,26 @@
 namespace terreslam
 {
 
-class PlaneProcessor
+class BlobProcessor
 {
 public:
-	PlaneProcessor(
+	BlobProcessor(
 		std::string logs_dir,
 		bool debug)
 	:
-		logs_path_(logs_dir + "/log_plane_detector.txt"),
+		logs_path_(logs_dir + "/log_blob_detector.txt"),
 		debug_(debug)
 	{
-		std::cout<<"Constructor plane_processor...\n";
+		std::cout<<"Constructor blob_processor...\n";
 		remove(logs_path_.c_str());
 	}
 
-	~PlaneProcessor(){}
+	~BlobProcessor(){}
 
 	void setDebug(bool d) {debug_=d;}
-
-	void processPlanes(Scan *scan);
+	void processBlobs(Scan *scan);
 
 private:
-
 	std::string logs_path_;
 	bool debug_;
 	std::ofstream fp_;

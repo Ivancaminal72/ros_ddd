@@ -3,8 +3,6 @@
  *    Created Date: 2021-01-21 11:44:08
  */
 
-#include <iostream>
-
 #include "terreslam/features/plane_detector.h"
 
 namespace terreslam

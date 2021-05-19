@@ -1,6 +1,6 @@
 /*
  *    Author: Ivan Caminal
- *    Created Date: 2021-03-04 14:45:06
+ *    Created Date: 2021-04-23 09:40:10
  */
 
 #pragma once
@@ -11,32 +11,29 @@
 namespace terreslam
 {
 
-class PlaneProcessor
+class KeypointDetector
 {
 public:
-	PlaneProcessor(
-		std::string logs_dir,
-		bool debug)
+	KeypointDetector(
+		bool debug,
+		std::string logs_dir)
 	:
-		logs_path_(logs_dir + "/log_plane_detector.txt"),
+		logs_path_(logs_dir + "/log_keypoint_detector.txt"),
 		debug_(debug)
 	{
-		std::cout<<"Constructor plane_processor...\n";
+		std::cout<<"Constructor keypoint_detector...\n";
 		remove(logs_path_.c_str());
 	}
 
-	~PlaneProcessor(){}
+	~KeypointDetector(){}
 
 	void setDebug(bool d) {debug_=d;}
-
-	void processPlanes(Scan *scan);
+	void detectKeypoints(Scan *scan);
 
 private:
-
 	std::string logs_path_;
 	bool debug_;
 	std::ofstream fp_;
-
 };
 
 }

@@ -184,10 +184,11 @@ namespace terreslam
 		~Scan();
 		void release();
 
-		std::string filename_rgb;
+		// std::string filename_rgb;
 
 		Scan*& ref() {return scan_ref;}
 		double& time() {return time_stamp;}
+		void filter(std::vector<int>& inidices);
 
 		Transform& Tcg() {return T_cg;}
 		Transform& Tcr() {return T_cr;}
@@ -199,7 +200,6 @@ namespace terreslam
 		// FeatureAssociation*& association_sim() {return feature_association_sim;}
 
 		void addFeature(Feature *f);
-		void filter(std::vector<int>& inidices);
 		Feature* findFeature(std::string id);
 
 		int sizeFeature() {return features.size();}

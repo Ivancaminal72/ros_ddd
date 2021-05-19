@@ -5,15 +5,9 @@
 
 #include <iostream>
 
-#include "terreslam/features/plane_processor.h"
+#include "terreslam/processings/plane_processor.h"
 
 namespace terreslam
 {
-
-class PlaneProcessor
-{
-public:
-
-}
 
 }

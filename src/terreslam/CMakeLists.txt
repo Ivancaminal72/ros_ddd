@@ -35,12 +35,17 @@ cs_add_library(${PROJECT_NAME}
   src/comms/kittiraw_common.cpp
   src/comms/kittiraw_ros_conversions.cpp
   src/features/plane_detector.cpp
-  # src/features/sunq_plane_extraction.cpp
-  # src/features/ulysses_plane_extraction.cpp
-  # src/utils/ulysses_map.cpp
-  # src/utils/ulysses_types.cpp
-  # src/utils/sunq_map.cpp
-  # src/utils/sunq_types.cpp
+  src/features/blob_detector.cpp
+  src/features/keypoint_detector.cpp
+  ## src/features/sunq_plane_extraction.cpp
+  ## src/features/ulysses_plane_extraction.cpp
+  src/processings/plane_processor.cpp
+  src/processings/blob_processor.cpp
+  src/processings/keypoint_processor.cpp
+  ## src/utils/ulysses_map.cpp
+  ## src/utils/ulysses_types.cpp
+  ## src/utils/sunq_map.cpp
+  ## src/utils/sunq_types.cpp
   src/utils/util_msg.cpp
   src/utils/util_algebra.cpp
   src/utils/util_types.cpp

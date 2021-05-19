@@ -199,8 +199,12 @@ private:
 		// if(entry_count_ == 0) Disk.WriteNormals(scan_->points(), scan_->normals());
 
 		/// PLANE PROCESSOR
+
+		/// BLOB DETECTOR
 		
 
+		/// Pre-PUBLISH
+		// Extract points
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr scan_planes (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		for(iterFeature it=scan_->beginFeature();it!=scan_->endFeature();it++)
