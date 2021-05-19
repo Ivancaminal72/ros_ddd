@@ -46,7 +46,7 @@ namespace adapt {
 class KittiToPng {
  public:
   KittiToPng(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private,
-                const std::string& sequence_dir);
+                const std::string& sequence_dir, const double playback_multiplier);
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
@@ -92,13 +92,16 @@ class KittiToPng {
   uint64_t current_timestamp_ns_;
   uint64_t next_entry_timestamp_ns_;
 
+  double playback_multiplier_;
+
   int cam_idx_proj_;
   std::ifstream fin_time_;
 };
 
 KittiToPng::KittiToPng(const ros::NodeHandle& nh,
                              const ros::NodeHandle& nh_private,
-                             const std::string& sequence_dir)
+                             const std::string& sequence_dir,
+                             const double playback_multiplier)
     : nh_(nh),
       nh_private_(nh_private),
       image_transport_(nh_),
@@ -109,7 +112,8 @@ KittiToPng::KittiToPng(const ros::NodeHandle& nh,
       lidar_frame_id_("bag/lidar"),
       current_entry_(0),
       publish_dt_ns_(0),
-      current_timestamp_ns_(0) {
+      current_timestamp_ns_(0),
+      playback_multiplier_(playback_multiplier){
   
   ROS_INFO("KittiToPng class initialization: OK");
 
@@ -176,7 +180,7 @@ void KittiToPng::timerCallback(const ros::WallTimerEvent& event) {
   }
 
   // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
-  current_timestamp_ns_ += publish_dt_ns_*0.3;
+  current_timestamp_ns_ += publish_dt_ns_*playback_multiplier_; // Variation from realtime
   // std::cout << "Updated timestmap: " << current_timestamp_ns_ << std::endl;
   publishClock(current_timestamp_ns_);
   // if (parser_.interpolatePoseAtTimestamp(current_timestamp_ns_,
@@ -357,11 +361,14 @@ int main(int argc, char** argv) {
   std::string sequence_dir;
   std::string calibration_file;
   std::string timestamp_file;
+  double play_mult = -1;
 
   //Parse arguments
   po::options_description mandatory_opts("Mandatory args");
   mandatory_opts.add_options()
-    ("seq,s", po::value<std::string>(&sequence_dir), "Sequence directory (without trailing slash)");
+    ("seq,s", po::value<std::string>(&sequence_dir), "Sequence directory (without trailing slash)")
+    ("multiplayback,r", po::value<double>(&play_mult), "multiplier reproduction to realtime")
+    ;
   
   po::positional_options_description positional_opts;
   positional_opts.add("seq", -1);
@@ -396,7 +403,7 @@ int main(int argc, char** argv) {
   ROS_INFO("Parsing of arguments: OK");
 
   //Ready to start
-  adapt::KittiToPng node(nh, nh_private, sequence_dir);
+  adapt::KittiToPng node(nh, nh_private, sequence_dir, play_mult);
   ROS_INFO("KittiToPng class constructor: OK");
   node.startPublishing(50.0);
 

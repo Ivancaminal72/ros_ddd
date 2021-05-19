@@ -104,7 +104,8 @@ namespace adapt {
 class PcdToPng {
  public:
   PcdToPng(const ros::NodeHandle& nh_sub, const ros::NodeHandle& nh_pub,
-           const ros::NodeHandle& nh_private, const int cam_idx_proj);
+           const ros::NodeHandle& nh_private, const int cam_idx_proj,
+           const double playback_multiplier);
 
   // Creates a timer to automatically publish entries in 'realtime' versus
   // the original data,
@@ -171,6 +172,8 @@ class PcdToPng {
   uint64_t current_timestamp_ns_;
   uint64_t next_entry_timestamp_ns_;
 
+  double playback_multiplier_;
+
   // std::queue<rosgraph_msgs::Clock> buffer_clock_;
   std::queue<pcl::PointCloud<pcl::PointXYZI>> buffer_pcd_sub_;
   std::queue<pcl::PointCloud<pcl::PointXYZI>> buffer_pcd_pub_;
@@ -201,7 +204,8 @@ class PcdToPng {
 PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
                    const ros::NodeHandle& nh_pub,
                    const ros::NodeHandle& nh_private,
-                   const int cam_idx_proj)
+                   const int cam_idx_proj,
+                   double playback_multiplier)
     : nh_sub_(nh_sub),
       nh_pub_(nh_pub),
       nh_private_(nh_private),
@@ -215,7 +219,8 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
       current_timestamp_ns_(0),
       cam_idx_proj_(cam_idx_proj),
       is_tf_ready_(false),
-      is_first_pcd_processed_(false){
+      is_first_pcd_processed_(false),
+      playback_multiplier_(playback_multiplier){
 
   sub_cam_frame_id_ = getSensorFrameId(prefix_+cam_frame_id_prefix_, cam_idx_proj_);
   // std::string pub_cam_frame_id_ = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
@@ -325,7 +330,7 @@ void PcdToPng::startRePublishing(double rate_hz)
 void PcdToPng::timerCallback(const ros::WallTimerEvent& event)
 {
   // std::cout << "Publish dt ns: " << publish_dt_ns_ << std::endl;
-  current_timestamp_ns_ += publish_dt_ns_*0.3;
+  current_timestamp_ns_ += publish_dt_ns_*playback_multiplier_; // Variation from realtime
   publishClock(current_timestamp_ns_);
   uint64_t difference = get_unsigned_difference(next_entry_timestamp_ns_, current_timestamp_ns_);
 
@@ -700,11 +705,14 @@ int main(int argc, char** argv) {
 
   //Declare variables
   int cam_idx_proj = -1;
+  double play_mult = -1;
 
   //Parse arguments
   po::options_description mandatory_opts("Mandatory args");
   mandatory_opts.add_options()
-    ("project,p", po::value<int>(&cam_idx_proj), "index of the camera to do pcd projection");
+    ("project,p", po::value<int>(&cam_idx_proj), "index of the camera to do pcd projection")
+    ("multiplayback,r", po::value<double>(&play_mult), "multiplier reproduction to realtime")
+    ;
 
   po::positional_options_description positional_opts;
   positional_opts.add("project", -1);
@@ -741,7 +749,7 @@ int main(int argc, char** argv) {
   ros::CallbackQueue pub_queue, sub_queue;
   nh_sub.setCallbackQueue(&sub_queue);
   nh_pub.setCallbackQueue(&pub_queue);
-  adapt::PcdToPng node(nh_sub, nh_pub, nh_private, cam_idx_proj);
+  adapt::PcdToPng node(nh_sub, nh_pub, nh_private, cam_idx_proj, play_mult);
 
   ros::AsyncSpinner spinner_sub(4, &sub_queue);
   ros::AsyncSpinner spinner_pub(1, &pub_queue);
