@@ -10,6 +10,8 @@ find_package(Boost REQUIRED COMPONENTS date_time filesystem system program_optio
 find_package(PCL 1.8 REQUIRED)
 
 set(CMAKE_MACOSX_RPATH 0)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations")
 add_definitions(-std=c++11)
 add_definitions(${PCL_DEFINITIONS}) # To include -march=native if set
 
@@ -57,7 +59,7 @@ cs_add_library(${PROJECT_NAME}
   src/io_disk.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES})
+# target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES})
 
 cs_add_library(${PROJECT_NAME}_plugins
   src/nodelets/rgb_depth_frontend.cpp
