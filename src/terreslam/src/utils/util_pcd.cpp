@@ -44,14 +44,38 @@ namespace util
 		std::cout << std::endl << std::endl;
 	}
 	
-	template <typename PointT> 
-	void pointType<PointT>::subtractPoints(typename pcl::PointCloud<PointT>::Ptr cloud, const std::vector<int>& indices)
+	void subtractPointsXYZRGBA(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud, const std::vector<int>& indices)
 	{
 		pcl::PointIndices::Ptr fIndices (new pcl::PointIndices);
 
 		fIndices->indices = indices;
 
-		pcl::ExtractIndices<PointT> extract;
+		pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
+		extract.setInputCloud (cloud);
+		extract.setIndices (fIndices);
+		extract.setNegative(false);
+		extract.filter(*cloud);
+	}
+
+	void subtractPointsNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud, const std::vector<int>& indices)
+	{
+		pcl::PointIndices::Ptr fIndices (new pcl::PointIndices);
+
+		fIndices->indices = indices;
+
+		pcl::ExtractIndices<pcl::Normal> extract;
+		extract.setInputCloud (cloud);
+		extract.setIndices (fIndices);
+		extract.setNegative(false);
+		extract.filter(*cloud);
+	}
+	void subtractPointsXY(pcl::PointCloud<pcl::PointXY>::Ptr cloud, const std::vector<int>& indices)
+	{
+		pcl::PointIndices::Ptr fIndices (new pcl::PointIndices);
+
+		fIndices->indices = indices;
+
+		pcl::ExtractIndices<pcl::PointXY> extract;
 		extract.setInputCloud (cloud);
 		extract.setIndices (fIndices);
 		extract.setNegative(false);

@@ -17,11 +17,9 @@ namespace util
 {
 	void curvatureFilter(Scan *scan, float thresh, bool high_pass=true);
 	void printEigenMatrix(Eigen::MatrixXd mat);
-	template <typename PointT> 
-	struct pointType
-	{
-		void subtractPoints(typename pcl::PointCloud<PointT>::Ptr cloud, const std::vector<int>& indices);
-	};
+	void subtractPointsXYZRGBA(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud, const std::vector<int>& indices);
+	void subtractPointsNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud, const std::vector<int>& indices);
+	void subtractPointsXY(pcl::PointCloud<pcl::PointXY>::Ptr cloud, const std::vector<int>& indices);
 }
 
 }

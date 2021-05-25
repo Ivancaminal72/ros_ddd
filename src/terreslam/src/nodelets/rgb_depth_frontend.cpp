@@ -187,7 +187,7 @@ private:
 		}
 
 		/// Eliminate points with low curvature
-		util::curvatureFilter(scan_, 0.14);
+		util::curvatureFilter(scan_, 0.08);
 
 		/// PLANE DETECTOR
 		// PD->detectPlanes(scan_);
@@ -204,33 +204,33 @@ private:
 		
 
 		/// Pre-PUBLISH
-		// Extract points
-		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr scan_planes (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		for(iterFeature it=scan_->beginFeature();it!=scan_->endFeature();it++)
-		{
-			if(it->second->Type()!=PLANE) continue;
-			pcl::copyPointCloud(*it->second->ptrPoints(),*it->second->ptrIndices(),*tmp_plane);
-			// pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBA> color(tmp_plane,0,255,0);
-			// uint8_t r = 255;
-			// uint8_t g = 0;
-			// uint8_t b = 0;
-			// int32_t rgb = (r << 16) | (g << 8) | b; 
-			// for(auto &p: tmp_plane->points) p.rgb=rgb;
-			*scan_planes += *tmp_plane;
-		}
+		// // Extract points beloging to a plane
+		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr scan_planes (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		// for(iterFeature it=scan_->beginFeature();it!=scan_->endFeature();it++)
+		// {
+		// 	if(it->second->Type()!=PLANE) continue;
+		// 	pcl::copyPointCloud(*it->second->ptrPoints(),*it->second->ptrIndices(),*tmp_plane);
+		// 	// pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBA> color(tmp_plane,0,255,0);
+		// 	// uint8_t r = 255;
+		// 	// uint8_t g = 0;
+		// 	// uint8_t b = 0;
+		// 	// int32_t rgb = (r << 16) | (g << 8) | b; 
+		// 	// for(auto &p: tmp_plane->points) p.rgb=rgb;
+		// 	*scan_planes += *tmp_plane;
+		// }
 
 		/// PUBLISH
-		/// - Planes
-		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*scan_planes, msg_pcd);
-		msg_pcd.header.frame_id = "/terreslam/cloud/plane";
-		plane_pub.publish(msg_pcd);
-
 		/// - Cloud
+		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*scan_->points(), msg_pcd);
 		msg_pcd.header.frame_id = "/terreslam/cloud";
 		cloud_pub.publish(msg_pcd);
+
+		// /// - Planes
+		// pcl::toROSMsg(*scan_planes, msg_pcd);
+		// msg_pcd.header.frame_id = "/terreslam/cloud/plane";
+		// plane_pub.publish(msg_pcd);
 
 		entry_count_++;
 	}
