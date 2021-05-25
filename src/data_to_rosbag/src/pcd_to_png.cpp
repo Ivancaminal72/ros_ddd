@@ -352,13 +352,17 @@ void PcdToPng::timerCallback(const ros::WallTimerEvent& event)
     uint tries = 0;
     while (!loadNextSyncTimestamp())
     {
-      ROS_ERROR("Error reading next entry");
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      if (tries >= 260) exit(1);
+      std::this_thread::sleep_for(std::chrono::milliseconds((int)(100/playback_multiplier_/10)));
+      if (tries >= 10)
+      {
+        ROS_ERROR("Error next entry probably missed");
+        current_entry_++;
+        if (tries >= 20) exit(1);
+      }
       tries++;
     }
-    std::cout<<"Next: "<< next_entry_timestamp_ns_<<std::endl;
-    std::cout<<"Curr: "<< current_timestamp_ns_<<std::endl;
+    // std::cout<<"Next: "<< next_entry_timestamp_ns_<<std::endl;
+    // std::cout<<"Curr: "<< current_timestamp_ns_<<std::endl
   }
 }
 
@@ -376,14 +380,15 @@ bool PcdToPng::loadNextSyncTimestamp()
   //compute_intensity// uint64_t b_infrared_info = (uint64_t) buffer_infrared_info_pub_.front().header.stamp.toNSec();
   mtx.unlock();
 
-  std::cout <<std::endl<< std::setprecision (17)
-            <<"1: " << next_entry_timestamp_ns_ <<std::endl
-            <<"2: " << b_rgb <<std::endl
-            <<"3: " << b_rgb_info <<std::endl
-            <<"4: " << b_depth <<std::endl
-            <<"5: " << b_depth_info <<std::endl;
-            //compute_intensity// <<"6: " << b_infrared <<std::endl
-            //compute_intensity// <<"7: " << b_infrared_info <<std::endl;
+  // std::cout << std::setprecision (17)
+  //           <<"1: " << next_entry_timestamp_ns_ <<std::endl
+  //           <<"2: " << b_rgb <<std::endl
+  //           <<"3: " << b_rgb_info <<std::endl
+  //           <<"4: " << b_depth <<std::endl
+  //           <<"5: " << b_depth_info <<std::endl;
+  //           //compute_intensity// <<"6: " << b_infrared <<std::endl
+  //           //compute_intensity// <<"7: " << b_infrared_info <<std::endl;
+  
   if (next_entry_timestamp_ns_ != b_rgb ||
       next_entry_timestamp_ns_ != b_rgb_info ||
       next_entry_timestamp_ns_ != b_depth ||
@@ -444,7 +449,8 @@ bool PcdToPng::rePublishEntry()
 
 void PcdToPng::processColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
                               const sensor_msgs::CameraInfoConstPtr& info_msg_ptr) {
-  std::cout<<"COOOLOR INSIDE"<<std::endl;
+  // std::cout<<"COOOLOR INSIDE"<<std::endl;
+
   // //Start chrono ticking
   // std::chrono::duration<double> tick;
   // std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -475,7 +481,7 @@ void PcdToPng::processColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
     }
   }
 
-  std::cout<<"Color processed: "<<image_msg_ptr->header.stamp.toNSec()<<std::endl;
+  // std::cout<<"Color processed: "<<image_msg_ptr->header.stamp.toNSec()<<std::endl;
 
   // tick_high_resolution(start_t, tick, elapsed_callback_color);
   // printElapsed(elapsed_callback_color, "processColor total");
@@ -485,7 +491,7 @@ void PcdToPng::processColor(const sensor_msgs::ImageConstPtr& image_msg_ptr,
 }
 
 void PcdToPng::processLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
-  std::cout<<"STAMPCD INSIDE"<<std::endl;
+  // std::cout<<"STAMPCD INSIDE"<<std::endl;
 
   // //Start chrono ticking
   // std::chrono::duration<double> tick;
@@ -542,8 +548,8 @@ void PcdToPng::processLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
     width_.erase(sub_cam_frame_id_);
     height_.erase(sub_cam_frame_id_);
     Proj_.erase(sub_cam_frame_id_);
-    std::cout<<"STAMPCD: "<< std::setprecision (17) <<pointcloud.header.stamp<<std::endl;
-    std::cout<<"Pcd processed: "<<pcds_processed_<<std::endl;
+    // std::cout<<"STAMPCD: "<< std::setprecision (17) <<pointcloud.header.stamp<<std::endl;
+    // std::cout<<"Pcd processed: "<<pcds_processed_<<std::endl;
     pcds_processed_++;
 
     // tick_high_resolution(start_t, tick, elapsed_callback);
@@ -566,12 +572,12 @@ void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
                                  //compute_intensity// std::queue<sensor_msgs::CameraInfo>& buffer_infrared_info_pub,
                                  bool& is_first_pcd_processed)
 {
-  //Start chrono ticking
-  std::chrono::duration<double> tick;
-  std::chrono::high_resolution_clock::time_point end_t, start_t;
-  start_t = std::chrono::high_resolution_clock::now();
-  end_t = std::chrono::high_resolution_clock::now();
-  tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+  // //Start chrono ticking
+  // std::chrono::duration<double> tick;
+  // std::chrono::high_resolution_clock::time_point end_t, start_t;
+  // start_t = std::chrono::high_resolution_clock::now();
+  // end_t = std::chrono::high_resolution_clock::now();
+  // tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
   cv::Mat depth_img;
   //compute_intensity// cv::Mat infrared_img;
