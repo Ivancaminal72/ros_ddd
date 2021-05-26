@@ -4,13 +4,17 @@
 !README.md
 !.catkin_workspace
 
-#Dependencies
+#Codes
 !/src
 /src/*
 !/src/rtabmap_ros_melodic_0.19.3-1
 !/src/data_to_rosbag
 !/src/terreslam
 
+#Configurations
+!/rviz
+
+#Ignore
 **/.git2/
 **/build/
 **/bin/
