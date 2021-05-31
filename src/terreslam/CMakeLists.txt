@@ -11,8 +11,8 @@ find_package(PCL 1.8 REQUIRED)
 
 set(CMAKE_MACOSX_RPATH 0)
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations")
-add_definitions(-std=c++11)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+add_definitions(-std=c++14)
 add_definitions(${PCL_DEFINITIONS}) # To include -march=native if set
 
 ###########

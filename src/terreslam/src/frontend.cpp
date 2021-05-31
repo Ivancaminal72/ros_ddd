@@ -52,16 +52,16 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/PD/thres_dist", PD_thres_dist);
 	// nh.getParam("/PD/thres_color", PD_thres_color);
 
-	PD = new PlaneDetector (PD_debug,
-													PD_theta,
-													PD_phi,
-													PD_d,
-													PD_max_plane,
-													PD_min_plane_size,
-													PD_thres_angle,
-													PD_thres_dist,
-													max_depth,
-													logs_dir);
+	PD = std::make_unique<PlaneDetector> (PD_debug,
+																				PD_theta,
+																				PD_phi,
+																				PD_d,
+																				PD_max_plane,
+																				PD_min_plane_size,
+																				PD_thres_angle,
+																				PD_thres_dist,
+																				max_depth,
+																				logs_dir);
 
 	// Publishers
 	odom_pub = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);

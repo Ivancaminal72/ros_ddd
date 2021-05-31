@@ -7,6 +7,7 @@
 
 #include <ros/ros.h>
 #include <nodelet/nodelet.h>
+#include <memory>
 
 #include "terreslam/features/plane_detector.h"
 #include "terreslam/visualizer.h"
@@ -49,7 +50,8 @@ protected:
 	ros::Publisher plane_pub;
 
 	// blocks
-	PlaneDetector *PD;
+	std::unique_ptr<PlaneDetector> PD;
+	
 
 	// pcl_viewer
 	// Visualizer Vis_;
