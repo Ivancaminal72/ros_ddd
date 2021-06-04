@@ -34,8 +34,8 @@ namespace terreslam
 class RGBDepthFrontend : public terreslam::Frontend
 {
 public:
-	RGBDepthFrontend() :
-		Frontend(),
+	RGBDepthFrontend() : 
+	Frontend(),
 		queue_size_(10)
 		{
 			std::cout << "Constructor rgb_depth_frontend..." << std::endl;
@@ -105,6 +105,8 @@ private:
 		scan_->points() = ptrPointCloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		scan_->normals() = ptrNormalCloud (new pcl::PointCloud<pcl::Normal>);
 		scan_->pixels() = ptrPixelCloud (new pcl::PointCloud<pcl::PointXY>);
+		scan_->imgRGB() = img_rgb;
+		scan_->imgDepth() = img_depth;
 		Eigen::Vector4d point_eigen;
 		Eigen::Vector4d point_eigen_backproj;
 		Eigen::Matrix4d P_inv = cam_model.P().inverse().matrix();
@@ -163,74 +165,14 @@ private:
 			scan_->points()->height=height;
 		}
 
-		///NORMALS
-		if(use_normal_integral_)
-		{
-			/// Generate the normal_cloud
-			/// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
-			pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne_integral;
-			ne_integral.setNormalEstimationMethod(pcl::IntegralImageNormalEstimation<pcl::PointXYZRGBA,pcl::Normal>::AVERAGE_DEPTH_CHANGE);
-			ne_integral.setDepthDependentSmoothing(true);
-			ne_integral.setNormalSmoothingSize(40.0);
-			ne_integral.setInputCloud(scan_->points());
-			ne_integral.compute(*scan_->normals());
-		}
-		else
-		{
-			pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
-			pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree;
-			ne.setInputCloud(scan_->points());
-			tree=pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr (new pcl::search::KdTree<pcl::PointXYZRGBA>());
-			ne.setSearchMethod(tree);
-			ne.setRadiusSearch(1);
-			ne.compute(*scan_->normals());
-		}
-
-		/// Eliminate points with low curvature
-		util::curvatureFilter(scan_, 0.08);
-
-		/// PLANE DETECTOR
-		// PD->detectPlanes(scan_);
-
-		/// Visualize normals
-		// Vis_.NormalView1(scan_->points(), scan_->normals());
-
-		/// Write normals
-		// if(entry_count_ == 0) Disk.WriteNormals(scan_->points(), scan_->normals());
-
-		/// PLANE PROCESSOR
-
-		/// BLOB DETECTOR
-		
-
-		/// Pre-PUBLISH
-		// // Extract points beloging to a plane
-		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr scan_planes (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		// for(iterFeature it=scan_->beginFeature();it!=scan_->endFeature();it++)
-		// {
-		// 	if(it->second->Type()!=PLANE) continue;
-		// 	pcl::copyPointCloud(*it->second->ptrPoints(),*it->second->ptrIndices(),*tmp_plane);
-		// 	// pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBA> color(tmp_plane,0,255,0);
-		// 	// uint8_t r = 255;
-		// 	// uint8_t g = 0;
-		// 	// uint8_t b = 0;
-		// 	// int32_t rgb = (r << 16) | (g << 8) | b; 
-		// 	// for(auto &p: tmp_plane->points) p.rgb=rgb;
-		// 	*scan_planes += *tmp_plane;
-		// }
 
 		/// PUBLISH
 		/// - Cloud
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*scan_->points(), msg_pcd);
-		msg_pcd.header.frame_id = "/terreslam/cloud";
+		msg_pcd.header.frame_id = cloud_frame_id;
+		msg_pcd.header.stamp = info.header.stamp;
 		cloud_pub.publish(msg_pcd);
-
-		// /// - Planes
-		// pcl::toROSMsg(*scan_planes, msg_pcd);
-		// msg_pcd.header.frame_id = "/terreslam/cloud/plane";
-		// plane_pub.publish(msg_pcd);
 
 		entry_count_++;
 	}
@@ -250,7 +192,6 @@ private:
 	int queue_size_;
 	int entry_count_ = 0;
 	bool use_normal_integral_ = false;
-	Scan *scan_;
 
 	/// Comms
 	image_transport::SubscriberFilter rgb_sub_;

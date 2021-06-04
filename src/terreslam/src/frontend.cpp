@@ -16,15 +16,7 @@
 namespace terreslam
 {
 
-Frontend::Frontend() : 
-	frame_id("base_link"),
-	odom_frame_id("/terreslam/odom"),
-	cloud_frame_id("/terreslam/cloud"),
-	plane_frame_id("/terreslam/cloud/plane"),
-	sub_lidar_frame_id("/adapt/lidar"),
-	sub_cam_frame_id("/adapt/cam"),
-	sub_cam_depth_frame_id("/adapt/cam_depth"),
-	sub_cam_info_frame_id("/adapt/camera_info")
+Frontend::Frontend()
 {
 	std::cout << "Constructor frontend..." << std::endl;
 }
@@ -40,28 +32,16 @@ void Frontend::onInit()
 	/// Parameters
 	nh.getParam("/terreslam/logsdir", logs_dir);
 	nh.getParam("/terreslam/max_depth", max_depth);
-	
-	/// - Plane detector
-	nh.getParam("/terreslam/PD/debug", PD_debug);
-	nh.getParam("/terreslam/PD/theta", PD_theta);
-	nh.getParam("/terreslam/PD/phi", PD_phi);
-	nh.getParam("/terreslam/PD/d", PD_d);
-	nh.getParam("/terreslam/PD/max_plane", PD_max_plane);
-	nh.getParam("/terreslam/PD/min_plane_size", PD_min_plane_size);
-	nh.getParam("/terreslam/PD/thres_angle", PD_thres_angle);
-	nh.getParam("/terreslam/PD/thres_dist", PD_thres_dist);
-	// nh.getParam("/PD/thres_color", PD_thres_color);
 
-	PD = std::make_unique<PlaneDetector> (PD_debug,
-																				PD_theta,
-																				PD_phi,
-																				PD_d,
-																				PD_max_plane,
-																				PD_min_plane_size,
-																				PD_thres_angle,
-																				PD_thres_dist,
-																				max_depth,
-																				logs_dir);
+	/// Comms
+	nh.getParam("/terreslam/frame_id", frame_id);
+	nh.getParam("/terreslam/frame_id/odom", odom_frame_id);
+	nh.getParam("/terreslam/frame_id/cloud", cloud_frame_id);
+	nh.getParam("/terreslam/frame_id/plane", plane_frame_id);
+	nh.getParam("/terreslam/frame_id/sub_lidar", sub_lidar_frame_id);
+	nh.getParam("/terreslam/frame_id/sub_cam", sub_cam_frame_id);
+	nh.getParam("/terreslam/frame_id/sub_cam_depth", sub_cam_depth_frame_id);
+	nh.getParam("/terreslam/frame_id/sub_cam_info", sub_cam_info_frame_id);
 
 	// Publishers
 	odom_pub = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);

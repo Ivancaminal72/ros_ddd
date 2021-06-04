@@ -1,18 +1,18 @@
 # YAML configuration of Terreslam
 
 # General
-/terreslam/logsdir: "/home/icaminal/outputs/unorganized/terreslam"
+/terreslam/logsdir: "~/outputs/unorganized/terreslam"
 /terreslam/max_depth: 120.0  #for Kinect 6.0
 
 # Comms
 /terreslam/frame_id: "base_link"
-/terreslam/odom_frame_id: "/terreslam/odom"
-/terreslam/cloud_frame_id: "/terreslam/cloud"
-/terreslam/plane_frame_id: "/terreslam/cloud/plane"
-/terreslam/sub_lidar_frame_id: "/adapt/lidar"
-/terreslam/sub_cam_frame_id: "/adapt/cam"
-/terreslam/sub_cam_depth_frame_id: "/adapt/cam_depth"
-/terreslam/sub_cam_info_frame_id: "/adapt/camera_info"
+/terreslam/frame_id/odom: "/terreslam/odom"
+/terreslam/frame_id/cloud: "/terreslam/cloud"
+/terreslam/frame_id/plane: "/terreslam/cloud/plane"
+/terreslam/frame_id/sub_lidar: "/adapt/lidar"
+/terreslam/frame_id/sub_cam: "/adapt/cam"
+/terreslam/frame_id/sub_cam_depth: "/adapt/cam_depth"
+/terreslam/frame_id/sub_cam_info: "/adapt/camera_info"
 
 # Plane Detector
 /terreslam/PD/debug: true

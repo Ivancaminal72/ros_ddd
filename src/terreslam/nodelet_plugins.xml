@@ -1,9 +1,19 @@
 <library path="lib/libterreslam_plugins">
-  <class name="terreslam/rgb_depth_frontend"
+  
+	<class name="terreslam/rgb_depth_frontend"
 		 type="terreslam::RGBDepthFrontend"
 		 base_class_type="nodelet::Nodelet">
 	<description>
-	  This is my nodelet.
+	  Preprocessing
+	</description>
+	</class>
+	
+	<class name="terreslam/plane_detector_frontend"
+		 type="terreslam::PlaneDetectorFrontend"
+		 base_class_type="nodelet::Nodelet">
+	<description>
+	  Plane detection
 	</description>
   </class>
+
 </library>

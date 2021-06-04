@@ -44,7 +44,7 @@ protected:
 	double PD_thres_dist;
 	// double PD_thres_color;
 	
-	/// Variables
+	/// COMMS variables
 	ros::Publisher odom_pub;
 	ros::Publisher cloud_pub;
 	ros::Publisher plane_pub;
@@ -52,6 +52,8 @@ protected:
 	// blocks
 	std::unique_ptr<PlaneDetector> PD;
 	
+	// variables
+	Scan* scan_;
 
 	// pcl_viewer
 	// Visualizer Vis_;

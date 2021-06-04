@@ -62,6 +62,7 @@ cs_add_library(${PROJECT_NAME}
 
 cs_add_library(${PROJECT_NAME}_plugins
   src/nodelets/rgb_depth_frontend.cpp
+  src/nodelets/plane_detector_frontend.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_plugins ${PROJECT_NAME} ${PCL_LIBRARIES})
