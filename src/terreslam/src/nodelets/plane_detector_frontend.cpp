@@ -76,8 +76,7 @@ private:
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
-		const sensor_msgs::PointCloud2 cloud_msg = *cloud_msg_ptr;
-		pcl::fromROSMsg(cloud_msg, *points);
+		pcl::fromROSMsg(*cloud_msg_ptr, *points);
 
 		///NORMALS
 		if(use_normal_integral_)
@@ -136,7 +135,7 @@ private:
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*points, msg_pcd);
 		msg_pcd.header.frame_id = cloud_filtered_frame_id;
-		msg_pcd.header.stamp = cloud_msg.header.stamp;
+		msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
 		cloud_filtered_pub.publish(msg_pcd);
 
 		// /// - Planes
