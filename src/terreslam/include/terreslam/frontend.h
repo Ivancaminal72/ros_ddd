@@ -22,11 +22,12 @@ public:
 	Frontend();
 
 protected:
-	// Parameters
+	// General parameters
 	std::string frame_id;
 	std::string odom_frame_id;
 	std::string cloud_frame_id;
-	std::string plane_frame_id;
+	std::string cloud_filtered_frame_id;
+	std::string cloud_plane_frame_id;
 	std::string sub_lidar_frame_id;
 	std::string sub_cam_frame_id;
 	std::string sub_cam_depth_frame_id;
@@ -34,6 +35,11 @@ protected:
 	std::string logs_dir;
 	double max_depth;
 
+	/// Plane Filter
+	float PF_thresh;
+	bool PF_highpass;
+
+	/// Plane Detector
 	bool PD_debug;
 	int PD_theta;
 	int PD_phi;
@@ -44,13 +50,13 @@ protected:
 	double PD_thres_dist;
 	// double PD_thres_color;
 	
-	/// COMMS variables
+	/// Comms
 	ros::Publisher odom_pub;
 	ros::Publisher cloud_pub;
+	ros::Publisher cloud_filtered_pub;
 	ros::Publisher plane_pub;
 
-	// blocks
-	std::unique_ptr<PlaneDetector> PD;
+	ros::Subscriber cloud_sub;
 	
 	// variables
 	Scan* scan_;

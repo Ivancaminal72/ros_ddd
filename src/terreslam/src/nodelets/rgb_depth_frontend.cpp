@@ -26,6 +26,10 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <nav_msgs/Odometry.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+
 #include <Eigen/Geometry>
 
 namespace terreslam
@@ -68,6 +72,29 @@ private:
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), rgb_sub_, depth_sub_, info_sub_);
 		exactSync_->registerCallback(boost::bind(&RGBDepthFrontend::callback, this, _1, _2, _3));
+
+		// Publishers
+		odom_pub = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);
+		cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id, 10);
+		// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
+
+		//Publish identity T_cam_cloud
+		geometry_msgs::TransformStamped Ts_cloud_lidar;
+		static tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
+		Ts_cloud_lidar.transform.rotation.x = 0;
+		Ts_cloud_lidar.transform.rotation.y = 0;
+		Ts_cloud_lidar.transform.rotation.z = 0;
+		Ts_cloud_lidar.transform.rotation.w = 1;
+		Ts_cloud_lidar.transform.translation.x = 0;
+		Ts_cloud_lidar.transform.translation.y = 0;
+		Ts_cloud_lidar.transform.translation.z = 0;
+		Ts_cloud_lidar.header.frame_id = sub_lidar_frame_id;
+		Ts_cloud_lidar.child_frame_id = cloud_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
+		Ts_cloud_lidar.child_frame_id = cloud_filtered_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
+		Ts_cloud_lidar.child_frame_id = cloud_plane_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
 	} 
 
 	void callback(

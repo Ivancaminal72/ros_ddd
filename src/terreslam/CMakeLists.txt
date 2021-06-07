@@ -75,6 +75,9 @@ cs_add_executable(terreslam_rgb_depth_frontend src/nodelets/z_rgb_depth_frontend
 target_link_libraries(terreslam_rgb_depth_frontend ${PCL_LIBRARIES})
 set_target_properties(terreslam_rgb_depth_frontend PROPERTIES OUTPUT_NAME "rgb_depth_frontend")
 
+cs_add_executable(terreslam_plane_detector_frontend src/nodelets/z_plane_detector_frontend.cpp)
+target_link_libraries(terreslam_plane_detector_frontend ${PCL_LIBRARIES})
+set_target_properties(terreslam_plane_detector_frontend PROPERTIES OUTPUT_NAME "plane_detector_frontend")
 
 ##########
 # EXPORT #

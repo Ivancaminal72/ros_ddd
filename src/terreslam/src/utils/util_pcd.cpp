@@ -13,26 +13,27 @@ namespace terreslam
 namespace util
 {
 
-	void curvatureFilter(Scan *scan, float thresh, bool high_pass)
+	void curvatureFilter(ptrPointCloud points, ptrNormalCloud normals, float thresh, bool high_pass)
  {
 	std::vector<int> inidices;
 	// Reserve enough space for the indices
-	inidices.resize(scan->points()->size());
+	inidices.resize(points->size());
   
 	int j = 0;
-	for (int i = 0; i < static_cast<int>(scan->points()->size()); ++i)
+	for (int i = 0; i < static_cast<int>(points->size()); ++i)
 	{
-		if(high_pass && scan->normals()->at(i).curvature < thresh) 
+		if(high_pass && normals->at(i).curvature < thresh) 
 			continue;
 		inidices[j] = i;
 		j++;
 	}
-	if (j != static_cast<int> (scan->points()->size()))
+	if (j != static_cast<int> (points->size()))
 	{
 		// Resize to the correct size
 		inidices.resize (j);
 	}
-	scan->filter(inidices);
+	util::subtractPointsXYZRGBA(points, inidices);
+	util::subtractPointsNormal(normals, inidices);
  }
 
 	void printEigenMatrix(Eigen::MatrixXd mat)

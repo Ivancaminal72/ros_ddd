@@ -954,13 +954,6 @@ namespace terreslam
 		// }
 	}
 
-	void Scan::filter(std::vector<int>& inidices)
-	{
-		util::subtractPointsXYZRGBA(point_cloud, inidices);
-		util::subtractPointsNormal(normal_cloud, inidices);
-		util::subtractPointsXY(pixel_cloud, inidices);
-	}
-
 	void Scan::addFeature(Feature *f)
 	{
 		f->setID(features.size());

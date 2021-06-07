@@ -34,26 +34,38 @@ namespace terreslam
 class PlaneDetectorFrontend : public terreslam::Frontend
 {
 public:
-	PlaneDetectorFrontend() : 
-	Frontend(),
-		queue_size_(1)
+	PlaneDetectorFrontend() :
+		queue_size_(10)
 		{
 			std::cout << "Constructor plane_detector_frontend..." << std::endl;
 		}
 
 private:
 
-	void onInit()
+	void onFrontendInit()
 	{
 		std::cout << "Initalize plane_detector_frontend..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
-		
 		ros::NodeHandle cloud_nh(nh, "cloud");
-		std::string subscribedTopicsMsg;
+
+		PD = std::make_unique<PlaneDetector> (PD_debug,
+																					PD_theta,
+																					PD_phi,
+																					PD_d,
+																					PD_max_plane,
+																					PD_min_plane_size,
+																					PD_thres_angle,
+																					PD_thres_dist,
+																					max_depth,
+																					logs_dir);
 
 		/// Subscribers
-		cloud_nh.subscribe(cloud_frame_id, queue_size_, &PlaneDetectorFrontend::callback, this);
+		cloud_sub = cloud_nh.subscribe(cloud_frame_id, queue_size_, &PlaneDetectorFrontend::callback, this);
+
+		// Publishers
+		cloud_filtered_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
+		plane_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_plane_frame_id, 10);
 	} 
 
 	void callback(
@@ -62,9 +74,9 @@ private:
 		std::cout << "Entry plane: " << entry_count_ << std::endl;
 		// std::cout << cloud_msg_ptr->header.stamp << std::endl;
 
-		ptrPointCloud points = ptrPointCloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		ptrNormalCloud normals = ptrNormalCloud (new pcl::PointCloud<pcl::Normal>);
-		sensor_msgs::PointCloud2 cloud_msg = *cloud_msg_ptr;
+		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+		const sensor_msgs::PointCloud2 cloud_msg = *cloud_msg_ptr;
 		pcl::fromROSMsg(cloud_msg, *points);
 
 		///NORMALS
@@ -91,7 +103,7 @@ private:
 		}
 
 		/// Eliminate points with low curvature
-		util::curvatureFilter(scan_, 0.08);
+		util::curvatureFilter(points, normals, PF_thresh, PF_highpass);
 
 		/// PLANE DETECTOR
 		// PD->detectPlanes(scan_);
@@ -123,9 +135,9 @@ private:
 		/// - Cloud Filtered
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*points, msg_pcd);
-		msg_pcd.header.frame_id = cloud_frame_id+"/filtered";
+		msg_pcd.header.frame_id = cloud_filtered_frame_id;
 		msg_pcd.header.stamp = cloud_msg.header.stamp;
-		cloud_pub.publish(msg_pcd);
+		cloud_filtered_pub.publish(msg_pcd);
 
 		// /// - Planes
 		// pcl::toROSMsg(*scan_planes, msg_pcd);
@@ -146,10 +158,13 @@ private:
 	const double depthScale = pow(2,16)/120;
 	const float bad_point = std::numeric_limits<float>::quiet_NaN();
 
-	/// Variables
+	/// General variables
 	int queue_size_;
 	int entry_count_ = 0;
 	bool use_normal_integral_ = false;
+
+	// blocks
+	std::unique_ptr<PlaneDetector> PD;
 
 };
 

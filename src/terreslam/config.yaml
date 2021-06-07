@@ -1,18 +1,24 @@
 # YAML configuration of Terreslam
+#IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
 
 # General
-/terreslam/logsdir: "~/outputs/unorganized/terreslam"
+/terreslam/logsdir: '~/outputs/unorganized/terreslam'
 /terreslam/max_depth: 120.0  #for Kinect 6.0
 
 # Comms
-/terreslam/frame_id: "base_link"
-/terreslam/frame_id/odom: "/terreslam/odom"
-/terreslam/frame_id/cloud: "/terreslam/cloud"
-/terreslam/frame_id/plane: "/terreslam/cloud/plane"
-/terreslam/frame_id/sub_lidar: "/adapt/lidar"
-/terreslam/frame_id/sub_cam: "/adapt/cam"
-/terreslam/frame_id/sub_cam_depth: "/adapt/cam_depth"
-/terreslam/frame_id/sub_cam_info: "/adapt/camera_info"
+/terreslam/frame_id/base: 'base_link'
+/terreslam/frame_id/odom: '/terreslam/odom'
+/terreslam/frame_id/cloud: '/terreslam/cloud'
+/terreslam/frame_id/cloud_filtered: '/terreslam/cloud/filtered'
+/terreslam/frame_id/cloud_plane: '/terreslam/cloud/plane'
+/terreslam/frame_id/sub_lidar: '/adapt/lidar'
+/terreslam/frame_id/sub_cam: '/adapt/cam'
+/terreslam/frame_id/sub_cam_depth: '/adapt/cam_depth'
+/terreslam/frame_id/sub_cam_info: '/adapt/camera_info'
+
+# Plane Filter
+/terreslam/PF/threshold: 0.05
+/terreslam/PF/highpass: true
 
 # Plane Detector
 /terreslam/PD/debug: true
