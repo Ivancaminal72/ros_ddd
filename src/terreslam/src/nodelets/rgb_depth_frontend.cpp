@@ -65,12 +65,12 @@ private:
 		image_transport::TransportHints hintsDepth("raw", ros::TransportHints(), depth_pnh);
 
 		/// Subscribers
-		rgb_sub_.subscribe(rgb_it, sub_cam_frame_id, 1, hintsRgb);
-		depth_sub_.subscribe(depth_it, sub_cam_depth_frame_id, 1, hintsDepth);
-		info_sub_.subscribe(rgb_nh, sub_cam_info_frame_id, 1);
+		rgb_sub_filter_.subscribe(rgb_it, sub_cam_frame_id, 1, hintsRgb);
+		depth_sub_filter_.subscribe(depth_it, sub_cam_depth_frame_id, 1, hintsDepth);
+		info_sub_filter_.subscribe(rgb_nh, sub_cam_info_frame_id, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
-			(MyExactSyncPolicy(queue_size_), rgb_sub_, depth_sub_, info_sub_);
+			(MyExactSyncPolicy(queue_size_), rgb_sub_filter_, depth_sub_filter_, info_sub_filter_);
 		exactSync_->registerCallback(boost::bind(&RGBDepthFrontend::callback, this, _1, _2, _3));
 
 		// Publishers
@@ -170,7 +170,7 @@ private:
 					scan_->points()->push_back(point_pcl);
 					scan_->pixels()->push_back(tmp_pointxy);
 				}
-				else if (use_normal_integral_)
+				else if (use_normal_integral)
 				{
 					/// 3 channels for one pixel in rgb image
 					point_pcl.b=*rgb_ptr;
@@ -185,7 +185,7 @@ private:
 				else rgb_ptr+=3;
 			}
 
-		if(use_normal_integral_)
+		if(use_normal_integral)
 		{
 			/// Organize the point_cloud for the normal estimation
 			scan_->points()->width=width;
@@ -201,6 +201,12 @@ private:
 		msg_pcd.header.stamp = info.header.stamp;
 		cloud_pub.publish(msg_pcd);
 
+		/// - Cloud XY
+		pcl::toROSMsg(*scan_->pixels(), msg_pcd);
+		msg_pcd.header.frame_id = cloud_frame_id+"/xy";
+		msg_pcd.header.stamp = info.header.stamp;
+		cloud_pub.publish(msg_pcd);
+
 		entry_count_++;
 	}
 
@@ -211,19 +217,14 @@ private:
 	}
 
 private:
-	/// Constants
-	const double depthScale = pow(2,16)/120;
-	const float bad_point = std::numeric_limits<float>::quiet_NaN();
-
 	/// Variables
 	int queue_size_;
 	int entry_count_ = 0;
-	bool use_normal_integral_ = false;
 
 	/// Comms
-	image_transport::SubscriberFilter rgb_sub_;
-	image_transport::SubscriberFilter depth_sub_;
-	message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub_;
+	image_transport::SubscriberFilter rgb_sub_filter_;
+	image_transport::SubscriberFilter depth_sub_filter_;
+	message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub_filter_;
 	
 	typedef message_filters::sync_policies::ExactTime
 		<sensor_msgs::Image,

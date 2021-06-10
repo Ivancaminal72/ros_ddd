@@ -22,7 +22,7 @@ public:
 	Frontend();
 
 protected:
-	// General parameters
+	// General frame_id
 	std::string frame_id;
 	std::string odom_frame_id;
 	std::string cloud_frame_id;
@@ -32,14 +32,22 @@ protected:
 	std::string sub_cam_frame_id;
 	std::string sub_cam_depth_frame_id;
 	std::string sub_cam_info_frame_id;
+	
+	/// General parameters
 	std::string logs_dir;
 	double max_depth;
 
+	/// Constants
+	const double depthScale = pow(2,16)/120;
+	const float bad_point = std::numeric_limits<float>::quiet_NaN();
+
 	/// Plane Filter
+	bool use_normal_integral = false;
 	float PF_thresh;
 	bool PF_highpass;
 
 	/// Plane Detector
+	Scan* scan_;
 	bool PD_debug;
 	int PD_theta;
 	int PD_phi;
@@ -57,9 +65,6 @@ protected:
 	ros::Publisher plane_pub;
 
 	ros::Subscriber cloud_sub;
-	
-	// variables
-	Scan* scan_;
 
 	// pcl_viewer
 	// Visualizer Vis_;

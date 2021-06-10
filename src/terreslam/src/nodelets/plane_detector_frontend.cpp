@@ -79,7 +79,7 @@ private:
 		pcl::fromROSMsg(*cloud_msg_ptr, *points);
 
 		///NORMALS
-		if(use_normal_integral_)
+		if(use_normal_integral)
 		{
 			/// Generate the normal_cloud
 			/// More methods --> AVERAGE_3D_GRADIENT; AVERAGE_DEPTH_CHANGE; COVARIANCE_MATRIX
@@ -105,6 +105,11 @@ private:
 		util::curvatureFilter(points, normals, PF_thresh, PF_highpass);
 
 		/// PLANE DETECTOR
+		// scan_ = new Scan();
+		// scan_->points()->clear();
+		// scan_->normals()->clear();
+		// scan_->points() = points;
+		// scan_->normals() = normals;
 		// PD->detectPlanes(scan_);
 
 		/// Visualize normals
@@ -138,9 +143,9 @@ private:
 		msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
 		cloud_filtered_pub.publish(msg_pcd);
 
-		// /// - Planes
+		/// - Planes
 		// pcl::toROSMsg(*scan_planes, msg_pcd);
-		// msg_pcd.header.frame_id = cloud_frame_id+"/plane";
+		// msg_pcd.header.frame_id = cloud_plane_frame_id;
 		// plane_pub.publish(msg_pcd);
 
 		entry_count_++;
@@ -153,14 +158,10 @@ private:
 	}
 
 private:
-	/// Constants
-	const double depthScale = pow(2,16)/120;
-	const float bad_point = std::numeric_limits<float>::quiet_NaN();
 
 	/// General variables
 	int queue_size_;
 	int entry_count_ = 0;
-	bool use_normal_integral_ = false;
 
 	// blocks
 	std::unique_ptr<PlaneDetector> PD;
