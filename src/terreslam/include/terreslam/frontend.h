@@ -26,6 +26,7 @@ protected:
 	std::string frame_id;
 	std::string odom_frame_id;
 	std::string cloud_frame_id;
+	std::string cloud_xy_frame_id;
 	std::string cloud_filtered_frame_id;
 	std::string cloud_plane_frame_id;
 	std::string sub_lidar_frame_id;
@@ -61,6 +62,7 @@ protected:
 	/// Comms
 	ros::Publisher odom_pub;
 	ros::Publisher cloud_pub;
+	ros::Publisher cloud_xy_pub;
 	ros::Publisher cloud_filtered_pub;
 	ros::Publisher plane_pub;
 

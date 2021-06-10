@@ -76,6 +76,7 @@ private:
 		// Publishers
 		odom_pub = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);
 		cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id, 10);
+		cloud_xy_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_xy_frame_id, 10);
 		// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
 		//Publish identity T_cam_cloud
@@ -203,9 +204,9 @@ private:
 
 		/// - Cloud XY
 		pcl::toROSMsg(*scan_->pixels(), msg_pcd);
-		msg_pcd.header.frame_id = cloud_frame_id+"/xy";
+		msg_pcd.header.frame_id = cloud_xy_frame_id;
 		msg_pcd.header.stamp = info.header.stamp;
-		cloud_pub.publish(msg_pcd);
+		cloud_xy_pub.publish(msg_pcd);
 
 		entry_count_++;
 	}

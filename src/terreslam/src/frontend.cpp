@@ -33,6 +33,7 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/frame_id/base", frame_id);
 	nh.getParam("/terreslam/frame_id/odom", odom_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud", cloud_frame_id);
+	nh.getParam("/terreslam/frame_id/cloud_xy", cloud_xy_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud_filtered", cloud_filtered_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud_plane", cloud_plane_frame_id);
 	nh.getParam("/terreslam/frame_id/sub_lidar", sub_lidar_frame_id);

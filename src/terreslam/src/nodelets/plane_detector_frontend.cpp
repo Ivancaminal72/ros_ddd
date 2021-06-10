@@ -61,7 +61,14 @@ private:
 																					logs_dir);
 
 		/// Subscribers
-		cloud_sub = cloud_nh.subscribe(cloud_frame_id, queue_size_, &PlaneDetectorFrontend::callback, this);
+		// cloud_sub = cloud_nh.subscribe(cloud_frame_id, queue_size_, &PlaneDetectorFrontend::callback, this);
+		
+		cloud_sub_filter_.subscribe(cloud_nh, cloud_frame_id, 1);
+		cloud_xy_sub_filter_.subscribe(cloud_nh, cloud_xy_frame_id, 1);
+
+		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
+			(MyExactSyncPolicy(queue_size_), cloud_sub_filter_, cloud_xy_sub_filter_);
+		exactSync_->registerCallback(boost::bind(&PlaneDetectorFrontend::callback, this, _1, _2));
 
 		// Publishers
 		cloud_filtered_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
@@ -69,14 +76,17 @@ private:
 	} 
 
 	void callback(
-		const sensor_msgs::PointCloud2ConstPtr& cloud_msg_ptr)
+		const sensor_msgs::PointCloud2ConstPtr& cloud_msg_ptr,
+		const sensor_msgs::PointCloud2ConstPtr& cloud_xy_msg_ptr)
 	{
 		std::cout << "Entry plane: " << entry_count_ << std::endl;
 		// std::cout << cloud_msg_ptr->header.stamp << std::endl;
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+		pcl::PointCloud<pcl::PointXY>::Ptr pixels (new pcl::PointCloud<pcl::PointXY>);
 		pcl::fromROSMsg(*cloud_msg_ptr, *points);
+		pcl::fromROSMsg(*cloud_xy_msg_ptr, *pixels);
 
 		///NORMALS
 		if(use_normal_integral)
@@ -108,8 +118,10 @@ private:
 		// scan_ = new Scan();
 		// scan_->points()->clear();
 		// scan_->normals()->clear();
+		// scan_->pixels()->clear();
 		// scan_->points() = points;
 		// scan_->normals() = normals;
+		// scan_->pixels() = pixels;
 		// PD->detectPlanes(scan_);
 
 		/// Visualize normals
@@ -165,6 +177,14 @@ private:
 
 	// blocks
 	std::unique_ptr<PlaneDetector> PD;
+
+	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_filter_;
+	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_xy_sub_filter_;
+
+	typedef message_filters::sync_policies::ExactTime
+		<sensor_msgs::PointCloud2,
+		sensor_msgs::PointCloud2> MyExactSyncPolicy;
+	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
 
 };
 
