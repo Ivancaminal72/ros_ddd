@@ -24,6 +24,7 @@
 
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/features/normal_3d_omp.h>
 
 #include <Eigen/Geometry>
 
@@ -106,7 +107,8 @@ private:
 		}
 		else
 		{
-			pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
+			pcl::NormalEstimationOMP<pcl::PointXYZRGBA, pcl::Normal> ne;
+			ne.setNumberOfThreads(6);
 			pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree;
 			ne.setInputCloud(points);
 			tree=pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr (new pcl::search::KdTree<pcl::PointXYZRGBA>());
