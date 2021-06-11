@@ -5,10 +5,9 @@
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
-#include "terreslam/utils/util_msg.h"
 #include "terreslam/utils/util_map.h"
 #include "terreslam/utils/util_pcd.h"
-#include "terreslam/utils/util_algebra.h"
+#include "terreslam/utils/util_chrono.h"
 
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
@@ -80,7 +79,12 @@ private:
 		const sensor_msgs::PointCloud2ConstPtr& cloud_xy_msg_ptr)
 	{
 		std::cout << "Entry plane: " << entry_count_ << std::endl;
-		// std::cout << cloud_msg_ptr->header.stamp << std::endl;
+		// ///Start chrono ticking
+		// std::chrono::duration<double> tick;
+		// std::chrono::high_resolution_clock::time_point end_t, start_t;
+		// start_t = std::chrono::high_resolution_clock::now();
+		// end_t = std::chrono::high_resolution_clock::now();
+		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
@@ -110,6 +114,8 @@ private:
 			ne.setRadiusSearch(1);
 			ne.compute(*normals);
 		}
+
+		// tick_high_resolution(start_t, tick, elapsed_normal);
 
 		/// Eliminate points with low curvature
 		util::curvatureFilter(points, normals, PF_thresh, PF_highpass);
@@ -161,6 +167,10 @@ private:
 		// plane_pub.publish(msg_pcd);
 
 		entry_count_++;
+
+		// tick_high_resolution(start_t, tick, elapsed_filter);
+		// printElapsed(elapsed_normal, "Callback plane normal: ");
+		// printElapsed(elapsed_filter, "Callback plane filter: ");
 	}
 
 	void skipFrame(std::string msg)
@@ -174,6 +184,10 @@ private:
 	/// General variables
 	int queue_size_;
 	int entry_count_ = 0;
+
+	///Chrono timmings
+	std::vector<double> elapsed_normal;
+	std::vector<double> elapsed_filter;
 
 	// blocks
 	std::unique_ptr<PlaneDetector> PD;

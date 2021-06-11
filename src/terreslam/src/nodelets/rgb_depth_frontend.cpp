@@ -5,10 +5,9 @@
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
-#include "terreslam/utils/util_msg.h"
 #include "terreslam/utils/util_map.h"
 #include "terreslam/utils/util_pcd.h"
-#include "terreslam/utils/util_algebra.h"
+#include "terreslam/utils/util_chrono.h"
 
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
@@ -104,9 +103,12 @@ private:
 		const sensor_msgs::CameraInfoConstPtr& info_msg)
 	{
 		std::cout << "Entry: " << entry_count_ << std::endl;
-		// std::cout << rgb_msg->header.stamp << std::endl;
-		// std::cout << depth_msg->header.stamp << std::endl;
-		// std::cout << info_msg->header.stamp << std::endl;
+		// ///Start chrono ticking
+		// std::chrono::duration<double> tick;
+		// std::chrono::high_resolution_clock::time_point end_t, start_t;
+		// start_t = std::chrono::high_resolution_clock::now();
+		// end_t = std::chrono::high_resolution_clock::now();
+		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
 		cv_bridge::CvImageConstPtr ptr_msg_rgb = cv_bridge::toCvShare(rgb_msg);
 		cv_bridge::CvImageConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
@@ -209,6 +211,9 @@ private:
 		cloud_xy_pub.publish(msg_pcd);
 
 		entry_count_++;
+
+		// tick_high_resolution(start_t, tick, elapsed);
+		// printElapsed(elapsed, "Callback rgb_depth: ");
 	}
 
 	void skipFrame(std::string msg)
@@ -221,6 +226,9 @@ private:
 	/// Variables
 	int queue_size_;
 	int entry_count_ = 0;
+
+	///Chrono timmings
+	// std::vector<double> elapsed;
 
 	/// Comms
 	image_transport::SubscriberFilter rgb_sub_filter_;
