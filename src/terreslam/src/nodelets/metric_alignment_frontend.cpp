@@ -1,6 +1,6 @@
 /*
  *    Author: Ivan Caminal
- *    Created Date: 2021-06-15 10:37:02
+ *    Created Date: 2021-06-15 11:37:46
  */
 
 #include "terreslam/frontend.h"
@@ -9,35 +9,41 @@
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
 
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
+
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+
+#include <nav_msgs/Odometry.h>
 
 namespace terreslam
 {
 
-class BlobDetectorFrontend : public terreslam::Frontend
+class MetricAlignmentFrontend : public terreslam::Frontend
 {
 public:
-	BlobDetectorFrontend() :
+	MetricAlignmentFrontend() :
 		queue_size_(10)
 		{
-			std::cout << "Constructor blob_detector_frontend..." << std::endl;
+			std::cout << "Constructor metric_alignment_frontend..." << std::endl;
 		}
 
 private:
 
 	void onFrontendInit()
 	{
-		std::cout << "Initalize blob_detector_frontend..." << std::endl;
+		std::cout << "Initalize metric_alignment_frontend..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
 		ros::NodeHandle cf_nh(nh, "cloud_filtered");
 
 		/// Subscribers
-		cloud_filtered_sub_ = cf_nh.subscribe(cloud_filtered_frame_id, queue_size_, &BlobDetectorFrontend::callback, this);
+		cloud_filtered_sub_ = cf_nh.subscribe(cloud_filtered_frame_id, queue_size_, &MetricAlignmentFrontend::callback, this);
 
 		// Publishers
-		blob_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
+		odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);
 	} 
 
 	void callback(
@@ -54,7 +60,7 @@ private:
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		pcl::fromROSMsg(*cf_msg_ptr, *points);
 
-		///BLOB DETECTION
+		///METRIC ALIGNMENT
 		
 
 		/// Pre-PUBLISH
@@ -80,12 +86,7 @@ private:
 		pcl::toROSMsg(*points, msg_pcd);
 		msg_pcd.header.frame_id = cloud_filtered_frame_id;
 		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
-		blob_pub_.publish(msg_pcd);
-
-		/// - Blobs
-		// pcl::toROSMsg(*scan_planes, msg_pcd);
-		// msg_pcd.header.frame_id = cloud_plane_frame_id;
-		// plane_pub.publish(msg_pcd);
+		odom_pub_.publish(msg_pcd);
 
 		entry_count_++;
 
@@ -106,7 +107,7 @@ private:
 	int entry_count_ = 0;
 
 	///Comms
-	ros::Publisher blob_pub_;
+	ros::Publisher odom_pub_;
 	ros::Subscriber cloud_filtered_sub_;
 
 	///Chrono timmings
@@ -114,6 +115,6 @@ private:
 
 };
 
-PLUGINLIB_EXPORT_CLASS(terreslam::BlobDetectorFrontend, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(terreslam::MetricAlignmentFrontend, nodelet::Nodelet);
 
 }

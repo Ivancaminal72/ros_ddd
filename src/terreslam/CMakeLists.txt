@@ -63,6 +63,7 @@ cs_add_library(${PROJECT_NAME}_plugins
   src/nodelets/rgb_depth_frontend.cpp
   src/nodelets/plane_detector_frontend.cpp
   src/nodelets/blob_detector_frontend.cpp
+  src/nodelets/metric_alignment_frontend.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_plugins ${PROJECT_NAME} ${PCL_LIBRARIES})
@@ -82,6 +83,10 @@ set_target_properties(terreslam_plane_detector_frontend PROPERTIES OUTPUT_NAME "
 cs_add_executable(terreslam_blob_detector_frontend src/nodelets/z_blob_detector_frontend.cpp)
 target_link_libraries(terreslam_blob_detector_frontend ${PCL_LIBRARIES})
 set_target_properties(terreslam_blob_detector_frontend PROPERTIES OUTPUT_NAME "blob_detector_frontend")
+
+cs_add_executable(terreslam_metric_alignment_frontend src/nodelets/z_metric_alignment_frontend.cpp)
+target_link_libraries(terreslam_metric_alignment_frontend ${PCL_LIBRARIES})
+set_target_properties(terreslam_metric_alignment_frontend PROPERTIES OUTPUT_NAME "metric_alignment_frontend")
 
 ##########
 # EXPORT #

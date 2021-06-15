@@ -25,7 +25,6 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include <nav_msgs/Odometry.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
@@ -73,9 +72,8 @@ private:
 		exactSync_->registerCallback(boost::bind(&RGBDepthFrontend::callback, this, _1, _2, _3));
 
 		// Publishers
-		odom_pub = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);
-		cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id, 10);
-		cloud_xy_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_xy_frame_id, 10);
+		cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id, 10);
+		cloud_xy_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_xy_frame_id, 10);
 		// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
 		//Publish identity T_cam_cloud
@@ -202,13 +200,13 @@ private:
 		pcl::toROSMsg(*scan_->points(), msg_pcd);
 		msg_pcd.header.frame_id = cloud_frame_id;
 		msg_pcd.header.stamp = info.header.stamp;
-		cloud_pub.publish(msg_pcd);
+		cloud_pub_.publish(msg_pcd);
 
 		/// - Cloud XY
 		pcl::toROSMsg(*scan_->pixels(), msg_pcd);
 		msg_pcd.header.frame_id = cloud_xy_frame_id;
 		msg_pcd.header.stamp = info.header.stamp;
-		cloud_xy_pub.publish(msg_pcd);
+		cloud_xy_pub_.publish(msg_pcd);
 
 		entry_count_++;
 
@@ -231,6 +229,8 @@ private:
 	// std::vector<double> elapsed;
 
 	/// Comms
+	ros::Publisher cloud_pub_;
+	ros::Publisher cloud_xy_pub_;
 	image_transport::SubscriberFilter rgb_sub_filter_;
 	image_transport::SubscriberFilter depth_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub_filter_;

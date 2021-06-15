@@ -16,11 +16,19 @@
 	</description>
   </class>
 
-	<class name="terreslam/plane_detector_frontend"
+	<class name="terreslam/blob_detector_frontend"
 		 type="terreslam::BlobDetectorFrontend"
 		 base_class_type="nodelet::Nodelet">
 	<description>
-	  Plane detection
+	  Blob detection
+	</description>
+  </class>
+
+	<class name="terreslam/metric_alignment_frontend"
+		 type="terreslam::MetricAlignmentFrontend"
+		 base_class_type="nodelet::Nodelet">
+	<description>
+	  Metric Alignment
 	</description>
   </class>
 

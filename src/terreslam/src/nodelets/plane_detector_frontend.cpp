@@ -61,8 +61,8 @@ private:
 		exactSync_->registerCallback(boost::bind(&PlaneDetectorFrontend::callback, this, _1, _2));
 
 		// Publishers
-		cloud_filtered_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
-		plane_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_plane_frame_id, 10);
+		cloud_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
+		plane_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_plane_frame_id, 10);
 	} 
 
 	void callback(
@@ -151,7 +151,7 @@ private:
 		pcl::toROSMsg(*points, msg_pcd);
 		msg_pcd.header.frame_id = cloud_filtered_frame_id;
 		msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
-		cloud_filtered_pub.publish(msg_pcd);
+		cloud_filtered_pub_.publish(msg_pcd);
 
 		/// - Planes
 		// pcl::toROSMsg(*scan_planes, msg_pcd);
@@ -177,13 +177,10 @@ private:
 	int queue_size_;
 	int entry_count_ = 0;
 
-	///Chrono timmings
-	std::vector<double> elapsed_normal;
-	std::vector<double> elapsed_filter;
-
-	// blocks
-	std::unique_ptr<PlaneDetector> PD;
-
+	///Comms
+	// ros::Subscriber cloud_sub;
+	ros::Publisher cloud_filtered_pub_;
+	ros::Publisher plane_pub_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_xy_sub_filter_;
 
@@ -191,6 +188,13 @@ private:
 		<sensor_msgs::PointCloud2,
 		sensor_msgs::PointCloud2> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
+
+	///Chrono timmings
+	std::vector<double> elapsed_normal;
+	std::vector<double> elapsed_filter;
+
+	// blocks
+	std::unique_ptr<PlaneDetector> PD;
 
 };
 
