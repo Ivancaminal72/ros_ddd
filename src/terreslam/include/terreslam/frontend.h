@@ -65,8 +65,10 @@ protected:
 	ros::Publisher cloud_xy_pub;
 	ros::Publisher cloud_filtered_pub;
 	ros::Publisher plane_pub;
+	ros::Publisher blob_pub;
 
 	ros::Subscriber cloud_sub;
+	ros::Subscriber cloud_filtered_sub;
 
 	// pcl_viewer
 	// Visualizer Vis_;

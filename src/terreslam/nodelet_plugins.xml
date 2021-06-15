@@ -16,4 +16,12 @@
 	</description>
   </class>
 
+	<class name="terreslam/plane_detector_frontend"
+		 type="terreslam::BlobDetectorFrontend"
+		 base_class_type="nodelet::Nodelet">
+	<description>
+	  Plane detection
+	</description>
+  </class>
+
 </library>

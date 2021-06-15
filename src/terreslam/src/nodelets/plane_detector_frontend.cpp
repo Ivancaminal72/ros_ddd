@@ -4,8 +4,6 @@
  */
 
 #include "terreslam/frontend.h"
-#include "terreslam/camera_model.h"
-#include "terreslam/utils/util_map.h"
 #include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
 
@@ -16,17 +14,9 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/exact_time.h>
 
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
-
-#include <sensor_msgs/image_encodings.h>
-#include <cv_bridge/cv_bridge.h>
-
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/features/normal_3d_omp.h>
-
-#include <Eigen/Geometry>
 
 namespace terreslam
 {
