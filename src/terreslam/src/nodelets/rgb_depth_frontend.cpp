@@ -93,6 +93,8 @@ private:
 		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
 		Ts_cloud_lidar.child_frame_id = cloud_plane_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
+		Ts_cloud_lidar.child_frame_id = cloud_filtered_blobs_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
 	} 
 
 	void callback(
@@ -100,7 +102,7 @@ private:
 		const sensor_msgs::ImageConstPtr& depth_msg,
 		const sensor_msgs::CameraInfoConstPtr& info_msg)
 	{
-		std::cout << "Entry: " << entry_count_ << std::endl;
+		std::cout << "Entry: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -208,7 +210,7 @@ private:
 		msg_pcd.header.stamp = info.header.stamp;
 		cloud_xy_pub_.publish(msg_pcd);
 
-		entry_count_++;
+		entry_count++;
 
 		// tick_high_resolution(start_t, tick, elapsed);
 		// printElapsed(elapsed, "Callback rgb_depth: ");
@@ -217,13 +219,12 @@ private:
 	void skipFrame(std::string msg)
 	{
 		std::cerr<<msg<<std::endl;
-		entry_count_++;
+		entry_count++;
 	}
 
 private:
 	/// Variables
 	int queue_size_;
-	int entry_count_ = 0;
 
 	///Chrono timmings
 	// std::vector<double> elapsed;

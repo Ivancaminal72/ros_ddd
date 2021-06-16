@@ -49,7 +49,7 @@ private:
 	void callback(
 		const sensor_msgs::PointCloud2ConstPtr& cf_msg_ptr)
 	{
-		std::cout << "Entry plane: " << entry_count_ << std::endl;
+		std::cout << "Entry plane: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -88,7 +88,7 @@ private:
 		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
 		odom_pub_.publish(msg_pcd);
 
-		entry_count_++;
+		entry_count++;
 
 		// tick_high_resolution(start_t, tick, elapsed);
 		// printElapsed(elapsed, "Callback blob detector: ");
@@ -97,14 +97,13 @@ private:
 	void skipFrame(std::string msg)
 	{
 		std::cerr<<msg<<std::endl;
-		entry_count_++;
+		entry_count++;
 	}
 
 private:
 
 	/// General variables
 	int queue_size_;
-	int entry_count_ = 0;
 
 	///Comms
 	ros::Publisher odom_pub_;

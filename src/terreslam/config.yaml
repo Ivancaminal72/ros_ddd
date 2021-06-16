@@ -11,6 +11,7 @@
 /terreslam/frame_id/cloud: '/terreslam/cloud'
 /terreslam/frame_id/cloud_xy: '/terreslam/cloud_xy'
 /terreslam/frame_id/cloud_filtered: '/terreslam/cloud_filtered'
+/terreslam/frame_id/cloud_filtered_blobs: '/terreslam/cloud_filtered_blobs'
 /terreslam/frame_id/cloud_plane: '/terreslam/cloud_plane'
 /terreslam/frame_id/sub_lidar: '/adapt/lidar'
 /terreslam/frame_id/sub_cam: '/adapt/cam'

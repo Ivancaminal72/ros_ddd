@@ -28,6 +28,7 @@ protected:
 	std::string cloud_frame_id;
 	std::string cloud_xy_frame_id;
 	std::string cloud_filtered_frame_id;
+	std::string cloud_filtered_blobs_frame_id;
 	std::string cloud_plane_frame_id;
 	std::string sub_lidar_frame_id;
 	std::string sub_cam_frame_id;
@@ -35,6 +36,7 @@ protected:
 	std::string sub_cam_info_frame_id;
 	
 	/// General parameters
+	int entry_count = 0;
 	std::string logs_dir;
 	double max_depth;
 

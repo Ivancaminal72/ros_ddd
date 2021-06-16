@@ -4,6 +4,7 @@
  */
 
 #include "terreslam/frontend.h"
+#include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
 
 #include "nodelet/nodelet.h"
@@ -11,6 +12,7 @@
 
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/segmentation/extract_clusters.h>
 
 namespace terreslam
 {
@@ -37,13 +39,13 @@ private:
 		cloud_filtered_sub_ = cf_nh.subscribe(cloud_filtered_frame_id, queue_size_, &BlobDetectorFrontend::callback, this);
 
 		// Publishers
-		blob_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
+		blob_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_frame_id, 10);
 	} 
 
 	void callback(
 		const sensor_msgs::PointCloud2ConstPtr& cf_msg_ptr)
 	{
-		std::cout << "Entry plane: " << entry_count_ << std::endl;
+		std::cout << "Entry blob: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -55,30 +57,35 @@ private:
 		pcl::fromROSMsg(*cf_msg_ptr, *points);
 
 		///BLOB DETECTION
-		
+		// Creating the KdTree object for the search method of the extraction
+		pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGBA>);
+		tree->setInputCloud (points);
 
-		/// Pre-PUBLISH
-		// // Extract points beloging to a plane
-		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr tmp_plane (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr scan_planes (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		// for(iterFeature it=scan_->beginFeature();it!=scan_->endFeature();it++)
-		// {
-		// 	if(it->second->Type()!=PLANE) continue;
-		// 	pcl::copyPointCloud(*it->second->ptrPoints(),*it->second->ptrIndices(),*tmp_plane);
-		// 	// pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBA> color(tmp_plane,0,255,0);
-		// 	// uint8_t r = 255;
-		// 	// uint8_t g = 0;
-		// 	// uint8_t b = 0;
-		// 	// int32_t rgb = (r << 16) | (g << 8) | b; 
-		// 	// for(auto &p: tmp_plane->points) p.rgb=rgb;
-		// 	*scan_planes += *tmp_plane;
-		// }
+		std::vector<pcl::PointIndices> cluster_indices;
+		pcl::EuclideanClusterExtraction<pcl::PointXYZRGBA> ec;
+		ec.setClusterTolerance (0.3);
+		ec.setMinClusterSize (50);
+		ec.setMaxClusterSize (700);
+		ec.setSearchMethod (tree);
+		ec.setInputCloud (points);
+		ec.extract (cluster_indices);
+
+		std::cout<<"Cluster size: "<<cluster_indices.size()<<std::endl;
+
+		double j = 0;
+		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+		{
+			uint32_t rgb = util::rgb_palette(j/cluster_indices.size());
+			for (const auto& idx : it->indices)
+				(*points)[idx].rgb=rgb;
+			j+=1;
+		}
 
 		/// PUBLISH
-		/// - Cloud Filtered
+		/// - Cloud Filtered Blobs
 		sensor_msgs::PointCloud2 msg_pcd;
 		pcl::toROSMsg(*points, msg_pcd);
-		msg_pcd.header.frame_id = cloud_filtered_frame_id;
+		msg_pcd.header.frame_id = cloud_filtered_blobs_frame_id;
 		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
 		blob_pub_.publish(msg_pcd);
 
@@ -87,7 +94,7 @@ private:
 		// msg_pcd.header.frame_id = cloud_plane_frame_id;
 		// plane_pub.publish(msg_pcd);
 
-		entry_count_++;
+		entry_count++;
 
 		// tick_high_resolution(start_t, tick, elapsed);
 		// printElapsed(elapsed, "Callback blob detector: ");
@@ -96,14 +103,13 @@ private:
 	void skipFrame(std::string msg)
 	{
 		std::cerr<<msg<<std::endl;
-		entry_count_++;
+		entry_count++;
 	}
 
 private:
 
 	/// General variables
 	int queue_size_;
-	int entry_count_ = 0;
 
 	///Comms
 	ros::Publisher blob_pub_;
