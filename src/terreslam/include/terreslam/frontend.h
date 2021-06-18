@@ -61,6 +61,10 @@ protected:
 	double PD_thres_dist;
 	// double PD_thres_color;
 
+	//Blob Detector
+	float BD_tolerance;
+	int BD_min_size;
+	int BD_max_size;
 
 
 	// pcl_viewer

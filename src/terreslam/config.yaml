@@ -33,5 +33,10 @@
 /terreslam/PD/thres_dist: 0.5
 # /terreslam/PD/thres_color: 
 
+# Blob Detector
+/terreslam/BD/tolerance: 0.28
+/terreslam/BD/min_size: 20
+/terreslam/BD/max_size: 3000
+
 # Plane Processor
 /terreslam/PP/debug: true

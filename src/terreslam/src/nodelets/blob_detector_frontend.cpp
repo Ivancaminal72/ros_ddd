@@ -55,6 +55,15 @@ private:
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		pcl::fromROSMsg(*cf_msg_ptr, *points);
+    
+		///PARALLEL PROJECTION
+		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points_ori (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		*points_ori = *points;
+		for(auto& point : *points)
+		{
+			point.y = 0;
+		}
+
 
 		///BLOB DETECTION
 		// Creating the KdTree object for the search method of the extraction
@@ -63,28 +72,28 @@ private:
 
 		std::vector<pcl::PointIndices> cluster_indices;
 		pcl::EuclideanClusterExtraction<pcl::PointXYZRGBA> ec;
-		ec.setClusterTolerance (0.3);
-		ec.setMinClusterSize (50);
-		ec.setMaxClusterSize (700);
+		ec.setClusterTolerance (BD_tolerance);
+		ec.setMinClusterSize (BD_min_size);
+		ec.setMaxClusterSize (BD_max_size);
 		ec.setSearchMethod (tree);
 		ec.setInputCloud (points);
 		ec.extract (cluster_indices);
 
-		std::cout<<"Cluster size: "<<cluster_indices.size()<<std::endl;
+		// std::cout<<"Cluster size: "<<cluster_indices.size()<<std::endl;
 
 		double j = 0;
 		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
 		{
 			uint32_t rgb = util::rgb_palette(j/cluster_indices.size());
 			for (const auto& idx : it->indices)
-				(*points)[idx].rgb=rgb;
+				(*points_ori)[idx].rgb=rgb;
 			j+=1;
 		}
 
 		/// PUBLISH
 		/// - Cloud Filtered Blobs
 		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*points, msg_pcd);
+		pcl::toROSMsg(*points_ori, msg_pcd);
 		msg_pcd.header.frame_id = cloud_filtered_blobs_frame_id;
 		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
 		blob_pub_.publish(msg_pcd);

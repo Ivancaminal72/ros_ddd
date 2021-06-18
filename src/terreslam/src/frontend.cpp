@@ -57,6 +57,11 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/PD/thres_dist", PD_thres_dist);
 	// nh.getParam("/PD/thres_color", PD_thres_color);
 
+	/// - Blob detector parameters
+	nh.getParam("/terreslam/BD/tolerance", BD_tolerance);
+	nh.getParam("/terreslam/BD/min_size", BD_min_size);
+	nh.getParam("/terreslam/BD/max_size", BD_max_size);
+
 	onFrontendInit();
 }
 
