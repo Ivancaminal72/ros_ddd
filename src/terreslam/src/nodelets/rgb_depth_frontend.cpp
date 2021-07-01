@@ -210,6 +210,7 @@ private:
 		msg_pcd.header.stamp = info.header.stamp;
 		cloud_xy_pub_.publish(msg_pcd);
 
+		scan_->release();
 		entry_count++;
 
 		// tick_high_resolution(start_t, tick, elapsed);
