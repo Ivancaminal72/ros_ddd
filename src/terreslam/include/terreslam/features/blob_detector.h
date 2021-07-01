@@ -8,8 +8,22 @@
 #include "terreslam/utils/util_types.h"
 #include "terreslam/utils/util_map.h"
 
+#include<vector>
+
 namespace terreslam
 {
+
+struct Blob
+{
+	float height; //-1*y+3
+	float hue;
+	float lightness;
+	float x;
+	float z;
+	float radius;
+	uint32_t palette;
+	uint8_t	frame;
+};
 
 class BlobDetector
 {
@@ -26,6 +40,7 @@ public:
 	}
 
 	void setDebug(bool d) {debug_=d;}
+
 	void detectBlobs(Scan *scan);
 
 private:
