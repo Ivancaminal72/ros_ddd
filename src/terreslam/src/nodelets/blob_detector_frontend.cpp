@@ -16,6 +16,8 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <math.h>
 
+#include <Eigen/Dense>
+
 namespace terreslam
 {
 
@@ -42,6 +44,10 @@ private:
 
 		// Publishers
 		blob_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_frame_id, 10);
+
+		// Initialize palette
+		for(int i=0; i<50; ++i)
+				rgb[i] = util::rgb_palette((double)i/50);
 	} 
 
 	void callback(
@@ -85,8 +91,8 @@ private:
 
 		/// Blobs creation
 		current_blobs.clear();
+		// float max_height=0;
 		int j = 0;
-		float max_height=0;
 		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, j+=1)
 		{
 			Blob blob;
@@ -135,34 +141,75 @@ private:
 		// 	std::cout<<"Blob z: "<<blob.z<<std::endl;
 		// }
 
-		// ///MATCHING
-		// //eigen matrix blob_dist[i,j]
-		// if(map_blobs.size() == 0) 
-		// {
-		// 	map_blobs=current_blobs;
-		// 	return;
-		// }
-		// else
-		// {
-		// 	float centroid_dist, radius_dist, height_dist;
-		// 	for(Blob blob : current_blobs)
-		// 	{
-		// 		for(Blob blob_old : map_blobs)
-		// 		{
-		// 			centroid_dist = pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2);
-		// 			radius_dist = blob.radius - blob_old.radius;
-		// 			height_dist = blob.height - blob_old.height;
-		// 			blob_dist[i,j] = pow(centroid_dist,2) + pow(radius_dist,2) + pow(height_dist,2); 
-		// 		}
-		// 	}
-		// }
+		///MATCHING
+		if(map_blobs.size() == 0) //First time initialize map
+		{
+			old_points = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr (new pcl::PointCloud<pcl::PointXYZRGBA>);
+			map_blobs=current_blobs;
+			old_cluster_indices=cluster_indices;
+			old_points = points->makeShared();
+			
+			for(Blob blob : map_blobs)
+			{
+				int randNum = rand()%(50); //Rand number between 0 and 49
+				blob.palette= rgb[randNum];
+			}
+			entry_count++;
+			return;
+		}
+		else //Attempt matching
+		{
+			int cur_size = cluster_indices.size();
+			int old_size = old_cluster_indices.size();
+			Eigen::MatrixXf blob_dist(cur_size,old_size);
+			float centroid_dist, radius_dist, height_dist;
+			int i = 0;
+			for(Blob blob : current_blobs)
+			{
+				int j = 0;
+				for(Blob blob_old : map_blobs)
+				{
+					centroid_dist = pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2);
+					radius_dist = blob.radius - blob_old.radius;
+					height_dist = blob.height - blob_old.height;
+					blob_dist(i,j) = pow(centroid_dist,2) + pow(radius_dist,2) + pow(height_dist,2); 
+					j+=1;
+				}
+				i+=1;
+			}
 
+			i=0;
+			for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, i+=1)
+			{
+				Eigen::MatrixXf::Index minIndexCol, minIndexRow;
+				blob_dist.row(i).minCoeff(&minIndexRow);
+				blob_dist.col(minIndexRow).minCoeff(&minIndexCol);
+				if(i == minIndexCol) //MATCHED
+				{
+					current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
+				}
+				else //NOT MATCHED
+				{
+					int randNum = rand()%(50); //Rand number between 0 and 49
+					current_blobs.at(i).palette = rgb[randNum];
+				}
+			}
 
+			j=0;
+			for (std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin (); it != old_cluster_indices.end (); ++it, j+=1)
+			{
+				for (const auto& idx1 : it->indices)
+				{
+					(*old_points)[idx1].rgb=map_blobs.at(j).palette;
+				}
+			}
+
+		}
 
 		/// PUBLISH
 		/// - Cloud Filtered Blobs
 		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*points, msg_pcd);
+		pcl::toROSMsg(*old_points, msg_pcd);
 		msg_pcd.header.frame_id = cloud_filtered_blobs_frame_id;
 		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
 		blob_pub_.publish(msg_pcd);
@@ -172,6 +219,12 @@ private:
 		// msg_pcd.header.frame_id = cloud_plane_frame_id;
 		// plane_pub.publish(msg_pcd);
 
+		//Update old data
+		map_blobs=current_blobs;
+		old_cluster_indices=cluster_indices;
+		old_points->clear(); //Necessary??
+		old_points = points->makeShared();
+		
 		entry_count++;
 
 		// tick_high_resolution(start_t, tick, elapsed);
@@ -199,7 +252,11 @@ private:
 	/// Blobs
 	std::vector<Blob> current_blobs;
 	std::vector<Blob> map_blobs; //Per cadascun hi ha un centroid, radi, height
+	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr old_points;
+	std::vector<pcl::PointIndices> old_cluster_indices;
 	//frame discutir
+
+	uint32_t rgb[50];
 
 };
 
