@@ -6,6 +6,7 @@
 #include "terreslam/frontend.h"
 #include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
+#include "terreslam/utils/util_general.h"
 #include "terreslam/features/blob_detector.h"
 
 #include "nodelet/nodelet.h"
@@ -159,9 +160,11 @@ private:
 		}
 		else //Attempt matching
 		{
+			matches.clear();
 			int cur_size = cluster_indices.size();
 			int old_size = old_cluster_indices.size();
 			Eigen::MatrixXf blob_dist(cur_size,old_size);
+			Eigen::MatrixXf blob_dist_xz(cur_size,old_size);
 			float centroid_dist, radius_dist, height_dist;
 			int i = 0;
 			for(Blob blob : current_blobs)
@@ -169,10 +172,11 @@ private:
 				int j = 0;
 				for(Blob blob_old : map_blobs)
 				{
-					centroid_dist = pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2);
+					centroid_dist = sqrt(pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2));
 					radius_dist = blob.radius - blob_old.radius;
 					height_dist = blob.height - blob_old.height;
-					blob_dist(i,j) = pow(centroid_dist,2) + pow(radius_dist,2) + pow(height_dist,2); 
+					blob_dist(i,j) = pow(centroid_dist,2) + pow(radius_dist,2) + pow(height_dist,2);
+					blob_dist_xz(i,j) = centroid_dist;
 					j+=1;
 				}
 				i+=1;
@@ -187,6 +191,8 @@ private:
 				if(i == minIndexCol) //MATCHED
 				{
 					current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
+					matches.emplace_back(i,minIndexRow);
+					matches_dist_xz.emplace_back(blob_dist_xz(i,minIndexRow));
 				}
 				else //NOT MATCHED
 				{
@@ -198,9 +204,60 @@ private:
 			j=0;
 			for (std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin (); it != old_cluster_indices.end (); ++it, j+=1)
 			{
-				for (const auto& idx1 : it->indices)
+				for (const auto& idx : it->indices)
 				{
-					(*old_points)[idx1].rgb=map_blobs.at(j).palette;
+					(*old_points)[idx].rgb=map_blobs.at(j).palette;
+				}
+			}
+
+			//DYNAMIC Blobs
+			std::vector<int> indices_to_delete;
+			std::vector<float> matches_dist_xz_small = matches_dist_xz;
+			
+			for(i=0; i<matches.size(); ++i)
+			{
+				if(current_blobs.at(matches.at(i).first).radius > (2*0.5))
+				{
+					indices_to_delete.emplace_back(i);		
+					// std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
+					// for (const auto& idx : it->indices)
+					// {
+					// 	uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+					// 	(*old_points)[idx].rgb= rgb_color;
+					// }
+				}
+			}
+			for(i=0; i<indices_to_delete.size(); ++i)
+			{
+				matches_dist_xz_small.erase(matches_dist_xz_small.begin()+indices_to_delete.at(i)-i);
+			}
+
+			
+			float median_xz = util::calculateMedian(matches_dist_xz_small);
+			
+			if(median_xz > 0)
+			{
+				indices_to_delete.clear();
+				for(i=0; i<matches.size(); ++i)
+				{
+					// if((abs(matches_dist_xz.at(i) - median_xz) > 0.035) && (abs(acos(x_avg*xi+z_avg*zi)) > M_PI/10)) //DYNAMIC
+					if(abs(matches_dist_xz.at(i) - median_xz) > 0.025) //DYNAMIC
+					{
+						indices_to_delete.emplace_back(i);
+						std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
+						for (const auto& idx : it->indices)
+						{
+							uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+							(*old_points)[idx].rgb= rgb_color;
+						}
+					} 
+						
+				}
+				for(i=0; i<indices_to_delete.size(); ++i)
+				{
+					//old_cluster_indices.erase(old_cluster_indices.begin()+matches.at(indices_to_delete.at(i)).second-i);
+					matches.erase(matches.begin()+indices_to_delete.at(i)-i);
+					matches_dist_xz.erase(matches_dist_xz.begin()+indices_to_delete.at(i)-i);
 				}
 			}
 
@@ -255,6 +312,8 @@ private:
 	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr old_points;
 	std::vector<pcl::PointIndices> old_cluster_indices;
 	//frame discutir
+	std::vector<std::pair<int,int>> matches;
+	std::vector<float> matches_dist_xz;
 
 	uint32_t rgb[50];
 

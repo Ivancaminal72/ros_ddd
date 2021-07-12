@@ -7,6 +7,9 @@
 
 namespace terreslam
 {
+namespace util
+{
+
 	void printElapsed(std::vector<double> elapsed_vec, std::string block_str)
 	{
 			double average = std::accumulate(elapsed_vec.begin(), elapsed_vec.end(), 0.0) / elapsed_vec.size();
@@ -33,4 +36,5 @@ namespace terreslam
 			assert(abs_diff<=INT64_MAX);
 			return abs_diff;
 	}
+}
 }
