@@ -2,7 +2,7 @@
 #IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
 
 # General
-/terreslam/logsdir: '~/outputs/unorganized/terreslam'
+/terreslam/logsdir: '/home/ivan/outputs/terreslam/unorganized'
 /terreslam/max_depth: 120.0  #for Kinect 6.0
 
 # Comms
@@ -37,6 +37,9 @@
 /terreslam/BD/tolerance: 0.28
 /terreslam/BD/min_size: 20
 /terreslam/BD/max_size: 3000
+/terreslam/BD/alpha: 0.7
+/terreslam/BD/thres_xz: 0.025
+/terreslam/BD/thres_radius: 0.5
 
 # Plane Processor
 /terreslam/PP/debug: true

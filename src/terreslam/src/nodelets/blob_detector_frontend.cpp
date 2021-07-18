@@ -16,6 +16,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <math.h>
+#include <fstream>
 
 #include <Eigen/Dense>
 
@@ -49,6 +50,13 @@ private:
 		// Initialize palette
 		for(int i=0; i<50; ++i)
 				rgb[i] = util::rgb_palette((double)i/50);
+
+		// Initialize logging
+		// logs_path_ = logs_dir + "/log_dynamic_blob_detector.csv";
+		// std::cout<<"Opening file to write at path: "<<logs_path_<<std::endl;
+		// fp_.open(logs_path_);
+		// if (fp_.is_open()) std::cout << "OK!\n";
+		// else std::cerr << "Error opening file: "<< strerror(errno) <<std::endl;
 	} 
 
 	void callback(
@@ -216,7 +224,7 @@ private:
 			
 			for(i=0; i<matches.size(); ++i)
 			{
-				if(current_blobs.at(matches.at(i).first).radius > (2*0.5))
+				if(current_blobs.at(matches.at(i).first).radius > (2*BD_thres_radius))
 				{
 					indices_to_delete.emplace_back(i);		
 					// std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
@@ -233,15 +241,17 @@ private:
 			}
 
 			
-			float median_xz = util::calculateMedian(matches_dist_xz_small);
-			
+			float median_xz_curr = util::calculateMedian(matches_dist_xz_small);
+			median_xz = BD_alpha * median_xz_curr + (1-BD_alpha) * median_xz;
+
 			if(median_xz > 0)
 			{
 				indices_to_delete.clear();
 				for(i=0; i<matches.size(); ++i)
 				{
+					// fp_<<matches_dist_xz.at(i)<<std::endl;
 					// if((abs(matches_dist_xz.at(i) - median_xz) > 0.035) && (abs(acos(x_avg*xi+z_avg*zi)) > M_PI/10)) //DYNAMIC
-					if(abs(matches_dist_xz.at(i) - median_xz) > 0.025) //DYNAMIC
+					if(abs(matches_dist_xz.at(i) - median_xz) > BD_thres_xz) //DYNAMIC
 					{
 						indices_to_delete.emplace_back(i);
 						std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
@@ -314,8 +324,13 @@ private:
 	//frame discutir
 	std::vector<std::pair<int,int>> matches;
 	std::vector<float> matches_dist_xz;
+	float median_xz;
 
 	uint32_t rgb[50];
+
+	/// Logging
+	std::ofstream fp_;
+	std::string logs_path_;
 
 };
 
