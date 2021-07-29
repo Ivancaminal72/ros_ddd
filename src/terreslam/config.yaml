@@ -19,7 +19,7 @@
 /terreslam/frame_id/sub_cam_info: '/adapt/camera_info'
 
 # Plane Filter
-/terreslam/PF/threshold: 0.05
+/terreslam/PF/threshold: 0.12 #0.05
 /terreslam/PF/highpass: true
 
 # Plane Detector
@@ -34,11 +34,12 @@
 # /terreslam/PD/thres_color: 
 
 # Blob Detector
-/terreslam/BD/tolerance: 0.28
-/terreslam/BD/min_size: 20
+/terreslam/BD/tolerance: 0.55
+/terreslam/BD/min_size: 15
 /terreslam/BD/max_size: 3000
-/terreslam/BD/alpha: 0.7
-/terreslam/BD/thres_xz: 0.025
+/terreslam/BD/ppa: 34
+/terreslam/BD/alpha: 1
+/terreslam/BD/thres_xz: 0.034
 /terreslam/BD/thres_radius: 0.5
 
 # Plane Processor

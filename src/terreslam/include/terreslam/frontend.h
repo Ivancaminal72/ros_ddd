@@ -65,6 +65,7 @@ protected:
 	float BD_tolerance;
 	int BD_min_size;
 	int BD_max_size;
+	int BD_ppa;
 	float BD_alpha;
 	float BD_thres_xz;
 	float BD_thres_radius;

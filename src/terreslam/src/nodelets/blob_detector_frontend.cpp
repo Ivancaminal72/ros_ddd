@@ -133,13 +133,31 @@ private:
 			height_avg = height_acc / it->indices.size();
 			height2_avg = height2_acc / it->indices.size();
 			height_dev = 2*sqrt(height2_avg - pow(height_avg,2)); //Height_avg+height_dev (estimació alçada)
-			
-			blob.height = height_avg+height_dev;
-			blob.radius = centroid_dev;
-			blob.x=x_avg;
-			blob.z=z_avg;
 
-			current_blobs.emplace_back(blob);
+			int ppa = (2*it->indices.size()) / (M_PI*pow(centroid_dev,2));
+			if( ppa < BD_ppa)
+			{
+				indices_to_delete.emplace_back(j);
+			}
+			else
+			{
+				blob.height = height_avg+height_dev;
+				blob.radius = centroid_dev;
+				blob.x=x_avg;
+				blob.z=z_avg;
+				current_blobs.emplace_back(blob);
+			}
+		}
+		for(j=0; j<indices_to_delete.size(); ++j)
+		{
+			cluster_indices.erase(cluster_indices.begin()+indices_to_delete.at(j)-j);
+		}
+
+		if(cluster_indices.size() == 0)
+		{
+			reset=true;
+			entry_count++;
+			return;
 		}
 
 		// for(Blob blob : current_blobs)
@@ -151,18 +169,19 @@ private:
 		// }
 
 		///MATCHING
-		if(map_blobs.size() == 0) //First time initialize map
+		if(entry_count == 0 || reset) //First time initialize map
 		{
 			old_points = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr (new pcl::PointCloud<pcl::PointXYZRGBA>);
 			map_blobs=current_blobs;
 			old_cluster_indices=cluster_indices;
 			old_points = points->makeShared();
 			
-			for(Blob blob : map_blobs)
+			for(Blob blob_old : map_blobs)
 			{
 				int randNum = rand()%(50); //Rand number between 0 and 49
-				blob.palette= rgb[randNum];
+				blob_old.palette= rgb[randNum];
 			}
+			reset=false;
 			entry_count++;
 			return;
 		}
@@ -198,6 +217,8 @@ private:
 				blob_dist.col(minIndexRow).minCoeff(&minIndexCol);
 				if(i == minIndexCol) //MATCHED
 				{
+					// int randNum = rand()%(50); //Rand number between 0 and 49
+					// current_blobs.at(i).palette = rgb[randNum];
 					current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
 					matches.emplace_back(i,minIndexRow);
 					matches_dist_xz.emplace_back(blob_dist_xz(i,minIndexRow));
@@ -218,58 +239,59 @@ private:
 				}
 			}
 
-			//DYNAMIC Blobs
-			std::vector<int> indices_to_delete;
-			std::vector<float> matches_dist_xz_small = matches_dist_xz;
+			// //DYNAMIC Blobs
+			// indices_to_delete.clear();
+			// std::vector<float> matches_dist_xz_small = matches_dist_xz;
 			
-			for(i=0; i<matches.size(); ++i)
-			{
-				if(current_blobs.at(matches.at(i).first).radius > (2*BD_thres_radius))
-				{
-					indices_to_delete.emplace_back(i);		
-					// std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
-					// for (const auto& idx : it->indices)
-					// {
-					// 	uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
-					// 	(*old_points)[idx].rgb= rgb_color;
-					// }
-				}
-			}
-			for(i=0; i<indices_to_delete.size(); ++i)
-			{
-				matches_dist_xz_small.erase(matches_dist_xz_small.begin()+indices_to_delete.at(i)-i);
-			}
+			// for(i=0; i<matches.size(); ++i)
+			// {
+			// 	if(current_blobs.at(matches.at(i).first).radius > (2*BD_thres_radius))
+			// 	{
+			// 		indices_to_delete.emplace_back(i);		
+			// 		// std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
+			// 		// for (const auto& idx : it->indices)
+			// 		// {
+			// 		// 	uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+			// 		// 	(*old_points)[idx].rgb= rgb_color;
+			// 		// }
+			// 	}
+			// }
+			// for(i=0; i<indices_to_delete.size(); ++i)
+			// {
+			// 	matches_dist_xz_small.erase(matches_dist_xz_small.begin()+indices_to_delete.at(i)-i);
+			// }
 
 			
-			float median_xz_curr = util::calculateMedian(matches_dist_xz_small);
-			median_xz = BD_alpha * median_xz_curr + (1-BD_alpha) * median_xz;
+			// float median_xz_curr = util::calculateMedian(matches_dist_xz_small);
+			// if(entry_count == 0) median_xz = median_xz_curr;
+			// median_xz = BD_alpha * median_xz_curr + (1-BD_alpha) * median_xz;
 
-			if(median_xz > 0)
-			{
-				indices_to_delete.clear();
-				for(i=0; i<matches.size(); ++i)
-				{
-					// fp_<<matches_dist_xz.at(i)<<std::endl;
-					// if((abs(matches_dist_xz.at(i) - median_xz) > 0.035) && (abs(acos(x_avg*xi+z_avg*zi)) > M_PI/10)) //DYNAMIC
-					if(abs(matches_dist_xz.at(i) - median_xz) > BD_thres_xz) //DYNAMIC
-					{
-						indices_to_delete.emplace_back(i);
-						std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
-						for (const auto& idx : it->indices)
-						{
-							uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
-							(*old_points)[idx].rgb= rgb_color;
-						}
-					} 
+			// if(median_xz > 0)
+			// {
+			// 	indices_to_delete.clear();
+			// 	for(i=0; i<matches.size(); ++i)
+			// 	{
+			// 		// fp_<<matches_dist_xz.at(i)<<std::endl;
+			// 		// if((abs(matches_dist_xz.at(i) - median_xz) > 0.035) && (abs(acos(x_avg*xi+z_avg*zi)) > M_PI/10)) //DYNAMIC
+			// 		if(abs(matches_dist_xz.at(i) - median_xz) > BD_thres_xz) //DYNAMIC
+			// 		{
+			// 			indices_to_delete.emplace_back(i);
+			// 			std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
+			// 			for (const auto& idx : it->indices)
+			// 			{
+			// 				uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+			// 				(*old_points)[idx].rgb= rgb_color;
+			// 			}
+			// 		} 
 						
-				}
-				for(i=0; i<indices_to_delete.size(); ++i)
-				{
-					//old_cluster_indices.erase(old_cluster_indices.begin()+matches.at(indices_to_delete.at(i)).second-i);
-					matches.erase(matches.begin()+indices_to_delete.at(i)-i);
-					matches_dist_xz.erase(matches_dist_xz.begin()+indices_to_delete.at(i)-i);
-				}
-			}
+			// 	}
+			// 	for(i=0; i<indices_to_delete.size(); ++i)
+			// 	{
+			// 		//old_cluster_indices.erase(old_cluster_indices.begin()+matches.at(indices_to_delete.at(i)).second-i);
+			// 		matches.erase(matches.begin()+indices_to_delete.at(i)-i);
+			// 		matches_dist_xz.erase(matches_dist_xz.begin()+indices_to_delete.at(i)-i);
+			// 	}
+			// }
 
 		}
 
@@ -324,7 +346,8 @@ private:
 	//frame discutir
 	std::vector<std::pair<int,int>> matches;
 	std::vector<float> matches_dist_xz;
-	float median_xz;
+	float median_xz=0;
+	bool reset=false;
 
 	uint32_t rgb[50];
 

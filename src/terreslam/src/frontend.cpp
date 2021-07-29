@@ -61,6 +61,7 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/BD/tolerance", BD_tolerance);
 	nh.getParam("/terreslam/BD/min_size", BD_min_size);
 	nh.getParam("/terreslam/BD/max_size", BD_max_size);
+	nh.getParam("/terreslam/BD/ppa", BD_ppa);
 	nh.getParam("/terreslam/BD/alpha", BD_alpha);
 	nh.getParam("/terreslam/BD/thres_xz", BD_thres_xz);
 	nh.getParam("/terreslam/BD/thres_radius", BD_thres_radius);
