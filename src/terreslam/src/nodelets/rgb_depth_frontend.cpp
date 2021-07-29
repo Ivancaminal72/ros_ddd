@@ -213,8 +213,8 @@ private:
 		scan_->release();
 		entry_count++;
 
-		// tick_high_resolution(start_t, tick, elapsed);
-		// printElapsed(elapsed, "Callback rgb_depth: ");
+		// util::tick_high_resolution(start_t, tick, elapsed);
+		// util::printElapsed(elapsed, "Callback rgb_depth: ");
 	}
 
 	void skipFrame(std::string msg)

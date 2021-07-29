@@ -107,7 +107,7 @@ private:
 			ne.compute(*normals);
 		}
 
-		// tick_high_resolution(start_t, tick, elapsed_normal);
+		// util::tick_high_resolution(start_t, tick, elapsed_normal);
 
 		/// Eliminate points with low curvature
 		util::curvatureFilter(points, normals, PF_thresh, PF_highpass);
@@ -160,9 +160,9 @@ private:
 
 		entry_count++;
 
-		// tick_high_resolution(start_t, tick, elapsed_filter);
-		// printElapsed(elapsed_normal, "Callback plane normal: ");
-		// printElapsed(elapsed_filter, "Callback plane filter: ");
+		// util::tick_high_resolution(start_t, tick, elapsed_filter);
+		// util::printElapsed(elapsed_normal, "Callback plane normal: ");
+		// util::printElapsed(elapsed_filter, "Callback plane filter: ");
 	}
 
 	void skipFrame(std::string msg)

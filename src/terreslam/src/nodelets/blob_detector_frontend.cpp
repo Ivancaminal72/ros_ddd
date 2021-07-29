@@ -101,6 +101,7 @@ private:
 		/// Blobs creation
 		current_blobs.clear();
 		// float max_height=0;
+		std::vector<int> indices_to_delete;
 		int j = 0;
 		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, j+=1)
 		{
@@ -316,8 +317,8 @@ private:
 		
 		entry_count++;
 
-		// tick_high_resolution(start_t, tick, elapsed);
-		// printElapsed(elapsed, "Callback blob detector: ");
+		// util::tick_high_resolution(start_t, tick, elapsed);
+		// util::printElapsed(elapsed, "Callback blob detector: ");
 	}
 
 	void skipFrame(std::string msg)
