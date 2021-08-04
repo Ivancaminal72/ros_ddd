@@ -18,6 +18,9 @@
 
 #include <nav_msgs/Odometry.h>
 
+//msgs
+#include <terreslam/BlobMatches.h>
+
 namespace terreslam
 {
 
@@ -37,19 +40,19 @@ private:
 		std::cout << "Initalize metric_alignment_frontend..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
-		ros::NodeHandle cf_nh(nh, "cloud_filtered");
+		ros::NodeHandle bm_nh(nh, "blob_matches");
 
 		/// Subscribers
-		cloud_filtered_sub_ = cf_nh.subscribe(cloud_filtered_frame_id, queue_size_, &MetricAlignmentFrontend::callback, this);
+		blob_matches_sub_ = bm_nh.subscribe(blob_matches_frame_id, queue_size_, &MetricAlignmentFrontend::callback, this);
 
 		// Publishers
 		odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);
 	} 
 
 	void callback(
-		const sensor_msgs::PointCloud2ConstPtr& cf_msg_ptr)
+		const terreslam::BlobMatchesPtr& bm_msg_ptr)
 	{
-		std::cout << "Entry plane: " << entry_count << std::endl;
+		std::cout << "Entry MA: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -57,8 +60,22 @@ private:
 		// end_t = std::chrono::high_resolution_clock::now();
 		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
-		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		pcl::fromROSMsg(*cf_msg_ptr, *points);
+		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		// pcl::fromROSMsg(*cf_msg_ptr, *points);
+		
+		size_t sm = bm_msg_ptr->x_cur.size();
+		std::vector<float> radius_cur(sm), height_cur(sm);
+		std::vector<float> radius_old(sm), height_old(sm);
+		std::vector<cv::Point2f> cur(sm), old(sm);
+		radius_cur = bm_msg_ptr->radius_cur;
+		height_cur = bm_msg_ptr->height_cur;
+		radius_old = bm_msg_ptr->radius_old;
+		height_old = bm_msg_ptr->height_old;
+		for(i=0; i<sm; ++i)
+		{
+			cur.at(i) = cv::Point2f(bm_msg_ptr->x_cur.at(i), bm_msg_ptr->z_cur.at(i));
+			old.at(i) = cv::Point2f(bm_msg_ptr->x_old.at(i), bm_msg_ptr->z_old.at(i));
+		}
 
 		///METRIC ALIGNMENT
 		
@@ -82,16 +99,16 @@ private:
 
 		/// PUBLISH
 		/// - Cloud Filtered
-		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*points, msg_pcd);
-		msg_pcd.header.frame_id = cloud_filtered_frame_id;
-		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
-		odom_pub_.publish(msg_pcd);
+		// sensor_msgs::PointCloud2 msg_pcd;
+		// pcl::toROSMsg(*points, msg_pcd);
+		// msg_pcd.header.frame_id = cloud_filtered_frame_id;
+		// msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
+		// odom_pub_.publish(msg_pcd);
 
 		entry_count++;
 
-		// tick_high_resolution(start_t, tick, elapsed);
-		// printElapsed(elapsed, "Callback blob detector: ");
+		// util::tick_high_resolution(start_t, tick, elapsed);
+		// util::printElapsed(elapsed, "Callback blob detector: ");
 	}
 
 	void skipFrame(std::string msg)
@@ -107,11 +124,13 @@ private:
 
 	///Comms
 	ros::Publisher odom_pub_;
-	ros::Subscriber cloud_filtered_sub_;
+	ros::Subscriber blob_matches_sub_;
 
 	///Chrono timmings
 	std::vector<double> elapsed;
 
+	/// Blobs
+	unsigned int i,j;
 };
 
 PLUGINLIB_EXPORT_CLASS(terreslam::MetricAlignmentFrontend, nodelet::Nodelet);

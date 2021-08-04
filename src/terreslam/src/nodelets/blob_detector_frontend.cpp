@@ -20,6 +20,9 @@
 
 #include <Eigen/Dense>
 
+//msgs
+#include <terreslam/BlobMatches.h>
+
 namespace terreslam
 {
 
@@ -45,10 +48,11 @@ private:
 		cloud_filtered_sub_ = cf_nh.subscribe(cloud_filtered_frame_id, queue_size_, &BlobDetectorFrontend::callback, this);
 
 		// Publishers
-		blob_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_frame_id, 10);
+		cloud_blobs_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_frame_id, 10);
+		blob_matches_pub_ = nh.advertise<terreslam::BlobMatches>(blob_matches_frame_id, 1);
 
 		// Initialize palette
-		for(int i=0; i<50; ++i)
+		for(i=0; i<50; ++i)
 				rgb[i] = util::rgb_palette((double)i/50);
 
 		// Initialize logging
@@ -102,7 +106,7 @@ private:
 		current_blobs.clear();
 		// float max_height=0;
 		std::vector<int> indices_to_delete;
-		int j = 0;
+		j=0;
 		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, j+=1)
 		{
 			Blob blob;
@@ -194,10 +198,10 @@ private:
 			Eigen::MatrixXf blob_dist(cur_size,old_size);
 			Eigen::MatrixXf blob_dist_xz(cur_size,old_size);
 			float centroid_dist, radius_dist, height_dist;
-			int i = 0;
+			i=0;
 			for(Blob blob : current_blobs)
 			{
-				int j = 0;
+				j=0;
 				for(Blob blob_old : map_blobs)
 				{
 					centroid_dist = sqrt(pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2));
@@ -302,12 +306,35 @@ private:
 		pcl::toROSMsg(*old_points, msg_pcd);
 		msg_pcd.header.frame_id = cloud_filtered_blobs_frame_id;
 		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
-		blob_pub_.publish(msg_pcd);
+		cloud_blobs_pub_.publish(msg_pcd);
 
 		/// - Blobs
-		// pcl::toROSMsg(*scan_planes, msg_pcd);
-		// msg_pcd.header.frame_id = cloud_plane_frame_id;
-		// plane_pub.publish(msg_pcd);
+		terreslam::BlobMatchesPtr bm_msg_ptr(new terreslam::BlobMatches);
+		bm_msg_ptr->header.frame_id = blob_matches_frame_id;
+		bm_msg_ptr->header.stamp = cf_msg_ptr->header.stamp;
+		size_t sm = matches.size();
+		std::vector<float> x_cur(sm), z_cur(sm), radius_cur(sm), height_cur(sm);
+		std::vector<float> x_old(sm), z_old(sm), radius_old(sm), height_old(sm);
+		for(i=0; i<matches.size(); ++i)
+		{
+			x_cur[i] = current_blobs.at(matches.at(i).first).x;
+			z_cur[i] = current_blobs.at(matches.at(i).first).z;
+			radius_cur[i] = current_blobs.at(matches.at(i).first).radius;
+			height_cur[i] = current_blobs.at(matches.at(i).first).height;
+			x_old[i] = map_blobs.at(matches.at(i).second).x;
+			z_old[i] = map_blobs.at(matches.at(i).second).z;
+			radius_old[i] = map_blobs.at(matches.at(i).second).radius;
+			height_old[i] = map_blobs.at(matches.at(i).second).height;
+		}
+		bm_msg_ptr->x_cur = x_cur;
+		bm_msg_ptr->z_cur = z_cur;
+		bm_msg_ptr->radius_cur = radius_cur;
+		bm_msg_ptr->height_cur = height_cur;
+		bm_msg_ptr->x_old = x_old;
+		bm_msg_ptr->z_old = z_old;
+		bm_msg_ptr->radius_old = radius_old;
+		bm_msg_ptr->height_old = height_old;
+		blob_matches_pub_.publish(bm_msg_ptr);
 
 		//Update old data
 		map_blobs=current_blobs;
@@ -333,13 +360,15 @@ private:
 	int queue_size_;
 
 	/// Comms
-	ros::Publisher blob_pub_;
+	ros::Publisher cloud_blobs_pub_;
+	ros::Publisher blob_matches_pub_;
 	ros::Subscriber cloud_filtered_sub_;
 
 	/// Chrono timmings
 	std::vector<double> elapsed;
 
 	/// Blobs
+	unsigned int i,j;
 	std::vector<Blob> current_blobs;
 	std::vector<Blob> map_blobs; //Per cadascun hi ha un centroid, radi, height
 	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr old_points;

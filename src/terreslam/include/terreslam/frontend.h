@@ -30,6 +30,7 @@ protected:
 	std::string cloud_filtered_frame_id;
 	std::string cloud_filtered_blobs_frame_id;
 	std::string cloud_plane_frame_id;
+	std::string blob_matches_frame_id;
 	std::string sub_lidar_frame_id;
 	std::string sub_cam_frame_id;
 	std::string sub_cam_depth_frame_id;
