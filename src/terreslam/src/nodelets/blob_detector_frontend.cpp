@@ -55,6 +55,8 @@ private:
 		for(i=0; i<50; ++i)
 				rgb[i] = util::rgb_palette((double)i/50);
 
+		srand (time(NULL));
+
 		// Initialize logging
 		// logs_path_ = logs_dir + "/log_dynamic_blob_detector.csv";
 		// std::cout<<"Opening file to write at path: "<<logs_path_<<std::endl;
@@ -181,10 +183,10 @@ private:
 			old_cluster_indices=cluster_indices;
 			old_points = points->makeShared();
 			
-			for(Blob blob_old : map_blobs)
+			for(Blob& blob_old : map_blobs)
 			{
 				int randNum = rand()%50; // [0, 50[
-				blob_old.palette= rgb[randNum];
+				blob_old.palette = rgb[randNum];
 				blob_old.stability=0;
 			}
 			reset=false;
@@ -200,10 +202,10 @@ private:
 			Eigen::MatrixXf blob_dist_xz(cur_size,old_size);
 			float centroid_dist, radius_dist, height_dist;
 			i=0;
-			for(Blob blob : current_blobs)
+			for(const Blob& blob : current_blobs)
 			{
 				j=0;
-				for(Blob blob_old : map_blobs)
+				for(const Blob& blob_old : map_blobs)
 				{
 					centroid_dist = sqrt(pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2));
 					radius_dist = blob.radius - blob_old.radius;
@@ -223,7 +225,7 @@ private:
 				blob_dist.col(minIndexRow).minCoeff(&minIndexCol);
 				if(i == minIndexCol) //MATCHED
 				{
-					// int randNum = rand()%(50); //Rand number between 0 and 49
+					// int randNum = rand()%50; // [0, 50[
 					// current_blobs.at(i).palette = rgb[randNum];
 					current_blobs.at(i).stability = map_blobs.at(minIndexRow).stability + 1;
 					current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
@@ -232,7 +234,7 @@ private:
 				}
 				else //NOT MATCHED
 				{
-					int randNum = rand()%(50); //Rand number between 0 and 49
+					int randNum = rand()%50; // [0, 50[
 					current_blobs.at(i).palette = rgb[randNum];
 					current_blobs.at(i).stability = 0;
 				}
