@@ -73,6 +73,7 @@ add_library(${PROJECT_NAME}
 	src/processings/plane_processor.cpp
 	src/processings/blob_processor.cpp
 	src/processings/keypoint_processor.cpp
+	src/registrations/dd_coarse_alignment.cpp
 	## src/utils/ulysses_map.cpp
 	## src/utils/ulysses_types.cpp
 	## src/utils/sunq_map.cpp
