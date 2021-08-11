@@ -62,11 +62,20 @@ private:
 
 		// pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		// pcl::fromROSMsg(*cf_msg_ptr, *points);
-		
 		size_t sm = bm_msg_ptr->x_cur.size();
+		assert(sm == bm_msg_ptr->stability.size() &&
+					 sm == bm_msg_ptr->z_cur.size() &&
+					 sm == bm_msg_ptr->radius_cur.size() &&
+					 sm == bm_msg_ptr->height_cur.size() &&
+					 sm == bm_msg_ptr->x_old.size() &&
+					 sm == bm_msg_ptr->z_old.size() &&
+					 sm == bm_msg_ptr->radius_old.size() &&
+					 sm == bm_msg_ptr->height_old.size());
+		std::vector<uint8_t> stability(sm);
 		std::vector<float> radius_cur(sm), height_cur(sm);
 		std::vector<float> radius_old(sm), height_old(sm);
 		std::vector<cv::Point2f> cur(sm), old(sm);
+		stability = bm_msg_ptr->stability;
 		radius_cur = bm_msg_ptr->radius_cur;
 		height_cur = bm_msg_ptr->height_cur;
 		radius_old = bm_msg_ptr->radius_old;

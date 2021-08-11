@@ -22,6 +22,7 @@ struct Blob
 	float z;
 	float radius;
 	uint32_t palette;
+	uint8_t	stability;
 	uint8_t	frame;
 };
 

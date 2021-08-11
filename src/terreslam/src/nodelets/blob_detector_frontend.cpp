@@ -183,8 +183,9 @@ private:
 			
 			for(Blob blob_old : map_blobs)
 			{
-				int randNum = rand()%(50); //Rand number between 0 and 49
+				int randNum = rand()%50; // [0, 50[
 				blob_old.palette= rgb[randNum];
+				blob_old.stability=0;
 			}
 			reset=false;
 			entry_count++;
@@ -224,6 +225,7 @@ private:
 				{
 					// int randNum = rand()%(50); //Rand number between 0 and 49
 					// current_blobs.at(i).palette = rgb[randNum];
+					current_blobs.at(i).stability = map_blobs.at(minIndexRow).stability + 1;
 					current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
 					matches.emplace_back(i,minIndexRow);
 					matches_dist_xz.emplace_back(blob_dist_xz(i,minIndexRow));
@@ -232,6 +234,7 @@ private:
 				{
 					int randNum = rand()%(50); //Rand number between 0 and 49
 					current_blobs.at(i).palette = rgb[randNum];
+					current_blobs.at(i).stability = 0;
 				}
 			}
 
@@ -313,10 +316,12 @@ private:
 		bm_msg_ptr->header.frame_id = blob_matches_frame_id;
 		bm_msg_ptr->header.stamp = cf_msg_ptr->header.stamp;
 		size_t sm = matches.size();
+		std::vector<uint8_t> stability(sm);
 		std::vector<float> x_cur(sm), z_cur(sm), radius_cur(sm), height_cur(sm);
 		std::vector<float> x_old(sm), z_old(sm), radius_old(sm), height_old(sm);
 		for(i=0; i<matches.size(); ++i)
 		{
+			stability[i] = current_blobs.at(matches.at(i).first).stability;
 			x_cur[i] = current_blobs.at(matches.at(i).first).x;
 			z_cur[i] = current_blobs.at(matches.at(i).first).z;
 			radius_cur[i] = current_blobs.at(matches.at(i).first).radius;
@@ -326,6 +331,7 @@ private:
 			radius_old[i] = map_blobs.at(matches.at(i).second).radius;
 			height_old[i] = map_blobs.at(matches.at(i).second).height;
 		}
+		bm_msg_ptr->stability = stability;
 		bm_msg_ptr->x_cur = x_cur;
 		bm_msg_ptr->z_cur = z_cur;
 		bm_msg_ptr->radius_cur = radius_cur;
