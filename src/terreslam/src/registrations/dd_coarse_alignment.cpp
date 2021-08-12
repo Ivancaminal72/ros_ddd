@@ -389,10 +389,10 @@ namespace terreslam
 				if(debug) cout<<" !!! less than 2 inliers "<<endl;
 				continue;
 			} else {
-				if(debug) cout<<" "<<ninliers<<" inliers; ";
+				if(debug) cout<<" "<<ninliers<<" inliers;";
 			}
 
-			if(debug) cout<<"; recalculate: RMSE = "<<cur_rmse<<", "<<ninliers <<" inliers";
+			if(debug) cout<<" recalculate: RMSE = "<<cur_rmse<<endl;
 
 
 			// 4. found a better solution?
@@ -411,13 +411,24 @@ namespace terreslam
 					if(debug) cout<<"Breaking early after "<< iter+1<<" iterations; inlier ratio = "<<inlier_ratio<<endl;
 					break;
 				}
-			} else {
-				if(debug) cout<<endl;
+			} else if(ninliers == best_ninliers && best_rmse > cur_rmse) {
+				best_ninliers = ninliers;
+				best_param[0] = param[0];
+				best_param[1] = param[1];
+				best_param[2] = param[2];
+				best_rmse = cur_rmse;
+
+				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
 			}
 		} // iterations
 
 		// 5. recreate inliers for the best parameters
 		ninliers = setInliers3Dof(src, dst, inliers, best_param, inlierMaxEr, center);
+
+		if(debug){
+			cout<<"Best iteration: "<<ninliers<<" inliers; recalculate: RMSE = "<<best_rmse<<endl;
+			cout<<" --- Final solution: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+		}
 
 		return best_rmse;
 	} // fit3DofRANSAC()

@@ -5,6 +5,7 @@
 
 #include "terreslam/frontend.h"
 #include "terreslam/utils/util_chrono.h"
+#include "terreslam/registrations/dd_coarse_alignment.h"
 
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
@@ -87,7 +88,9 @@ private:
 		}
 
 		///METRIC ALIGNMENT
-		
+		float best_params[3] = {0.0f};
+		bool inliers[sm] = {true};
+		fit3DofRANSAC(old, cur, best_params, inliers, cv::Point2d(0,0), 0.1, 2*sm);
 
 		/// Pre-PUBLISH
 		// // Extract points beloging to a plane
