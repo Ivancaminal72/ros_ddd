@@ -4,21 +4,28 @@
  */
 
 #include "terreslam/features/keypoint_detector.h"
+#include <opencv2/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
 
 namespace terreslam
 {
 
-void KeypointDetector::detectKeypoints(Scan *scan)
+std::vector<cv::KeyPoint> detectKeyPoints(const cv::Mat &image) 
 {
-	fp_.open(logs_path_, std::ios::app);
-	if(debug_)
-	{
-		fp_<<"*****************detectKeypoints**************************************"<<std::endl;
-	}
-	
+    std::vector<cv::Point2f> corners;
+    cv::goodFeaturesToTrack(image, corners, 500, 0.0005, 6);
+    std::vector<cv::KeyPoint> kpts;
+    for( size_t i = 0; i < corners.size(); i++ )
+        kpts.push_back(cv::KeyPoint(corners[i], 1.f));
+    return kpts;
+}
 
-	fp_.close();
-
+cv::Mat computeDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &kpts)
+{
+    auto featureExtractor = cv::xfeatures2d::BriefDescriptorExtractor::create(32);
+    cv::Mat descriptors;
+    featureExtractor->compute(image, kpts, descriptors);
+    return descriptors;
 }
 
 }

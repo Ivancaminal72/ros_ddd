@@ -32,7 +32,7 @@ public:
 	BlobDetectorFrontend() :
 		queue_size_(10)
 		{
-			std::cout << "Constructor blob_detector_frontend..." << std::endl;
+			// std::cout << "Constructor blob_detector_frontend..." << std::endl;
 		}
 
 private:
@@ -66,7 +66,7 @@ private:
 	} 
 
 	void callback(
-		const sensor_msgs::PointCloud2ConstPtr& cf_msg_ptr)
+		const sensor_msgs::PointCloud2::ConstPtr& cf_msg_ptr)
 	{
 		std::cout << "Entry blob: " << entry_count << std::endl;
 		// ///Start chrono ticking

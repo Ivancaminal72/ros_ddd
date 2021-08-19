@@ -9,7 +9,6 @@
 #include <nodelet/nodelet.h>
 #include <memory>
 
-#include "terreslam/features/plane_detector.h"
 #include "terreslam/visualizer.h"
 #include "terreslam/io_disk.h"
 
@@ -29,8 +28,10 @@ protected:
 	std::string cloud_xy_frame_id;
 	std::string cloud_filtered_frame_id;
 	std::string cloud_filtered_blobs_frame_id;
+	std::string cloud_keypoints_frame_id;
 	std::string cloud_plane_frame_id;
 	std::string blob_matches_frame_id;
+	std::string keypoint_matches_frame_id;
 	std::string sub_lidar_frame_id;
 	std::string sub_cam_frame_id;
 	std::string sub_cam_depth_frame_id;
@@ -51,7 +52,6 @@ protected:
 	bool PF_highpass;
 
 	/// Plane Detector
-	Scan* scan_;
 	bool PD_debug;
 	int PD_theta;
 	int PD_phi;
@@ -70,6 +70,9 @@ protected:
 	float BD_alpha;
 	float BD_thres_xz;
 	float BD_thres_radius;
+
+	//DD Keypoint
+	int DDKP_ws;
 
 
 	// pcl_viewer

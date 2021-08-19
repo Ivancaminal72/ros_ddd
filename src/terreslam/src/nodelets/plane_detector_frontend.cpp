@@ -4,6 +4,7 @@
  */
 
 #include "terreslam/frontend.h"
+#include "terreslam/features/plane_detector.h"
 #include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
 
@@ -27,7 +28,7 @@ public:
 	PlaneDetectorFrontend() :
 		queue_size_(10)
 		{
-			std::cout << "Constructor plane_detector_frontend..." << std::endl;
+			// std::cout << "Constructor plane_detector_frontend..." << std::endl;
 		}
 
 private:
@@ -66,8 +67,8 @@ private:
 	} 
 
 	void callback(
-		const sensor_msgs::PointCloud2ConstPtr& cloud_msg_ptr,
-		const sensor_msgs::PointCloud2ConstPtr& cloud_xy_msg_ptr)
+		const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+		const sensor_msgs::PointCloud2::ConstPtr& cloud_xy_msg_ptr)
 	{
 		std::cout << "Entry plane: " << entry_count << std::endl;
 		// ///Start chrono ticking
@@ -176,7 +177,7 @@ private:
 	/// General variables
 	int queue_size_;
 
-	///Comms
+	/// Comms
 	// ros::Subscriber cloud_sub;
 	ros::Publisher cloud_filtered_pub_;
 	ros::Publisher plane_pub_;
@@ -188,13 +189,15 @@ private:
 		sensor_msgs::PointCloud2> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
 
-	///Chrono timmings
+	/// Chrono timmings
 	std::vector<double> elapsed_normal;
 	std::vector<double> elapsed_filter;
 
 	// blocks
 	std::unique_ptr<PlaneDetector> PD;
 
+	/// Types
+	Scan* scan_;
 };
 
 PLUGINLIB_EXPORT_CLASS(terreslam::PlaneDetectorFrontend, nodelet::Nodelet);

@@ -12,8 +12,10 @@
 /terreslam/frame_id/cloud_xy: '/terreslam/cloud_xy'
 /terreslam/frame_id/cloud_filtered: '/terreslam/cloud_filtered'
 /terreslam/frame_id/cloud_filtered_blobs: '/terreslam/cloud_filtered_blobs'
+/terreslam/frame_id/cloud_keypoints: '/terreslam/cloud_keypoints'
 /terreslam/frame_id/cloud_plane: '/terreslam/cloud_plane'
 /terreslam/frame_id/blob_matches: '/terreslam/blob_matches'
+/terreslam/frame_id/keypoint_matches: '/terreslam/keypoint_matches'
 /terreslam/frame_id/sub_lidar: '/adapt/lidar'
 /terreslam/frame_id/sub_cam: '/adapt/cam'
 /terreslam/frame_id/sub_cam_depth: '/adapt/cam_depth'
@@ -42,6 +44,9 @@
 /terreslam/BD/alpha: 1
 /terreslam/BD/thres_xz: 0.034
 /terreslam/BD/thres_radius: 0.5
+
+# DD KP Detector
+/terreslam/DDKP/window_size: 16
 
 # Plane Processor
 /terreslam/PP/debug: true

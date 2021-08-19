@@ -232,7 +232,6 @@ public:
 		thres_angle_(thres_angle),
 		thres_dist_(thres_dist)
 	{
-		std::cout<<"Constructor plane_detector...\n";
 		cells_bottom_ = new Cells_bottom(theta,phi,d, max_depth);
 		thres_angle_ *= M_PI/180.0;
 		remove(logs_path_.c_str());

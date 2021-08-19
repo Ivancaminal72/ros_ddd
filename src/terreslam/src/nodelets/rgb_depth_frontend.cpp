@@ -5,6 +5,7 @@
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
+#include "terreslam/utils/util_types.h"
 #include "terreslam/utils/util_map.h"
 #include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
@@ -40,7 +41,7 @@ public:
 	Frontend(),
 		queue_size_(10)
 		{
-			std::cout << "Constructor rgb_depth_frontend..." << std::endl;
+			// std::cout << "Constructor rgb_depth_frontend..." << std::endl;
 		}
 
 private:
@@ -95,12 +96,14 @@ private:
 		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
 		Ts_cloud_lidar.child_frame_id = cloud_filtered_blobs_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
+		Ts_cloud_lidar.child_frame_id = cloud_keypoints_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
 	} 
 
 	void callback(
-		const sensor_msgs::ImageConstPtr& rgb_msg,
-		const sensor_msgs::ImageConstPtr& depth_msg,
-		const sensor_msgs::CameraInfoConstPtr& info_msg)
+		const sensor_msgs::Image::ConstPtr& rgb_msg,
+		const sensor_msgs::Image::ConstPtr& depth_msg,
+		const sensor_msgs::CameraInfo::ConstPtr& info_msg)
 	{
 		std::cout << "Entry: " << entry_count << std::endl;
 		// ///Start chrono ticking
@@ -110,8 +113,8 @@ private:
 		// end_t = std::chrono::high_resolution_clock::now();
 		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
-		cv_bridge::CvImageConstPtr ptr_msg_rgb = cv_bridge::toCvShare(rgb_msg);
-		cv_bridge::CvImageConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
+		cv_bridge::CvImage::ConstPtr ptr_msg_rgb = cv_bridge::toCvShare(rgb_msg);
+		cv_bridge::CvImage::ConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
 		sensor_msgs::CameraInfo info = *info_msg;
 
 		/// INITALIZATION
@@ -123,7 +126,7 @@ private:
 		ptr_msg_rgb->image.copyTo(cv::Mat(img_rgb, cv::Rect(0, 0, rgb_msg->width, rgb_msg->height)));
 		ptr_msg_depth->image.copyTo(cv::Mat(img_depth, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
 
-		/// BACKPROJECTION
+		/// PRE-BACKPROJECTION
 		CameraModel cam_model(info);
 		// cam_model.printModel();
 
@@ -227,7 +230,7 @@ private:
 	/// Variables
 	int queue_size_;
 
-	///Chrono timmings
+	/// Chrono timmings
 	// std::vector<double> elapsed;
 
 	/// Comms
@@ -242,6 +245,10 @@ private:
 		sensor_msgs::Image,
 		sensor_msgs::CameraInfo> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
+
+	/// Types
+	Scan* scan_;
+
 };
 
 PLUGINLIB_EXPORT_CLASS(terreslam::RGBDepthFrontend, nodelet::Nodelet);

@@ -7,6 +7,14 @@
 	  Preprocessing
 	</description>
 	</class>
+
+	<class name="terreslam/dd_keypoint_frontend"
+		 type="terreslam::DDKeypointFrontend"
+		 base_class_type="nodelet::Nodelet">
+	<description>
+	  2D Keypoint detection and processing
+	</description>
+	</class>
 	
 	<class name="terreslam/plane_detector_frontend"
 		 type="terreslam::PlaneDetectorFrontend"

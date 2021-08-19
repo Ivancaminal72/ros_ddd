@@ -14,13 +14,11 @@ namespace terreslam
 
 Frontend::Frontend()
 {
-	std::cout << "Constructor frontend..." << std::endl;
+	// std::cout << "Constructor frontend..." << std::endl;
 }
 
 void Frontend::onInit()
-{
-	std::cout << "onInit frontend:" << std::endl;
-	
+{	
 	ros::NodeHandle & nh = getNodeHandle();
 	ros::NodeHandle & pnh = getPrivateNodeHandle();
 	const nodelet::V_string & str_argv = getMyArgv();
@@ -36,8 +34,10 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/frame_id/cloud_xy", cloud_xy_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud_filtered", cloud_filtered_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud_filtered_blobs", cloud_filtered_blobs_frame_id);
+	nh.getParam("/terreslam/frame_id/cloud_keypoints", cloud_keypoints_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud_plane", cloud_plane_frame_id);
 	nh.getParam("/terreslam/frame_id/blob_matches", blob_matches_frame_id);
+	nh.getParam("/terreslam/frame_id/keypoint_matches", keypoint_matches_frame_id);
 	nh.getParam("/terreslam/frame_id/sub_lidar", sub_lidar_frame_id);
 	nh.getParam("/terreslam/frame_id/sub_cam", sub_cam_frame_id);
 	nh.getParam("/terreslam/frame_id/sub_cam_depth", sub_cam_depth_frame_id);
@@ -66,6 +66,9 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/BD/alpha", BD_alpha);
 	nh.getParam("/terreslam/BD/thres_xz", BD_thres_xz);
 	nh.getParam("/terreslam/BD/thres_radius", BD_thres_radius);
+
+	/// - DD Keypoint parameters
+	nh.getParam("/terreslam/DDKP/window_size", DDKP_ws);
 
 	onFrontendInit();
 }

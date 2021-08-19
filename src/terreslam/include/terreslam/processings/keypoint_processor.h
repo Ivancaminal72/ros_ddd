@@ -11,30 +11,7 @@
 namespace terreslam
 {
 
-class KeypointProcessor
-{
-public:
-	KeypointProcessor(
-		std::string logs_dir,
-		bool debug)
-	:
-		logs_path_(logs_dir + "/log_keypoint_detector.txt"),
-		debug_(debug)
-	{
-		std::cout<<"Constructor keypoint_processor...\n";
-		remove(logs_path_.c_str());
-	}
-
-	~KeypointProcessor(){}
-
-	void setDebug(bool d) {debug_=d;}
-	void processKeypoints(Scan *scan);
-
-private:
-	std::string logs_path_;
-	bool debug_;
-	std::ofstream fp_;
-
-};
+	std::vector<cv::DMatch> matchTwoImage(const cv::Mat &descriptor1, const cv::Mat &descriptor2);
+	void nonZeroWindowContourLookUp(int& u, int& v, const int& ws, const cv::Mat& img);
 
 }
