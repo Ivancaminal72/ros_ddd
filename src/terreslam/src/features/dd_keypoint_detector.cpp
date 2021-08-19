@@ -3,7 +3,7 @@
  *    Created Date: 2021-04-23 09:40:30
  */
 
-#include "terreslam/features/keypoint_detector.h"
+#include "terreslam/features/dd_keypoint_detector.h"
 #include <opencv2/features2d.hpp>
 #include <opencv2/xfeatures2d.hpp>
 

@@ -5,8 +5,8 @@
 
 #include "terreslam/frontend.h"
 #include "terreslam/camera_model.h"
-#include "terreslam/features/keypoint_detector.h"
-#include "terreslam/processings/keypoint_processor.h"
+#include "terreslam/features/dd_keypoint_detector.h"
+#include "terreslam/processings/dd_keypoint_processor.h"
 #include "terreslam/utils/util_map.h"
 #include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
@@ -252,13 +252,13 @@ private:
 	
 	///Chrono timmings
 	// std::vector<double> elapsed;
-	std::vector<double> elapsed_initialization;
-	std::vector<double> elapsed_KP_detection;
-	std::vector<double> elapsed_KP_description;
-	std::vector<double> elapsed_cam_model;
-	std::vector<double> elapsed_matching;
-	std::vector<double> elapsed_backprojection;
-	std::vector<double> elapsed_publish;
+	// std::vector<double> elapsed_initialization;
+	// std::vector<double> elapsed_KP_detection;
+	// std::vector<double> elapsed_KP_description;
+	// std::vector<double> elapsed_cam_model;
+	// std::vector<double> elapsed_matching;
+	// std::vector<double> elapsed_backprojection;
+	// std::vector<double> elapsed_publish;
 
 	///Kpts
 	std::vector<cv::KeyPoint> cur_kpts;

@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-#include "terreslam/processings/keypoint_processor.h"
+#include "terreslam/processings/dd_keypoint_processor.h"
 
 namespace terreslam
 {

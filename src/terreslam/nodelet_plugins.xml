@@ -24,6 +24,14 @@
 	</description>
   </class>
 
+	<class name="terreslam/ddd_keypoint_frontend"
+		 type="terreslam::DDDKeypointFrontend"
+		 base_class_type="nodelet::Nodelet">
+	<description>
+	  3D Keypoint detection and processing
+	</description>
+	</class>
+
 	<class name="terreslam/blob_detector_frontend"
 		 type="terreslam::BlobDetectorFrontend"
 		 base_class_type="nodelet::Nodelet">
