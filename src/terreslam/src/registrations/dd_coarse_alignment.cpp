@@ -38,7 +38,7 @@ namespace terreslam
 
 		double RMSE = 0.0;
 		int ninliers = 0;
-		for (unsigned int i=0; i<n; i++) {
+		for (unsigned int i=0; i<n; ++i) {
 			if (all_inliers || inliers[i]) {
 				RMSE += sqErr_3Dof(src[i]-center, dst[i]-center, cos_alpha, sin_alpha, T);
 				ninliers++;
@@ -74,7 +74,7 @@ namespace terreslam
 		if (inliers==NULL) {
 
 			// just get the number of inliers (e.g. after QUADRATIC fit only)
-			for (unsigned int i=0; i<n; i++) {
+			for (unsigned int i=0; i<n; ++i) {
 				
 				float sqErr = sqErr_3Dof(src[i]-center, dst[i]-center, cos_ang, sin_ang, T);
 				if ( sqErr < max_sqErr)
@@ -83,7 +83,7 @@ namespace terreslam
 		} else {
 
 				// get the number of inliers and set them (e.g. for RANSAC)
-				for (unsigned int i=0; i<n; i++) {
+				for (unsigned int i=0; i<n; ++i) {
 					
 					float sqErr = sqErr_3Dof(src[i]-center, dst[i]-center, cos_ang, sin_ang, T);
 					if ( sqErr < max_sqErr) {
@@ -112,7 +112,7 @@ namespace terreslam
 			ninliers = n;
 		} else {
 			ninliers = 0;
-			for (unsigned int i=0; i<n; i++){
+			for (unsigned int i=0; i<n; ++i){
 				if (inliers[i])
 					ninliers++;
 			}
@@ -157,7 +157,7 @@ namespace terreslam
 		// 2n x 1
 		cv::Mat src2(2*ninliers, 1, CV_32F); // 2n x 1: [X1, Y1, X2, Y2, X3, Y3]'
 
-		for (unsigned int i=0, row_cnt = 0; i<n; i++) {
+		for (unsigned int i=0, row_cnt = 0; i<n; ++i) {
 
 			// use inliers only
 			if (all_inliers || inliers[i]) {
@@ -234,7 +234,7 @@ namespace terreslam
 			dst = dst_;
 		} else {
 			ninliers = 0;
-			for (int i=0; i<N; i++){
+			for (int i=0; i<N; ++i){
 				if (inliers[i]) {
 					ninliers++;
 					src.push_back(src_[i]);
@@ -265,14 +265,14 @@ namespace terreslam
 			cout<<"Centers: "<<center_src<<", "<<center_dst<<endl;
 
 		// subtract centroids from data
-		for (int i=0; i<ninliers; i++) {
+		for (int i=0; i<ninliers; ++i) {
 			src[i] -= center_src;
 			dst[i] -= center_dst;
 		}
 
 		// compute a covariance matrix
 		float Cxx = 0.0, Cxy = 0.0, Cyx = 0.0, Cyy = 0.0;
-		for (int i=0; i<ninliers; i++) {
+		for (int i=0; i<ninliers; ++i) {
 			Cxx += src[i].x*dst[i].x;
 			Cxy += src[i].x*dst[i].y;
 			Cyx += src[i].y*dst[i].x;

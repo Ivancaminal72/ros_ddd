@@ -15,7 +15,7 @@ namespace util
 
 	//input: ratio is between 0 to 1
 	//output: rgb color
-	uint32_t rgb_palette(double ratio)
+	uint32_t rgba_palette(double ratio)
 	{
 			//we want to normalize ratio so that it fits in to 6 regions
 			//where each region is 256 units long
@@ -24,7 +24,7 @@ namespace util
 			//find the distance to the start of the closest region
 			int x = normalized % 256;
 
-			int red = 0, grn = 0, blu = 0;
+			uint8_t alpha=255, red = 0, grn = 0, blu = 0;
 			switch(normalized / 256)
 			{
 			case 0: red = 255;      grn = x;        blu = 0;       break;//red
@@ -35,7 +35,7 @@ namespace util
 			case 5: red = 255;      grn = 0;        blu = 255 - x; break;//magenta
 			}
 
-			return (red << 16) + (grn << 8) + blu;
+			return (alpha << 24) + (red << 16) + (grn << 8) + blu;
 	}
 
 	void curvatureFilter(ptrPointCloud points, ptrNormalCloud normals, float thresh, bool high_pass)

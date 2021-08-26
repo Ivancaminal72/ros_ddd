@@ -53,7 +53,7 @@ private:
 
 		// Initialize palette
 		for(i=0; i<50; ++i)
-				rgb[i] = util::rgb_palette((double)i/50);
+				rgba[i] = util::rgba_palette((double)i/50);
 
 		srand (time(NULL));
 
@@ -112,7 +112,7 @@ private:
 		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, j+=1)
 		{
 			Blob blob;
-			// uint32_t rgb = util::rgb_palette((double)j/cluster_indices.size());
+			// uint32_t rgba = util::rgba_palette((double)j/cluster_indices.size());
 			float height, height_acc=0, height2_acc=0, height_avg, height2_avg, height_dev;
 			float centroid_dev;
 			float x, z, x_acc=0, z_acc=0, x2_acc=0, z2_acc=0, x_avg, z_avg, x2_avg, z2_avg;
@@ -130,7 +130,7 @@ private:
 				z2_acc += z*z;
 				height_acc += height;
 				height2_acc += pow(height, 2);
-				// (*points_ori)[idx1].rgb=rgb;
+				// (*points_ori)[idx1].rgba=rgba;
 			}
 			x_avg = x_acc / it->indices.size(); //Centroide (x_avg, z_avg)
 			z_avg = z_acc / it->indices.size();
@@ -186,7 +186,7 @@ private:
 			for(Blob& blob_old : map_blobs)
 			{
 				int randNum = rand()%50; // [0, 50[
-				blob_old.palette = rgb[randNum];
+				blob_old.palette = rgba[randNum];
 				blob_old.stability=0;
 			}
 			reset=false;
@@ -226,7 +226,7 @@ private:
 				if(i == minIndexCol) //MATCHED
 				{
 					// int randNum = rand()%50; // [0, 50[
-					// current_blobs.at(i).palette = rgb[randNum];
+					// current_blobs.at(i).palette = rgba[randNum];
 					current_blobs.at(i).stability = map_blobs.at(minIndexRow).stability + 1;
 					current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
 					matches.emplace_back(i,minIndexRow);
@@ -235,7 +235,7 @@ private:
 				else //NOT MATCHED
 				{
 					int randNum = rand()%50; // [0, 50[
-					current_blobs.at(i).palette = rgb[randNum];
+					current_blobs.at(i).palette = rgba[randNum];
 					current_blobs.at(i).stability = 0;
 				}
 			}
@@ -245,7 +245,7 @@ private:
 			{
 				for (const auto& idx : it->indices)
 				{
-					(*old_points)[idx].rgb=map_blobs.at(j).palette;
+					(*old_points)[idx].rgba=map_blobs.at(j).palette;
 				}
 			}
 
@@ -261,8 +261,8 @@ private:
 			// 		// std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
 			// 		// for (const auto& idx : it->indices)
 			// 		// {
-			// 		// 	uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
-			// 		// 	(*old_points)[idx].rgb= rgb_color;
+			// 		// 	uint32_t rgba_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+			// 		// 	(*old_points)[idx].rgba= rgba_color;
 			// 		// }
 			// 	}
 			// }
@@ -289,8 +289,8 @@ private:
 			// 			std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
 			// 			for (const auto& idx : it->indices)
 			// 			{
-			// 				uint32_t rgb_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
-			// 				(*old_points)[idx].rgb= rgb_color;
+			// 				uint32_t rgba_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+			// 				(*old_points)[idx].rgba= rgba_color;
 			// 			}
 			// 		} 
 						
@@ -387,7 +387,7 @@ private:
 	float median_xz=0;
 	bool reset=false;
 
-	uint32_t rgb[50];
+	uint32_t rgba[50];
 
 	/// Logging
 	std::ofstream fp_;

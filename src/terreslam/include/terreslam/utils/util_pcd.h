@@ -15,7 +15,7 @@ namespace terreslam
 
 namespace util
 {
-	uint32_t rgb_palette(double ratio);
+	uint32_t rgba_palette(double ratio);
 	void curvatureFilter(ptrPointCloud points, ptrNormalCloud normals, float thresh, bool high_pass=true);
 	void printEigenMatrix(Eigen::MatrixXd mat);
 	void subtractPointsXYZRGBA(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud, const std::vector<int>& indices);

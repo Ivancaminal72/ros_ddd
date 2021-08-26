@@ -36,8 +36,10 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/frame_id/cloud_filtered_blobs", cloud_filtered_blobs_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud_keypoints", cloud_keypoints_frame_id);
 	nh.getParam("/terreslam/frame_id/cloud_plane", cloud_plane_frame_id);
+	nh.getParam("/terreslam/frame_id/normal_filtered", normal_filtered_frame_id);
 	nh.getParam("/terreslam/frame_id/blob_matches", blob_matches_frame_id);
-	nh.getParam("/terreslam/frame_id/keypoint_matches", keypoint_matches_frame_id);
+	nh.getParam("/terreslam/frame_id/dd_keypoint_matches", dd_keypoint_matches_frame_id);
+	nh.getParam("/terreslam/frame_id/ddd_keypoint_matches", ddd_keypoint_matches_frame_id);
 	nh.getParam("/terreslam/frame_id/sub_lidar", sub_lidar_frame_id);
 	nh.getParam("/terreslam/frame_id/sub_cam", sub_cam_frame_id);
 	nh.getParam("/terreslam/frame_id/sub_cam_depth", sub_cam_depth_frame_id);
@@ -69,6 +71,13 @@ void Frontend::onInit()
 
 	/// - DD Keypoint parameters
 	nh.getParam("/terreslam/DDKP/window_size", DDKP_ws);
+
+	/// - DDD Keypoint parameters
+	nh.getParam("/terreslam/DDDKP/SIFT_min_scale", DDDKP_SIFT_min_scale);
+	nh.getParam("/terreslam/DDDKP/SIFT_nr_octaves", DDDKP_SIFT_nr_octaves);
+	nh.getParam("/terreslam/DDDKP/SIFT_nr_scales_per_octave", DDDKP_SIFT_nr_scales_per_octave);
+	nh.getParam("/terreslam/DDDKP/SIFT_min_contrast", DDDKP_SIFT_min_contrast);
+	nh.getParam("/terreslam/DDDKP/FPFH_radius", DDDKP_FPFH_radius);
 
 	onFrontendInit();
 }

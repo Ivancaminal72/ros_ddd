@@ -72,11 +72,13 @@ add_library(${PROJECT_NAME}
 	src/features/plane_detector.cpp
 	src/features/blob_detector.cpp
 	src/features/dd_keypoint_detector.cpp
+	src/features/ddd_keypoint_detector.cpp
 	## src/features/sunq_plane_extraction.cpp
 	## src/features/ulysses_plane_extraction.cpp
 	src/processings/plane_processor.cpp
 	src/processings/blob_processor.cpp
 	src/processings/dd_keypoint_processor.cpp
+	src/processings/ddd_keypoint_processor.cpp
 	src/registrations/dd_coarse_alignment.cpp
 	## src/utils/ulysses_map.cpp
 	## src/utils/ulysses_types.cpp
@@ -122,7 +124,7 @@ add_executable(terreslam_plane_detector_frontend src/nodelets/z_plane_detector_f
 target_link_libraries(terreslam_plane_detector_frontend ${Libraries})
 set_target_properties(terreslam_plane_detector_frontend PROPERTIES OUTPUT_NAME "plane_detector_frontend")
 
-add_executable(terreslam_ddd_keypoint_frontend src/nodelets/z_dd_keypoint_frontend.cpp)
+add_executable(terreslam_ddd_keypoint_frontend src/nodelets/z_ddd_keypoint_frontend.cpp)
 target_link_libraries(terreslam_ddd_keypoint_frontend ${Libraries})
 set_target_properties(terreslam_ddd_keypoint_frontend PROPERTIES OUTPUT_NAME "ddd_keypoint_frontend")
 

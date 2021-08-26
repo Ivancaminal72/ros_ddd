@@ -30,8 +30,10 @@ protected:
 	std::string cloud_filtered_blobs_frame_id;
 	std::string cloud_keypoints_frame_id;
 	std::string cloud_plane_frame_id;
+	std::string normal_filtered_frame_id;
 	std::string blob_matches_frame_id;
-	std::string keypoint_matches_frame_id;
+	std::string dd_keypoint_matches_frame_id;
+	std::string ddd_keypoint_matches_frame_id;
 	std::string sub_lidar_frame_id;
 	std::string sub_cam_frame_id;
 	std::string sub_cam_depth_frame_id;
@@ -74,6 +76,12 @@ protected:
 	//DD Keypoint
 	int DDKP_ws;
 
+	//DD Keypoint
+	float DDDKP_SIFT_min_scale;
+	int DDDKP_SIFT_nr_octaves;
+	int DDDKP_SIFT_nr_scales_per_octave;
+	float DDDKP_SIFT_min_contrast;
+	float DDDKP_FPFH_radius;
 
 	// pcl_viewer
 	// Visualizer Vis_;

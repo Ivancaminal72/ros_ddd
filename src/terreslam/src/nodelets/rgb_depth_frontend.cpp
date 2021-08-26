@@ -198,6 +198,7 @@ private:
 			scan_->points()->height=height;
 		}
 
+		// std::cout<<"Number of valid depth points: "<<scan_->points()->size()<<std::endl;
 
 		/// PUBLISH
 		/// - Cloud

@@ -63,6 +63,7 @@ private:
 
 		// Publishers
 		cloud_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
+		normal_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(normal_filtered_frame_id, 10);
 		plane_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_plane_frame_id, 10);
 	} 
 
@@ -111,7 +112,32 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_normal);
 
 		/// Eliminate points with low curvature
+		size_t fivepercent = points->size() * 0.05f;
+		float min_step = 0.01;
+		float increment = min_step;
+		float PF_thresh_opt = PF_thresh;
+		size_t old_size, reduction, remain;
+		
 		util::curvatureFilter(points, normals, PF_thresh, PF_highpass);
+
+		/// Optimize elimination
+		if(points->size() >= fivepercent)
+		{
+			old_size = points->size();
+			PF_thresh_opt += increment;
+			util::curvatureFilter(points, normals, PF_thresh_opt, PF_highpass);
+		}
+
+		while(points->size() >= fivepercent)
+		{
+			remain = points->size() - fivepercent;
+			reduction = old_size - points->size();
+			increment = remain * increment / reduction;
+			increment = (increment > min_step) ? increment : min_step;
+			old_size = points->size();
+			PF_thresh_opt += increment;
+			util::curvatureFilter(points, normals, PF_thresh_opt, PF_highpass);
+		}
 
 		/// PLANE DETECTOR
 		// scan_ = new Scan();
@@ -154,6 +180,12 @@ private:
 		msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
 		cloud_filtered_pub_.publish(msg_pcd);
 
+		/// - Normal Filtered
+		pcl::toROSMsg(*normals, msg_pcd);
+		msg_pcd.header.frame_id = normal_filtered_frame_id;
+		msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
+		normal_filtered_pub_.publish(msg_pcd);
+
 		/// - Planes
 		// pcl::toROSMsg(*scan_planes, msg_pcd);
 		// msg_pcd.header.frame_id = cloud_plane_frame_id;
@@ -180,6 +212,7 @@ private:
 	/// Comms
 	// ros::Subscriber cloud_sub;
 	ros::Publisher cloud_filtered_pub_;
+	ros::Publisher normal_filtered_pub_;
 	ros::Publisher plane_pub_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_xy_sub_filter_;
