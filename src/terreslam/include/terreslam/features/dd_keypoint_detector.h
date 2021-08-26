@@ -11,7 +11,7 @@
 namespace terreslam
 {
 
-std::vector<cv::KeyPoint> detectKeyPoints(const cv::Mat &image);
-cv::Mat computeDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &keyPoints);
+std::vector<cv::KeyPoint> detectGFTTKeyPoints(const cv::Mat &image);
+cv::Mat computeBriefDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &keyPoints);
 
 }

@@ -12,6 +12,6 @@ namespace terreslam
 {
 
 	std::vector<cv::DMatch> matchTwoImage(const cv::Mat &descriptor1, const cv::Mat &descriptor2);
-	void nonZeroWindowContourLookUp(int& u, int& v, const int& ws, const cv::Mat& img);
+	void nonZeroWindowContourLookUp(int& v, int& u, const int& ws, const cv::Mat& img);
 
 }

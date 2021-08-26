@@ -18,25 +18,37 @@ std::vector<cv::DMatch> matchTwoImage(const cv::Mat &descriptor1, const cv::Mat 
 	return matches;
 }
 
-void nonZeroWindowContourLookUp(int& u, int& v, const int& ws, const cv::Mat& img)
+void nonZeroWindowContourLookUp(int& v, int& u, const int& ws, const cv::Mat& img)
 {
 	assert(ws > 0);
-	int i,j;
+	int j,i,vv,uu;
+	uu = u+ws;
 	for(j=-ws+1; j<ws; ++j)
 	{
-		if(img.at<ushort>(u+ws,v+j) != 0) {u=u+ws; v=v+j; return;}
+		vv = v+j;
+		if(uu >= img.cols || vv >= img.rows || uu < 0 || vv < 0) break;
+		if(img.at<ushort>(vv,uu) != 0) {v=vv; u=uu; return;}
 	}
+	uu = u-ws;
 	for(j=-ws+1; j<ws; ++j)
 	{
-		if(img.at<ushort>(u-ws,v+j) != 0) {u=u-ws; v=v+j; return;}
+		vv = v+j;
+		if(uu >= img.cols || vv >= img.rows || uu < 0 || vv < 0) break;
+		if(img.at<ushort>(vv,uu) != 0) {v=vv; u=uu; return;}
 	}
+	vv = v-ws;
 	for(i=-ws; i<=ws; ++i)
 	{
-		if(img.at<ushort>(u+i,v-ws) != 0) {u=u+i; v=v-ws; return;}
+		uu = u+i;
+		if(uu >= img.cols || vv >= img.rows || uu < 0 || vv < 0) break;
+		if(img.at<ushort>(vv,uu) != 0) {v=vv; u=uu; return;}
 	}
+	vv = v+ws;
 	for(i=-ws; i<=ws; ++i)
 	{
-		if(img.at<ushort>(u+i,v+ws) != 0) {u=u+i; v=v+ws; return;}
+		uu = u+i;
+		if(uu >= img.cols || vv >= img.rows || uu < 0 || vv < 0) break;
+		if(img.at<ushort>(vv,uu) != 0) {v=vv; u=uu; return;}
 	}
 }
 

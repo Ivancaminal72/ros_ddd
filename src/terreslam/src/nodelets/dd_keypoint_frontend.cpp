@@ -74,7 +74,7 @@ private:
 		exactSync_->registerCallback(boost::bind(&DDKeypointFrontend::callback, this, _1, _2, _3));
 
 		// Publishers
-		keypoint_matches_pub_ = nh.advertise<terreslam::KeyPointMatches>(keypoint_matches_frame_id, 1);
+		dd_keypoint_matches_pub_ = nh.advertise<terreslam::KeyPointMatches>(dd_keypoint_matches_frame_id, 1);
 	} 
 
 	void callback(
@@ -104,13 +104,13 @@ private:
 		ptr_msg_depth->image.copyTo(cv::Mat(img_depth, cv::Rect(0, 0, depth_msg->width, depth_msg->height)));
 
 
-		/// 2D KEYPOINT DETECTION
+		/// 2D KEYPOINT DETECTION & DESCRIPTION
 		cv::Mat img_gray;
 		cv::cvtColor(img_rgb, img_gray, CV_BGR2GRAY);
 		// util::tick_high_resolution(start_t, tick, elapsed_initialization);
-		cur_kpts = detectKeyPoints(img_gray);
+		cur_kpts = detectGFTTKeyPoints(img_gray);
 		// util::tick_high_resolution(start_t, tick, elapsed_KP_detection);
-		cur_desc = computeDescriptors(img_rgb, cur_kpts);
+		cur_desc = computeBriefDescriptors(img_rgb, cur_kpts);
 		// util::tick_high_resolution(start_t, tick, elapsed_KP_description);
 
 
@@ -157,10 +157,10 @@ private:
 			cur_v = kpt.pt.y;
 			for(ws=1; ws<=DDKP_ws; ++ws)
 			{
-				if(img_depth.at<ushort>(cur_u,cur_v) != 0) break;
-				nonZeroWindowContourLookUp(cur_u, cur_v, ws, img_depth);
+				if(img_depth.at<ushort>(cur_v,cur_u) != 0) break;
+				nonZeroWindowContourLookUp(cur_v, cur_u, ws, img_depth);
 			}
-			if(img_depth.at<ushort>(cur_u,cur_v) == 0) break;
+			if(img_depth.at<ushort>(cur_v,cur_u) == 0) continue;
 			
 			///Train KeyPoint
 			kpt = old_kpts[match.trainIdx];
@@ -168,20 +168,20 @@ private:
 			old_v = kpt.pt.y;
 			for(ws=1; ws<=DDKP_ws; ++ws)
 			{
-				if(img_depth.at<ushort>(old_u,old_v) != 0) break;
-				nonZeroWindowContourLookUp(old_u, old_v, ws, img_depth);
+				if(img_depth.at<ushort>(old_v,old_u) != 0) break;
+				nonZeroWindowContourLookUp(old_v, old_u, ws, img_depth);
 			}
-			if(img_depth.at<ushort>(old_u,old_v) == 0) break;
+			if(img_depth.at<ushort>(old_v,old_u) == 0) continue;
 
 			//Save valid Match
-			depth_yx = (double) img_depth.at<ushort>(cur_u,cur_v) / depthScale;
+			depth_yx = (double) img_depth.at<ushort>(cur_v, cur_u) / depthScale;
 			point_eigen << (double) cur_u * depth_yx, (double) cur_v * depth_yx, (double) depth_yx, 1;
 			point_eigen_backproj = cur_P_inv * point_eigen;
 			x_cur.emplace_back((float) point_eigen_backproj(0));
 			y_cur.emplace_back((float) point_eigen_backproj(1));
 			z_cur.emplace_back((float) point_eigen_backproj(2));
 
-			depth_yx = (double) img_depth.at<ushort>(old_u,old_v) / depthScale;
+			depth_yx = (double) img_depth.at<ushort>(old_v,old_u) / depthScale;
 			point_eigen << (double) old_u * depth_yx, (double) old_v * depth_yx, (double) depth_yx, 1;
 			point_eigen_backproj = old_P_inv * point_eigen;
 			x_old.emplace_back((float) point_eigen_backproj(0));
@@ -196,9 +196,9 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_backprojection);
 
 		/// PUBLISH
-		/// - KeyPoints
+		/// - KeyPoint Matches
 		terreslam::KeyPointMatchesPtr kpm_msg_ptr(new terreslam::KeyPointMatches);
-		kpm_msg_ptr->header.frame_id = keypoint_matches_frame_id;
+		kpm_msg_ptr->header.frame_id = dd_keypoint_matches_frame_id;
 		kpm_msg_ptr->header.stamp = info_msg->header.stamp;
 		kpm_msg_ptr->x_cur = x_cur;
 		kpm_msg_ptr->y_cur = y_cur;
@@ -206,7 +206,7 @@ private:
 		kpm_msg_ptr->x_old = x_old;
 		kpm_msg_ptr->y_old = y_old;
 		kpm_msg_ptr->z_old = z_old;
-		keypoint_matches_pub_.publish(kpm_msg_ptr);
+		dd_keypoint_matches_pub_.publish(kpm_msg_ptr);
 
 		//Update old data
 		old_P_inv=cur_P_inv;
@@ -239,7 +239,7 @@ private:
 	int queue_size_;
 
 	/// Comms
-	ros::Publisher keypoint_matches_pub_;
+	ros::Publisher dd_keypoint_matches_pub_;
 	image_transport::SubscriberFilter rgb_sub_filter_;
 	image_transport::SubscriberFilter depth_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub_filter_;

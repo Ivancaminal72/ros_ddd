@@ -10,17 +10,17 @@
 namespace terreslam
 {
 
-std::vector<cv::KeyPoint> detectKeyPoints(const cv::Mat &image) 
+std::vector<cv::KeyPoint> detectGFTTKeyPoints(const cv::Mat &image) 
 {
     std::vector<cv::Point2f> corners;
     cv::goodFeaturesToTrack(image, corners, 500, 0.0005, 6);
     std::vector<cv::KeyPoint> kpts;
-    for( size_t i = 0; i < corners.size(); i++ )
+    for( size_t i = 0; i < corners.size(); ++i )
         kpts.push_back(cv::KeyPoint(corners[i], 1.f));
     return kpts;
 }
 
-cv::Mat computeDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &kpts)
+cv::Mat computeBriefDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &kpts)
 {
     auto featureExtractor = cv::xfeatures2d::BriefDescriptorExtractor::create(32);
     cv::Mat descriptors;
