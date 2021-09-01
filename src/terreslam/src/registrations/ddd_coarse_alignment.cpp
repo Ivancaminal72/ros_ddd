@@ -1,9 +1,9 @@
 /*
  *    Author: Ivan Caminal
- *    Created Date: 2021-08-04 17:31:47
+ *    Created Date: 2021-08-27 10:13:32
  */
 
-#include "terreslam/registrations/dd_coarse_alignment.h"
+#include "terreslam/registrations/ddd_coarse_alignment.h"
 
 namespace terreslam
 {
@@ -11,12 +11,10 @@ namespace terreslam
 	const float LARGE_NUMBER = FLT_MAX;
 
 	// calculates squared error from two point mapping; assumes rotation around Origin.
-	float sqErr_3Dof(cv::Point2f p1, cv::Point2f p2, float cos_alpha, float sin_alpha, cv::Point2f T) {
+	float sqErr_6Dof(cv::Point3f p1, cv::Point3f p2, const cv::Mat& RTr) {
 
-		float x2_est = T.x + cos_alpha * p1.x - sin_alpha * p1.y;
-		float y2_est = T.y + sin_alpha * p1.x + cos_alpha * p1.y;
-		cv::Point2f p2_est(x2_est, y2_est);
-		cv::Point2f dp = p2_est-p2;
+		cv::Mat p2_est = RTr(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(p1.x, p1.y, p1.z, 1));
+		cv::Mat dp = p2_est-cv::Mat(p2);
 		float sq_er = dp.dot(dp); // squared distance
 
 		//cout<<dp<<endl;
@@ -24,23 +22,18 @@ namespace terreslam
 	}
 
 	// calculate RMSE for point-to-point metrics
-	float RMSE_3Dof(const std::vector<cv::Point2f>& src, const std::vector<cv::Point2f>& dst,
-					const float* param, const bool* inliers, const cv::Point2f center) {
+	float RMSE_6Dof(const std::vector<cv::Point3f>& src, const std::vector<cv::Point3f>& dst,
+					const cv::Mat& RTr, const bool* inliers, const cv::Point3f center) {
 
 		const bool all_inliers = (inliers==NULL); // handy when we run QUADRTATIC will all inliers
 		unsigned int n = src.size();
 		assert(n>0 && n==dst.size());
 
-		float ang_rad = param[0];
-		cv::Point2f T(param[1], param[2]);
-		float cos_alpha = cos(ang_rad);
-		float sin_alpha = sin(ang_rad);
-
 		double RMSE = 0.0;
 		int ninliers = 0;
 		for (unsigned int i=0; i<n; ++i) {
 			if (all_inliers || inliers[i]) {
-				RMSE += sqErr_3Dof(src[i]-center, dst[i]-center, cos_alpha, sin_alpha, T);
+				RMSE += sqErr_6Dof(src[i]-center, dst[i]-center, RTr);
 				ninliers++;
 			}
 		}
@@ -53,22 +46,17 @@ namespace terreslam
 	}
 
 	// Sets inliers and returns their count
-	int setInliers3Dof(const std::vector<cv::Point2f>& src, const std::vector <cv::Point2f>& dst,
+	int setInliers6Dof(const std::vector<cv::Point3f>& src, const std::vector <cv::Point3f>& dst,
 					bool* inliers,
-					const float* param,
+					const cv::Mat& RTr,
 					const float max_er,
-					const cv::Point2f center) {
-
-		float ang_rad = param[0];
-		cv::Point2f T(param[1], param[2]);
+					const cv::Point3f center) {
 
 		// set inliers
 		unsigned int ninliers = 0;
 		unsigned int n = src.size();
 		assert(n>0 && n==dst.size());
 
-		float cos_ang = cos(ang_rad);
-		float sin_ang = sin(ang_rad);
 		float max_sqErr = max_er*max_er; // comparing squared values
 
 		if (inliers==NULL) {
@@ -76,7 +64,7 @@ namespace terreslam
 			// just get the number of inliers (e.g. after QUADRATIC fit only)
 			for (unsigned int i=0; i<n; ++i) {
 				
-				float sqErr = sqErr_3Dof(src[i]-center, dst[i]-center, cos_ang, sin_ang, T);
+				float sqErr = sqErr_6Dof(src[i]-center, dst[i]-center, RTr);
 				if ( sqErr < max_sqErr)
 					ninliers++;
 			}
@@ -85,7 +73,7 @@ namespace terreslam
 				// get the number of inliers and set them (e.g. for RANSAC)
 				for (unsigned int i=0; i<n; ++i) {
 					
-					float sqErr = sqErr_3Dof(src[i]-center, dst[i]-center, cos_ang, sin_ang, T);
+					float sqErr = sqErr_6Dof(src[i]-center, dst[i]-center, RTr);
 					if ( sqErr < max_sqErr) {
 						inliers[i] = 1;
 						ninliers++;
@@ -99,126 +87,8 @@ namespace terreslam
 	}
 
 	// fits 3DOF (rotation and translation in 2D) with least squares.
-	float fit3DofQUADRATICold(const std::vector<cv::Point2f>& src, const std::vector<cv::Point2f>& dst,
-					float* param, const bool* inliers, const cv::Point2f center) {
-
-		const bool all_inliers = (inliers==NULL); // handy when we run QUADRTATIC will all inliers
-		unsigned int n = src.size();
-		assert(dst.size() == n);
-
-		// count inliers
-		int ninliers;
-		if (all_inliers) {
-			ninliers = n;
-		} else {
-			ninliers = 0;
-			for (unsigned int i=0; i<n; ++i){
-				if (inliers[i])
-					ninliers++;
-			}
-		}
-
-		// under-dermined system
-		if (ninliers<2) {
-			//      param[0] = 0.0f; // ?
-			//      param[1] = 0.0f;
-			//      param[2] = 0.0f;
-			return LARGE_NUMBER;
-		}
-
-		/*
-		* x1*cosx(a)-y1*sin(a) + Tx = X1
-		* x1*sin(a)+y1*cos(a) + Ty = Y1
-		*
-		* approximation for small angle a (radians) sin(a)=a, cos(a)=1;
-		*
-		* x1*1 - y1*a + Tx = X1
-		* x1*a + y1*1 + Ty = Y1
-		*
-		* in matrix form M1*h=M2
-		*
-		*  2n x 4       4 x 1   2n x 1
-		*
-		* -y1 1 0 x1  *   a   =  X1
-		*  x1 0 1 y1      Tx     Y1
-		*                 Ty
-		*                 1=Z
-		*  ----------------------------
-		*  src1         res      src2
-		*/
-
-		//  4 x 1
-		float res_ar[4]; // alpha, Tx, Ty, 1
-		cv::Mat res(4, 1, CV_32F, res_ar); // 4 x 1
-
-		// 2n x 4
-		cv::Mat src1(2*ninliers, 4, CV_32F); // 2n x 4
-
-		// 2n x 1
-		cv::Mat src2(2*ninliers, 1, CV_32F); // 2n x 1: [X1, Y1, X2, Y2, X3, Y3]'
-
-		for (unsigned int i=0, row_cnt = 0; i<n; ++i) {
-
-			// use inliers only
-			if (all_inliers || inliers[i]) {
-
-				float x = src[i].x - center.x;
-				float y = src[i].y - center.y;
-
-				// first row
-
-				// src1
-				float* rowPtr = src1.ptr<float>(row_cnt);
-				rowPtr[0] = -y;
-				rowPtr[1] = 1.0f;
-				rowPtr[2] = 0.0f;
-				rowPtr[3] = x;
-
-				// src2
-				src2.at<float> (0, row_cnt) = dst[i].x - center.x;
-
-				// second row
-				row_cnt++;
-
-				// src1
-				rowPtr = src1.ptr<float>(row_cnt);
-				rowPtr[0] = x;
-				rowPtr[1] = 0.0f;
-				rowPtr[2] = 1.0f;
-				rowPtr[3] = y;
-
-				// src2
-				src2.at<float> (0, row_cnt) = dst[i].y - center.y;
-			}
-		}
-
-		cv::solve(src1, src2, res, cv::DECOMP_SVD);
-
-		// estimators
-		float alpha_est;
-		cv::Point2f T_est;
-
-		// original
-		alpha_est = res.at<float>(0, 0);
-		T_est = cv::Point2f(res.at<float>(1, 0), res.at<float>(2, 0));
-
-		float Z = res.at<float>(3, 0);
-		if (abs(Z-1.0) > 0.1) {
-			//cout<<"Bad Z in fit3DOF(), Z should be close to 1.0 = "<<Z<<endl;
-			//return LARGE_NUMBER;
-		}
-		param[0] = alpha_est; // rad
-		param[1] = T_est.x;
-		param[2] = T_est.y;
-
-		// calculate RMSE
-		float RMSE = RMSE_3Dof(src, dst, param, inliers, center);
-		return RMSE;
-	} // fit3DofQUADRATICOLd()
-
-	// fits 3DOF (rotation and translation in 2D) with least squares.
-	float fit3DofQUADRATIC(const std::vector<cv::Point2f>& src_, const std::vector<cv::Point2f>& dst_,
-					float* param, const bool* inliers, const cv::Point2f center) {
+	float fit6DofQUADRATIC(const std::vector<cv::Point3f>& src_, const std::vector<cv::Point3f>& dst_,
+					float* param, cv::Mat& param_RTr, const bool* inliers, const cv::Point3f center) {
 
 		const bool debug = false;                   // print more debug info
 		const bool all_inliers = (inliers==NULL);   // handy when we run QUADRTATIC will all inliers
@@ -226,7 +96,7 @@ namespace terreslam
 		int N = src_.size();
 
 		// collect inliers
-		std::vector<cv::Point2f> src, dst;
+		std::vector<cv::Point3f> src, dst;
 		int ninliers;
 		if (all_inliers) {
 			ninliers = N;
@@ -246,6 +116,9 @@ namespace terreslam
 			param[0] = 0.0f; // default return when there is not enough points
 			param[1] = 0.0f;
 			param[2] = 0.0f;
+			param[3] = 0.0f;
+			param[4] = 0.0f;
+			param[5] = 0.0f;
 			return LARGE_NUMBER;
 		}
 
@@ -259,8 +132,8 @@ namespace terreslam
 		// Calculate data centroids
 		cv::Scalar centroid_src = cv::mean(src);
 		cv::Scalar centroid_dst = cv::mean(dst);
-		cv::Point2f center_src(centroid_src[0], centroid_src[1]);
-		cv::Point2f center_dst(centroid_dst[0], centroid_dst[1]);
+		cv::Point3f center_src(centroid_src[0], centroid_src[1], centroid_src[2]);
+		cv::Point3f center_dst(centroid_dst[0], centroid_dst[1], centroid_dst[2]);
 		if (debug) 
 			cout<<"Centers: "<<center_src<<", "<<center_dst<<endl;
 
@@ -271,14 +144,21 @@ namespace terreslam
 		}
 
 		// compute a covariance matrix
-		float Cxx = 0.0, Cxy = 0.0, Cyx = 0.0, Cyy = 0.0;
+		float Cxx = 0.0, Cxy = 0.0, Cxz = 0.0;
+		float Cyx = 0.0, Cyy = 0.0, Cyz = 0.0;
+		float Czx = 0.0, Czy = 0.0, Czz = 0.0;
 		for (int i=0; i<ninliers; ++i) {
 			Cxx += src[i].x*dst[i].x;
 			Cxy += src[i].x*dst[i].y;
+			Cxz += src[i].x*dst[i].z;
 			Cyx += src[i].y*dst[i].x;
 			Cyy += src[i].y*dst[i].y;
+			Cyz += src[i].y*dst[i].z;
+			Czx += src[i].z*dst[i].x;
+			Czy += src[i].z*dst[i].y;
+			Czz += src[i].z*dst[i].z;
 		}
-		cv::Mat Mcov = (cv::Mat_<float>(2, 2)<<Cxx, Cxy, Cyx, Cyy);
+		cv::Mat Mcov = (cv::Mat_<float>(3, 3)<<Cxx, Cxy, Cxz, Cyx, Cyy, Cyz, Czx, Czy, Czz);
 		Mcov /= (ninliers-1);
 		if (debug) 
 			cout<<"Covariance-like Matrix "<<Mcov<<endl;
@@ -296,41 +176,53 @@ namespace terreslam
 		cv::Mat V = svd.vt.t();
 		cv::Mat Ut = svd.u.t();
 		float det_VUt = cv::determinant(V*Ut);
-		cv::Mat W = (cv::Mat_<float>(2, 2)<<1.0, 0.0, 0.0, det_VUt);
-		float rot[4];
-		cv::Mat R_est(2, 2, CV_32F, rot);
+		cv::Mat W = (cv::Mat_<float>(3, 3)<<1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, det_VUt);
+		float rot[6];
+		cv::Mat R_est(3, 3, CV_32F, rot);
 		R_est = V*W*Ut;
 		if (debug) 
 			cout<<"Rotation matrix: "<<R_est<<endl;
 
-		float cos_est = rot[0];
-		float sin_est = rot[2];
-		float ang = atan2(sin_est, cos_est);
+
+		float pitch = atan2(rot[7], rot[8]);
+   	float yaw = asin(-rot[6]);
+   	float roll = atan2(rot[3], rot[0]);
 
 		// translation (mean_dst - R*mean_src)
-		cv::Point2f center_srcRot = cv::Point2f(
-						cos_est*center_src.x - sin_est*center_src.y,
-						sin_est*center_src.x + cos_est*center_src.y);
-		cv::Point2f T_est = center_dst - center_srcRot;
+		cv::Mat center_srcRot = R_est * cv::Mat(center_src);
+		cv::Mat T_est_mat = cv::Mat(center_dst) - center_srcRot;
+		cv::Point3f T_est(T_est_mat);
 
 		// Final estimate msg
-		if (debug)
-			cout<<"Estimate = "<<ang*RAD2DEG<<"deg., T = "<<T_est<<endl;
+		if (debug){
+			cout<<"Estimate roll = "<<roll*RAD2DEG<<"deg. "<<endl;
+			cout<<"Estimate pitch = "<<pitch*RAD2DEG<<"deg. "<<endl;
+			cout<<"Estimate yaw = "<<yaw*RAD2DEG<<"deg. "<<endl;
+			cout<<"Estimate Translation = " << T_est<<"m. "<<endl;
+		}
 
-		param[0] = ang; // rad
-		param[1] = T_est.x;
-		param[2] = T_est.y;
+		param[0] = roll;
+		param[1] = pitch;
+		param[2] = yaw;
+		param[3] = T_est.x;
+		param[4] = T_est.y;
+		param[5] = T_est.z;
+
+		param_RTr = (cv::Mat_<float>(4, 4)<<rot[0], rot[1], rot[2], T_est.x, 
+																				rot[3], rot[4], rot[5], T_est.y, 
+																				rot[6], rot[7], rot[8], T_est.z,
+																				0     , 0     , 0     , 1      );
 
 		// calculate RMSE
-		float RMSE = RMSE_3Dof(src_, dst_, param, inliers, center);
+		float RMSE = RMSE_6Dof(src_, dst_, param_RTr, inliers, center);
 		return RMSE;
-	} // fit3DofQUADRATIC()
+	} // fit6DofQUADRATIC()
 
 	// RANSAC fit in 3DOF: 1D rot and 2D translation (maximizes the number of inliers)
 	// NOTE: no data normalization is currently performed
-	float fit3DofRANSAC(const std::vector<cv::Point2f>& src, const std::vector<cv::Point2f>& dst,
-					float* best_param,  bool* inliers,
-					const cv::Point2f center ,
+	float fit6DofRANSAC(const std::vector<cv::Point3f>& src, const std::vector<cv::Point3f>& dst,
+					float* best_param, cv::Mat& best_param_RTr,  bool* inliers,
+					const cv::Point3f center ,
 					const float inlierMaxEr,
 					const int niter,
 					const bool debug) {
@@ -347,6 +239,9 @@ namespace terreslam
 			best_param[0] = 0.0f; // ?
 			best_param[1] = 0.0f;
 			best_param[2] = 0.0f;
+			best_param[3] = 0.0f;
+			best_param[4] = 0.0f;
+			best_param[5] = 0.0f;
 			return LARGE_NUMBER;
 		}
 
@@ -354,8 +249,8 @@ namespace terreslam
 		unsigned int best_ninliers = 0;			// number of inliers
 		float best_rmse = LARGE_NUMBER;			// error
 		float cur_rmse;                			// current distance error
-		float param[3];                			// rad, Tx, Ty
-		std::vector <cv::Point2f> src_2pt(2), dst_2pt(2);// min set of 2 points (1 correspondence generates 2 equations)
+		float param[6];                			// roll, pitch, yaw, Tx, Ty, Tz
+		std::vector <cv::Point3f> src_2pt(2), dst_2pt(2);// min set of 2 points (1 correspondence generates 3 equations)
 		srand(time(NULL));
 
 		// iterations
@@ -374,14 +269,15 @@ namespace terreslam
 			dst_2pt[0] = dst[i1];
 			dst_2pt[1] = dst[i2];
 			bool two_inliers[] = {true, true};
+			cv::Mat param_RTr;
 
 			// 2. Quadratic fit for 2 points
-			cur_rmse = fit3DofQUADRATIC(src_2pt, dst_2pt, param, two_inliers, center);
+			cur_rmse = fit6DofQUADRATIC(src_2pt, dst_2pt, param, param_RTr, two_inliers, center);
 
 			// 3. Recalculate to settle params and inliers using a larger set
 			for (int iter2=0; iter2<ITERATION_TO_SETTLE; iter2++) {
-				ninliers = setInliers3Dof(src, dst, inliers, param, inlierMaxEr, center);   // changes inliers
-				cur_rmse = fit3DofQUADRATIC(src, dst, param, inliers, center);              // changes cur_param
+				ninliers = setInliers6Dof(src, dst, inliers, param_RTr, inlierMaxEr, center);   // changes inliers
+				cur_rmse = fit6DofQUADRATIC(src, dst, param, param_RTr, inliers, center);              // changes cur_param
 			}
 
 			// potential ill-condition or large error
@@ -401,9 +297,18 @@ namespace terreslam
 				best_param[0] = param[0];
 				best_param[1] = param[1];
 				best_param[2] = param[2];
+				best_param[3] = param[3];
+				best_param[4] = param[4];
+				best_param[5] = param[5];
+				best_param_RTr = param_RTr;
 				best_rmse = cur_rmse;
 
-				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+				if(debug){
+					cout<<" --- Solution improved: "<<endl;
+					cout<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+					cout<< best_param[3]<<", "<<best_param[4]<<", "<<param[5]<<endl;
+				}
+																									
 
 				// exit condition
 				float inlier_ratio = (float)best_ninliers/N;
@@ -416,20 +321,30 @@ namespace terreslam
 				best_param[0] = param[0];
 				best_param[1] = param[1];
 				best_param[2] = param[2];
+				best_param[3] = param[3];
+				best_param[4] = param[4];
+				best_param[5] = param[5];
+				best_param_RTr = param_RTr;
 				best_rmse = cur_rmse;
 
-				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+				if(debug){
+					cout<<" --- Solution improved: "<<endl;
+					cout<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+					cout<< best_param[3]<<", "<<best_param[4]<<", "<<param[5]<<endl;
+				}
 			}
 		} // iterations
 
 		// 5. recreate inliers for the best parameters
-		ninliers = setInliers3Dof(src, dst, inliers, best_param, inlierMaxEr, center);
+		ninliers = setInliers6Dof(src, dst, inliers, best_param_RTr, inlierMaxEr, center);
 
 		if(debug){
 			cout<<"Best iteration: "<<ninliers<<" inliers; recalculate: RMSE = "<<best_rmse<<endl;
-			cout<<" --- Final solution: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+			cout<<" --- Final solution: "<<endl;
+			cout<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+			cout<< best_param[3]<<", "<<best_param[4]<<", "<<param[5]<<endl;
 		}
 
 		return best_rmse;
-	} // fit3DofRANSAC()
+	} // fit6DofRANSAC()
 }

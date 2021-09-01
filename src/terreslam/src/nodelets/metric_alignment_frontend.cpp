@@ -6,6 +6,7 @@
 #include "terreslam/frontend.h"
 #include "terreslam/utils/util_chrono.h"
 #include "terreslam/registrations/dd_coarse_alignment.h"
+#include "terreslam/registrations/ddd_coarse_alignment.h"
 
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
@@ -123,12 +124,69 @@ private:
 			ddd_kpm_cur.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_cur.at(i), ddd_kpm_msg_ptr->y_cur.at(i), ddd_kpm_msg_ptr->z_cur.at(i));
 			ddd_kpm_old.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_old.at(i), ddd_kpm_msg_ptr->y_old.at(i), ddd_kpm_msg_ptr->z_old.at(i));
 		}
-
+		// util::tick_high_resolution(start_t, tick, elapsed_load_msg);
 
 		///METRIC ALIGNMENT
-		float best_params[3] = {0.0f};
+		cv::Mat RTr_KPs;
+		/// - MA Blobs Coarse
+		float best_param[3] = {0.0f};
 		bool inliers[sm] = {true};
-		fit3DofRANSAC(bm_old, bm_cur, best_params, inliers, cv::Point2d(0,0), 0.1, 2*sm);
+		fit3DofRANSAC(bm_old, bm_cur, best_param, inliers, cv::Point2f(0,0), 0.1, 2*sm, MA_debug_Blobs_coarse);
+
+		/// Transformation
+		float theta = best_param[0];
+		float tx = best_param[1];
+		float tz = best_param[2];
+		cv::Mat RTr_Blob_Coarse(cv::Matx44f(cos(theta) , 0, sin(theta), tx, 
+																				0          , 1, 0 			  , 0 , 
+																				-sin(theta), 0, cos(theta), tz,
+																				0          , 0, 0         , 1));
+
+		// util::tick_high_resolution(start_t, tick, elapsed_Blob_coarse);
+		
+		/// - MA Keypoints Coarse
+		if(MA_joint_KPs)
+		{
+			ddd_kpm_cur.insert(
+				ddd_kpm_cur.end(), 
+				std::make_move_iterator(dd_kpm_cur.begin()),
+				std::make_move_iterator(dd_kpm_cur.end()));
+			
+			ddd_kpm_old.insert(
+				ddd_kpm_old.end(), 
+				std::make_move_iterator(dd_kpm_old.begin()),
+				std::make_move_iterator(dd_kpm_old.end()));
+
+			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
+
+			float best_param[6] = {0.0f};
+			size_t joint_sm = dd_sm+ddd_sm;
+			bool inliers[joint_sm] = {true};
+			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
+
+		}
+		else //separated KPs
+		{
+			cv::Mat RTr_2DKPs;
+			cv::Mat RTr_3DKPs;
+
+			cv::transform(dd_kpm_old, dd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
+
+			float best_param_2D[6] = {0.0f};
+			bool inliers_2D[dd_sm] = {true};
+			fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
+
+			cv::Mat RTr_tmp = RTr_2DKPs * RTr_Blob_Coarse;
+			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_tmp(cv::Rect( 0, 0, 4, 3 )));
+
+			float best_param_3D[6] = {0.0f};
+			bool inliers_3D[ddd_sm] = {true};
+			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+
+			RTr_KPs = RTr_3DKPs * RTr_2DKPs;
+		}
+
+		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
 
 		/// Pre-PUBLISH
 		pcl::PointCloud<pcl::PointXYZRGBA> cloud;
@@ -180,6 +238,9 @@ private:
 
 		// util::tick_high_resolution(start_t, tick, elapsed);
 		// util::printElapsed(elapsed, "Callback blob detector: ");
+		// util::printElapsed(elapsed_load_msg, "Load msg: ");
+		// util::printElapsed(elapsed_Blob_coarse, "MA Blob Coarse: ");
+		// util::printElapsed(elapsed_KPs, "MA Keypoints: ");
 	}
 
 	void skipFrame(std::string msg)
@@ -208,6 +269,9 @@ private:
 
 	///Chrono timmings
 	std::vector<double> elapsed;
+	std::vector<double> elapsed_load_msg;
+	std::vector<double> elapsed_Blob_coarse;
+	std::vector<double> elapsed_KPs;
 
 	/// Blobs
 	unsigned int i,j;

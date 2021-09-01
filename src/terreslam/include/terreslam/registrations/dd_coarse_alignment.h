@@ -17,6 +17,6 @@ namespace terreslam
 	int setInliers3Dof(const std::vector<cv::Point2f>& src, const std::vector <cv::Point2f>& dst, bool* inliers, const float* param, const float max_er, const cv::Point2f center);
 	float fit3DofQUADRATICold(const std::vector<cv::Point2f>& src, const std::vector<cv::Point2f>& dst, float* param, const bool* inliers, const cv::Point2f center);
 	float fit3DofQUADRATIC(const std::vector<cv::Point2f>& src_, const std::vector<cv::Point2f>& dst_, float* param, const bool* inliers, const cv::Point2f center);
-	float fit3DofRANSAC(const std::vector<cv::Point2f>& src, const std::vector<cv::Point2f>& dst, float* best_param,  bool* inliers, const cv::Point2f center, const float inlierMaxEr, const int niter);
+	float fit3DofRANSAC(const std::vector<cv::Point2f>& src, const std::vector<cv::Point2f>& dst, float* best_param,  bool* inliers, const cv::Point2f center, const float inlierMaxEr, const int niter, const bool debug);
 }
 

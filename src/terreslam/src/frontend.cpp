@@ -79,6 +79,11 @@ void Frontend::onInit()
 	nh.getParam("/terreslam/DDDKP/SIFT_min_contrast", DDDKP_SIFT_min_contrast);
 	nh.getParam("/terreslam/DDDKP/FPFH_radius", DDDKP_FPFH_radius);
 
+	/// - MA
+	nh.getParam("/terreslam/MA/joint_KPs", MA_joint_KPs);
+	nh.getParam("/terreslam/MA/debug_Blobs_coarse", MA_debug_Blobs_coarse);
+	nh.getParam("/terreslam/MA/debug_KPs", MA_debug_KPs);
+
 	onFrontendInit();
 }
 

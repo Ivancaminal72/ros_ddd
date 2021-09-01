@@ -80,6 +80,7 @@ add_library(${PROJECT_NAME}
 	src/processings/dd_keypoint_processor.cpp
 	src/processings/ddd_keypoint_processor.cpp
 	src/registrations/dd_coarse_alignment.cpp
+	src/registrations/ddd_coarse_alignment.cpp
 	## src/utils/ulysses_map.cpp
 	## src/utils/ulysses_types.cpp
 	## src/utils/sunq_map.cpp

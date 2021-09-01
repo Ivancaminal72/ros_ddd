@@ -36,7 +36,10 @@
 /terreslam/PD/min_plane_size: 800
 /terreslam/PD/thres_angle: 15.0
 /terreslam/PD/thres_dist: 0.5
-# /terreslam/PD/thres_color: 
+# /terreslam/PD/thres_color:
+
+# Plane Processor
+/terreslam/PP/debug: true
 
 # Blob Detector
 /terreslam/BD/tolerance: 0.55
@@ -57,5 +60,7 @@
 /terreslam/DDDKP/SIFT_min_contrast: 0.5
 /terreslam/DDDKP/FPFH_radius: 3.3
 
-# Plane Processor
-/terreslam/PP/debug: true
+# MA
+/terreslam/MA/joint_KPs: false
+/terreslam/MA/debug_Blobs_coarse: true
+/terreslam/MA/debug_KPs: true

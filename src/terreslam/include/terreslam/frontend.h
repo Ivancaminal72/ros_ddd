@@ -76,12 +76,19 @@ protected:
 	//DD Keypoint
 	int DDKP_ws;
 
-	//DD Keypoint
+	//DDD Keypoint
 	float DDDKP_SIFT_min_scale;
 	int DDDKP_SIFT_nr_octaves;
 	int DDDKP_SIFT_nr_scales_per_octave;
 	float DDDKP_SIFT_min_contrast;
 	float DDDKP_FPFH_radius;
+
+	//MA
+	bool MA_joint_KPs;
+	bool MA_debug_Blobs_coarse;
+	bool MA_debug_KPs;
+	
+
 
 	// pcl_viewer
 	// Visualizer Vis_;
