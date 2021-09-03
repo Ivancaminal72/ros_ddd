@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(data_to_rosbag)
+set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+# set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)

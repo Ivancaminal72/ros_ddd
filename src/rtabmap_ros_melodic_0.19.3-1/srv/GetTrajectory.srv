@@ -1,7 +1,0 @@
-#request
-bool global
-bool optimized
-string path
----
-#response
-string status

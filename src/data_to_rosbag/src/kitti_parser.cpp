@@ -169,6 +169,7 @@ bool KittiParser::loadTimestampMaps() {
   // std::cout << "Timestmap map for pose:\n";
   // for (size_t i = 0; i < timestamps_.size(); i++) 
   //   std::cout << i << " " << timestamps_[i] << std::endl;
+  return true;
 }
 
 bool KittiParser::getCameraCalibration(uint64_t cam_id,
@@ -355,6 +356,7 @@ bool KittiParser::projectPointcloud(int cam_idx_proj,
       }
       else outside+=1;
   }
+  return true;
 }
 
 bool KittiParser::getImageAtEntry(uint64_t entry, uint64_t cam_id,
@@ -364,7 +366,7 @@ bool KittiParser::getImageAtEntry(uint64_t entry, uint64_t cam_id,
                          "/" + getFilenameForEntry(entry) +
                          ".png";
 
-  *image = cv::imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+  *image = cv::imread(filename, cv::IMREAD_UNCHANGED);
 
   if (!image->data) {
     std::cout << "Could not load image data.\n";

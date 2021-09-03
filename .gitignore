@@ -7,7 +7,7 @@
 #Codes
 !/src
 /src/*
-!/src/rtabmap_ros_melodic_0.19.3-1
+!/src/rtabmap_ros_*
 !/src/data_to_rosbag
 !/src/terreslam
 

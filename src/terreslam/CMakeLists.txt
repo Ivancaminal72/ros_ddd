@@ -66,9 +66,6 @@ SET(Libraries
 #############
 
 add_library(${PROJECT_NAME}
-	src/comms/kitti_parser.cpp
-	src/comms/kittiraw_common.cpp
-	src/comms/kittiraw_ros_conversions.cpp
 	src/features/plane_detector.cpp
 	src/features/blob_detector.cpp
 	src/features/dd_keypoint_detector.cpp
