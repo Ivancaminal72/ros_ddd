@@ -3,7 +3,7 @@
  *    Created Date: 2021-01-19 11:47:07
  */
 
-#include "terreslam/frontend.h"
+#include "terreslam/nodelet.h"
 #include "terreslam/camera_model.h"
 #include "terreslam/utils/util_types.h"
 #include "terreslam/utils/util_map.h"
@@ -34,47 +34,43 @@
 namespace terreslam
 {
 
-class RGBDepthFrontend : public terreslam::Frontend
+class RGBDepthNodelet : public terreslam::Nodelet
 {
 public:
-	RGBDepthFrontend() : 
-	Frontend(),
+	RGBDepthNodelet() : 
+	Nodelet(),
 		queue_size_(10)
 		{
-			// std::cout << "Constructor rgb_depth_frontend..." << std::endl;
+			// std::cout << "Constructor rgb_depth_nodelet..." << std::endl;
 		}
 
 private:
 
-	virtual void onFrontendInit()
+	virtual void onNodeletInit()
 	{
-		std::cout << "Initalize rgb_depth_frontend..." << std::endl;
+		std::cout << "Initalize rgb_depth_nodelet..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
 		
 		std::string subscribedTopicsMsg;
 
-		ros::NodeHandle rgb_nh(nh, "rgb_img");
-		ros::NodeHandle depth_nh(nh, "depth_img");
-		ros::NodeHandle rgb_pnh(pnh, "rgb_img");
-		ros::NodeHandle depth_pnh(pnh, "depth_img");
-		image_transport::ImageTransport rgb_it(rgb_nh);
-		image_transport::ImageTransport depth_it(depth_nh);
-		image_transport::TransportHints hintsRgb("raw", ros::TransportHints(), rgb_pnh);
-		image_transport::TransportHints hintsDepth("raw", ros::TransportHints(), depth_pnh);
+		image_transport::ImageTransport rgb_it(nh);
+		image_transport::ImageTransport depth_it(nh);
+		image_transport::TransportHints hintsRgb("raw", ros::TransportHints(), pnh);
+		image_transport::TransportHints hintsDepth("raw", ros::TransportHints(), pnh);
 
 		/// Subscribers
-		rgb_sub_filter_.subscribe(rgb_it, sub_cam_frame_id, 1, hintsRgb);
-		depth_sub_filter_.subscribe(depth_it, sub_cam_depth_frame_id, 1, hintsDepth);
-		info_sub_filter_.subscribe(rgb_nh, sub_cam_info_frame_id, 1);
+		rgb_sub_filter_.subscribe(rgb_it, sub_cam_topic, 1, hintsRgb);
+		depth_sub_filter_.subscribe(depth_it, sub_cam_depth_topic, 1, hintsDepth);
+		info_sub_filter_.subscribe(nh, sub_cam_info_topic, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), rgb_sub_filter_, depth_sub_filter_, info_sub_filter_);
-		exactSync_->registerCallback(boost::bind(&RGBDepthFrontend::callback, this, _1, _2, _3));
+		exactSync_->registerCallback(boost::bind(&RGBDepthNodelet::callback, this, _1, _2, _3));
 
 		// Publishers
-		cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_frame_id, 10);
-		cloud_xy_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_xy_frame_id, 10);
+		cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_topic, 10);
+		cloud_xy_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_xy_topic, 10);
 		// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
 		//Publish identity T_cam_cloud
@@ -252,6 +248,6 @@ private:
 
 };
 
-PLUGINLIB_EXPORT_CLASS(terreslam::RGBDepthFrontend, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(terreslam::RGBDepthNodelet, nodelet::Nodelet);
 
 }

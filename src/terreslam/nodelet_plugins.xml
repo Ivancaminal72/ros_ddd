@@ -1,47 +1,47 @@
 <library path="lib/libterreslam_plugins">
   
-	<class name="terreslam/rgb_depth_frontend"
-		 type="terreslam::RGBDepthFrontend"
+	<class name="terreslam/rgb_depth_nodelet"
+		 type="terreslam::RGBDepthNodelet"
 		 base_class_type="nodelet::Nodelet">
 	<description>
 	  Preprocessing
 	</description>
 	</class>
 
-	<class name="terreslam/dd_keypoint_frontend"
-		 type="terreslam::DDKeypointFrontend"
+	<class name="terreslam/dd_keypoint_nodelet"
+		 type="terreslam::DDKeypointNodelet"
 		 base_class_type="nodelet::Nodelet">
 	<description>
 	  2D Keypoint detection and processing
 	</description>
 	</class>
 	
-	<class name="terreslam/plane_detector_frontend"
-		 type="terreslam::PlaneDetectorFrontend"
+	<class name="terreslam/plane_detector_nodelet"
+		 type="terreslam::PlaneDetectorNodelet"
 		 base_class_type="nodelet::Nodelet">
 	<description>
 	  Plane detection
 	</description>
   </class>
 
-	<class name="terreslam/ddd_keypoint_frontend"
-		 type="terreslam::DDDKeypointFrontend"
+	<class name="terreslam/ddd_keypoint_nodelet"
+		 type="terreslam::DDDKeypointNodelet"
 		 base_class_type="nodelet::Nodelet">
 	<description>
 	  3D Keypoint detection and processing
 	</description>
 	</class>
 
-	<class name="terreslam/blob_detector_frontend"
-		 type="terreslam::BlobDetectorFrontend"
+	<class name="terreslam/blob_detector_nodelet"
+		 type="terreslam::BlobDetectorNodelet"
 		 base_class_type="nodelet::Nodelet">
 	<description>
 	  Blob detection
 	</description>
   </class>
 
-	<class name="terreslam/metric_alignment_frontend"
-		 type="terreslam::MetricAlignmentFrontend"
+	<class name="terreslam/metric_alignment_nodelet"
+		 type="terreslam::MetricAlignmentNodelet"
 		 base_class_type="nodelet::Nodelet">
 	<description>
 	  Metric Alignment

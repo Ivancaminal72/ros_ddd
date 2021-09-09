@@ -3,7 +3,7 @@
  *    Created Date: 2021-06-15 10:37:02
  */
 
-#include "terreslam/frontend.h"
+#include "terreslam/nodelet.h"
 #include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
 #include "terreslam/utils/util_general.h"
@@ -26,30 +26,29 @@
 namespace terreslam
 {
 
-class BlobDetectorFrontend : public terreslam::Frontend
+class BlobDetectorNodelet : public terreslam::Nodelet
 {
 public:
-	BlobDetectorFrontend() :
+	BlobDetectorNodelet() :
 		queue_size_(10)
 		{
-			// std::cout << "Constructor blob_detector_frontend..." << std::endl;
+			// std::cout << "Constructor blob_detector_nodelet..." << std::endl;
 		}
 
 private:
 
-	void onFrontendInit()
+	void onNodeletInit()
 	{
-		std::cout << "Initalize blob_detector_frontend..." << std::endl;
+		std::cout << "Initalize blob_detector_nodelet..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
-		ros::NodeHandle cf_nh(nh, "cloud_filtered");
 
 		/// Subscribers
-		cloud_filtered_sub_ = cf_nh.subscribe(cloud_filtered_frame_id, queue_size_, &BlobDetectorFrontend::callback, this);
+		cloud_filtered_sub_ = nh.subscribe(cloud_filtered_topic, queue_size_, &BlobDetectorNodelet::callback, this);
 
 		// Publishers
-		cloud_blobs_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_frame_id, 10);
-		blob_matches_pub_ = nh.advertise<terreslam::BlobMatches>(blob_matches_frame_id, 1);
+		cloud_blobs_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_topic, 10);
+		blob_matches_pub_ = nh.advertise<terreslam::BlobMatches>(blob_matches_topic, 1);
 
 		// Initialize palette
 		for(i=0; i<50; ++i)
@@ -395,6 +394,6 @@ private:
 
 };
 
-PLUGINLIB_EXPORT_CLASS(terreslam::BlobDetectorFrontend, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(terreslam::BlobDetectorNodelet, nodelet::Nodelet);
 
 }

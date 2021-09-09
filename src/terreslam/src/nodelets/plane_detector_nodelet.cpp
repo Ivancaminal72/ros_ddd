@@ -3,7 +3,7 @@
  *    Created Date: 2021-01-19 11:47:07
  */
 
-#include "terreslam/frontend.h"
+#include "terreslam/nodelet.h"
 #include "terreslam/features/plane_detector.h"
 #include "terreslam/utils/util_pcd.h"
 #include "terreslam/utils/util_chrono.h"
@@ -22,23 +22,22 @@
 namespace terreslam
 {
 
-class PlaneDetectorFrontend : public terreslam::Frontend
+class PlaneDetectorNodelet : public terreslam::Nodelet
 {
 public:
-	PlaneDetectorFrontend() :
+	PlaneDetectorNodelet() :
 		queue_size_(10)
 		{
-			// std::cout << "Constructor plane_detector_frontend..." << std::endl;
+			// std::cout << "Constructor plane_detector_nodelet..." << std::endl;
 		}
 
 private:
 
-	void onFrontendInit()
+	void onNodeletInit()
 	{
-		std::cout << "Initalize plane_detector_frontend..." << std::endl;
+		std::cout << "Initalize plane_detector_nodelet..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
-		ros::NodeHandle cloud_nh(nh, "cloud");
 
 		PD = std::make_unique<PlaneDetector> (PD_debug,
 																					PD_theta,
@@ -52,19 +51,19 @@ private:
 																					logs_dir);
 
 		/// Subscribers
-		// cloud_sub = cloud_nh.subscribe(cloud_frame_id, queue_size_, &PlaneDetectorFrontend::callback, this);
+		// cloud_sub = nh.subscribe(cloud_topic, queue_size_, &PlaneDetectorNodelet::callback, this);
 		
-		cloud_sub_filter_.subscribe(cloud_nh, cloud_frame_id, 1);
-		cloud_xy_sub_filter_.subscribe(cloud_nh, cloud_xy_frame_id, 1);
+		cloud_sub_filter_.subscribe(nh, cloud_topic, 1);
+		cloud_xy_sub_filter_.subscribe(nh, cloud_xy_topic, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), cloud_sub_filter_, cloud_xy_sub_filter_);
-		exactSync_->registerCallback(boost::bind(&PlaneDetectorFrontend::callback, this, _1, _2));
+		exactSync_->registerCallback(boost::bind(&PlaneDetectorNodelet::callback, this, _1, _2));
 
 		// Publishers
-		cloud_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_frame_id, 10);
-		normal_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(normal_filtered_frame_id, 10);
-		plane_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_plane_frame_id, 10);
+		cloud_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_topic, 10);
+		normal_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(normal_filtered_topic, 10);
+		plane_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_plane_topic, 10);
 	} 
 
 	void callback(
@@ -233,6 +232,6 @@ private:
 	Scan* scan_;
 };
 
-PLUGINLIB_EXPORT_CLASS(terreslam::PlaneDetectorFrontend, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(terreslam::PlaneDetectorNodelet, nodelet::Nodelet);
 
 }

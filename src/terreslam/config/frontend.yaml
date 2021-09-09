@@ -1,0 +1,44 @@
+# YAML configuration of Terreslam Frontend
+#IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
+
+# Plane Filter
+PF/threshold: 0.12 #0.05
+PF/highpass: true
+
+# Plane Detector
+PD/debug: true
+PD/theta: 9
+PD/phi: 18
+PD/d: 1
+PD/max_plane: 99
+PD/min_plane_size: 800
+PD/thres_angle: 15.0
+PD/thres_dist: 0.5
+# PD/thres_color:
+
+# Plane Processor
+PP/debug: true
+
+# Blob Detector
+BD/tolerance: 0.55
+BD/min_size: 15
+BD/max_size: 3000
+BD/ppa: 34
+BD/alpha: 1
+BD/thres_xz: 0.034
+BD/thres_radius: 0.5
+
+# DD KP Detector
+DDKP/window_size: 1
+
+# DDD KP Detector
+DDDKP/SIFT_min_scale: 0.1
+DDDKP/SIFT_nr_octaves: 4
+DDDKP/SIFT_nr_scales_per_octave: 4
+DDDKP/SIFT_min_contrast: 0.5
+DDDKP/FPFH_radius: 3.3
+
+# MA
+MA/joint_KPs: true
+MA/debug_Blobs_coarse: false
+MA/debug_KPs: false

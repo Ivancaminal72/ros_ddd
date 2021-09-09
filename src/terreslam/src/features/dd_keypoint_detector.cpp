@@ -5,7 +5,7 @@
 
 #include "terreslam/features/dd_keypoint_detector.h"
 #include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
+#include <opencv4/opencv2/xfeatures2d.hpp>
 
 namespace terreslam
 {

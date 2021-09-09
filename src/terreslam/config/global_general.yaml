@@ -1,0 +1,24 @@
+# YAML configuration of Terreslam General
+#IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
+
+# General
+/terreslam/logsdir: '/home/ivan/outputs/terreslam/unorganized'
+/terreslam/max_depth: 120.0  #for Kinect 6.0
+
+# Comms
+/terreslam/frame_id/base: 'base_link'
+/terreslam/frame_id/odom: 'terreslam/odom'
+/terreslam/frame_id/cloud: 'terreslam/cloud'
+/terreslam/frame_id/cloud_xy: 'terreslam/cloud_xy'
+/terreslam/frame_id/cloud_filtered: 'terreslam/cloud_filtered'
+/terreslam/frame_id/cloud_filtered_blobs: 'terreslam/cloud_filtered_blobs'
+/terreslam/frame_id/cloud_keypoints: 'terreslam/cloud_keypoints'
+/terreslam/frame_id/cloud_plane: 'terreslam/cloud_plane'
+/terreslam/frame_id/normal_filtered: 'terreslam/normal_filtered'
+/terreslam/frame_id/blob_matches: 'terreslam/blob_matches'
+/terreslam/frame_id/dd_keypoint_matches: 'terreslam/dd_keypoint_matches'
+/terreslam/frame_id/ddd_keypoint_matches: 'terreslam/ddd_keypoint_matches'
+/terreslam/frame_id/sub_lidar: '/adapt/lidar'
+/terreslam/frame_id/sub_cam: '/adapt/cam'
+/terreslam/frame_id/sub_cam_depth: '/adapt/cam_depth'
+/terreslam/frame_id/sub_cam_info: '/adapt/camera_info'

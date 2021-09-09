@@ -224,8 +224,8 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
 
   sub_cam_frame_id_ = getSensorFrameId(prefix_+cam_frame_id_prefix_, cam_idx_proj_);
   // std::string pub_cam_frame_id_ = getSensorFrameId(cam_frame_id_prefix_, cam_idx_proj_);
-  pub_cam_frame_id_ = "/adapt/"+cam_frame_id_prefix_;
-  pub_lidar_frame_id_ = "/adapt/"+lidar_frame_id_;
+  pub_cam_frame_id_ = "adapt/"+cam_frame_id_prefix_;
+  pub_lidar_frame_id_ = "adapt/"+lidar_frame_id_;
 
   // Subcribe to the node_live / rosbag topics
   lidar_sub_ = nh_sub_.subscribe(prefix_+lidar_frame_id_, 20, &PcdToPng::processLidar, this); //queue x2 recomended size
@@ -233,7 +233,7 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
   ROS_INFO("Subscribed for bag topics");
 
   // Advertise all the publishing topics for ROS live streaming.
-  clock_pub_ = nh_pub_.advertise<rosgraph_msgs::Clock>("/adapt/clock", 1, false);
+  clock_pub_ = nh_pub_.advertise<rosgraph_msgs::Clock>("adapt/clock", 1, false);
   lidar_pub_ = nh_pub_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
       pub_lidar_frame_id_, 10, false);
   image_rgb_pub_ = image_transport_pub_.advertiseCamera(pub_cam_frame_id_, 1);

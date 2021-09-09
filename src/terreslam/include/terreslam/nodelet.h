@@ -15,14 +15,30 @@
 namespace terreslam
 {
 
-class Frontend : public nodelet::Nodelet
+class Nodelet : public nodelet::Nodelet
 {
 public:
-	Frontend();
+	Nodelet();
 
 protected:
+	// General topic
+	std::string odom_topic;
+	std::string cloud_topic;
+	std::string cloud_xy_topic;
+	std::string cloud_filtered_topic;
+	std::string cloud_filtered_blobs_topic;
+	std::string cloud_keypoints_topic;
+	std::string cloud_plane_topic;
+	std::string normal_filtered_topic;
+	std::string blob_matches_topic;
+	std::string dd_keypoint_matches_topic;
+	std::string ddd_keypoint_matches_topic;
+	std::string sub_lidar_topic;
+	std::string sub_cam_topic;
+	std::string sub_cam_depth_topic;
+	std::string sub_cam_info_topic;
+
 	// General frame_id
-	std::string frame_id;
 	std::string odom_frame_id;
 	std::string cloud_frame_id;
 	std::string cloud_xy_frame_id;
@@ -98,7 +114,7 @@ protected:
 
 private:
 	virtual void onInit();
-	virtual void onFrontendInit() = 0;
+	virtual void onNodeletInit() = 0;
 	
 };
 

@@ -3,7 +3,7 @@
  *    Created Date: 2021-08-19 17:43:50
  */
 
-#include "terreslam/frontend.h"
+#include "terreslam/nodelet.h"
 #include "terreslam/features/ddd_keypoint_detector.h"
 #include "terreslam/processings/ddd_keypoint_processor.h"
 #include "terreslam/utils/util_pcd.h"
@@ -35,35 +35,33 @@
 namespace terreslam
 {
 
-class DDDKeypointFrontend : public terreslam::Frontend
+class DDDKeypointNodelet : public terreslam::Nodelet
 {
 public:
-	DDDKeypointFrontend() :
+	DDDKeypointNodelet() :
 		queue_size_(10)
 		{
-			// std::cout << "Constructor ddd_keypoint_frontend..." << std::endl;
+			// std::cout << "Constructor ddd_keypoint_nodelet..." << std::endl;
 		}
 
 private:
 
-	void onFrontendInit()
+	void onNodeletInit()
 	{
-		std::cout << "Initalize ddd_keypoint_frontend..." << std::endl;
+		std::cout << "Initalize ddd_keypoint_nodelet..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
-		ros::NodeHandle cf_nh(nh, "cloud_filtered");
-		ros::NodeHandle nf_nh(nh, "normal_filtered");
 
 		/// Subscribers
-		cloud_filtered_sub_filter_.subscribe(cf_nh, cloud_filtered_frame_id, 1);
-		normal_filtered_sub_filter_.subscribe(nf_nh, normal_filtered_frame_id, 1);
+		cloud_filtered_sub_filter_.subscribe(nh, cloud_filtered_topic, 1);
+		normal_filtered_sub_filter_.subscribe(nh, normal_filtered_topic, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), cloud_filtered_sub_filter_, normal_filtered_sub_filter_);
-		exactSync_->registerCallback(boost::bind(&DDDKeypointFrontend::callback, this, _1, _2));
+		exactSync_->registerCallback(boost::bind(&DDDKeypointNodelet::callback, this, _1, _2));
 
 		// Publishers
-		ddd_keypoint_matches_pub_ = nh.advertise<terreslam::KeyPointMatches>(ddd_keypoint_matches_frame_id, 1);
+		ddd_keypoint_matches_pub_ = nh.advertise<terreslam::KeyPointMatches>(ddd_keypoint_matches_topic, 1);
 
 	} 
 
@@ -205,6 +203,6 @@ private:
 
 };
 
-PLUGINLIB_EXPORT_CLASS(terreslam::DDDKeypointFrontend, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(terreslam::DDDKeypointNodelet, nodelet::Nodelet);
 
 }

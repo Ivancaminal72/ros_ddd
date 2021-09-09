@@ -3,7 +3,7 @@
  *    Created Date: 2021-06-15 11:37:46
  */
 
-#include "terreslam/frontend.h"
+#include "terreslam/nodelet.h"
 #include "terreslam/utils/util_chrono.h"
 #include "terreslam/registrations/dd_coarse_alignment.h"
 #include "terreslam/registrations/ddd_coarse_alignment.h"
@@ -27,37 +27,35 @@
 namespace terreslam
 {
 
-class MetricAlignmentFrontend : public terreslam::Frontend
+class MetricAlignmentNodelet : public terreslam::Nodelet
 {
 public:
-	MetricAlignmentFrontend() :
+	MetricAlignmentNodelet() :
 		queue_size_(10)
 		{
-			// std::cout << "Constructor metric_alignment_frontend..." << std::endl;
+			// std::cout << "Constructor metric_alignment_nodelet..." << std::endl;
 		}
 
 private:
 
-	void onFrontendInit()
+	void onNodeletInit()
 	{
-		std::cout << "Initalize metric_alignment_frontend..." << std::endl;
+		std::cout << "Initalize metric_alignment_nodelet..." << std::endl;
 		ros::NodeHandle & nh = getNodeHandle();
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
-		ros::NodeHandle bm_nh(nh, "blob_matches");
-		ros::NodeHandle kpm_nh(nh, "keypoint_matches");
 
 		/// Subscribers
-		blob_matches_sub_filter_.subscribe(bm_nh, blob_matches_frame_id, 1);
-		dd_keypoint_matches_sub_filter_.subscribe(kpm_nh, dd_keypoint_matches_frame_id, 1);
-		ddd_keypoint_matches_sub_filter_.subscribe(kpm_nh, ddd_keypoint_matches_frame_id, 1);
+		blob_matches_sub_filter_.subscribe(nh, blob_matches_topic, 1);
+		dd_keypoint_matches_sub_filter_.subscribe(nh, dd_keypoint_matches_topic, 1);
+		ddd_keypoint_matches_sub_filter_.subscribe(nh, ddd_keypoint_matches_topic, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), blob_matches_sub_filter_, dd_keypoint_matches_sub_filter_, ddd_keypoint_matches_sub_filter_);
-		exactSync_->registerCallback(boost::bind(&MetricAlignmentFrontend::callback, this, _1, _2,_3));
+		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3));
 
 		// Publishers
-		cloud_keypoints_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_keypoints_frame_id, 10);
-		odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_frame_id, 1);
+		cloud_keypoints_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_keypoints_topic, 10);
+		odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_topic, 1);
 	} 
 
 	void callback(
@@ -111,6 +109,7 @@ private:
 			dd_kpm_cur.at(i) = cv::Point3f(dd_kpm_msg_ptr->x_cur.at(i), dd_kpm_msg_ptr->y_cur.at(i), dd_kpm_msg_ptr->z_cur.at(i));
 			dd_kpm_old.at(i) = cv::Point3f(dd_kpm_msg_ptr->x_old.at(i), dd_kpm_msg_ptr->y_old.at(i), dd_kpm_msg_ptr->z_old.at(i));
 		}
+		cout<<"Size dd_sm: "<<dd_sm<<endl;
 
 		size_t ddd_sm = ddd_kpm_msg_ptr->x_cur.size();
 		assert(ddd_sm == ddd_kpm_msg_ptr->y_cur.size() &&
@@ -144,47 +143,47 @@ private:
 
 		// util::tick_high_resolution(start_t, tick, elapsed_Blob_coarse);
 		
-		/// - MA Keypoints Coarse
-		if(MA_joint_KPs)
-		{
-			ddd_kpm_cur.insert(
-				ddd_kpm_cur.end(), 
-				std::make_move_iterator(dd_kpm_cur.begin()),
-				std::make_move_iterator(dd_kpm_cur.end()));
+		// /// - MA Keypoints Coarse
+		// if(MA_joint_KPs)
+		// {
+		// 	ddd_kpm_cur.insert(
+		// 		ddd_kpm_cur.end(), 
+		// 		std::make_move_iterator(dd_kpm_cur.begin()),
+		// 		std::make_move_iterator(dd_kpm_cur.end()));
 			
-			ddd_kpm_old.insert(
-				ddd_kpm_old.end(), 
-				std::make_move_iterator(dd_kpm_old.begin()),
-				std::make_move_iterator(dd_kpm_old.end()));
+		// 	ddd_kpm_old.insert(
+		// 		ddd_kpm_old.end(), 
+		// 		std::make_move_iterator(dd_kpm_old.begin()),
+		// 		std::make_move_iterator(dd_kpm_old.end()));
 
-			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
+		// 	cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
 
-			float best_param[6] = {0.0f};
-			size_t joint_sm = dd_sm+ddd_sm;
-			bool inliers[joint_sm] = {true};
-			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
+		// 	float best_param[6] = {0.0f};
+		// 	size_t joint_sm = dd_sm+ddd_sm;
+		// 	bool inliers[joint_sm] = {true};
+		// 	fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
 
-		}
-		else //separated KPs
-		{
-			cv::Mat RTr_2DKPs;
-			cv::Mat RTr_3DKPs;
+		// }
+		// else //separated KPs
+		// {
+		// 	cv::Mat RTr_2DKPs;
+		// 	cv::Mat RTr_3DKPs;
 
-			cv::transform(dd_kpm_old, dd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
+		// 	cv::transform(dd_kpm_old, dd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
 
-			float best_param_2D[6] = {0.0f};
-			bool inliers_2D[dd_sm] = {true};
-			fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
+		// 	float best_param_2D[6] = {0.0f};
+		// 	bool inliers_2D[dd_sm] = {true};
+		// 	fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
 
-			cv::Mat RTr_tmp = RTr_2DKPs * RTr_Blob_Coarse;
-			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_tmp(cv::Rect( 0, 0, 4, 3 )));
+		// 	cv::Mat RTr_tmp = RTr_2DKPs * RTr_Blob_Coarse;
+		// 	cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_tmp(cv::Rect( 0, 0, 4, 3 )));
 
-			float best_param_3D[6] = {0.0f};
-			bool inliers_3D[ddd_sm] = {true};
-			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+		// 	float best_param_3D[6] = {0.0f};
+		// 	bool inliers_3D[ddd_sm] = {true};
+		// 	fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
 
-			RTr_KPs = RTr_3DKPs * RTr_2DKPs;
-		}
+		// 	RTr_KPs = RTr_3DKPs * RTr_2DKPs;
+		// }
 
 		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
 
@@ -277,6 +276,6 @@ private:
 	unsigned int i,j;
 };
 
-PLUGINLIB_EXPORT_CLASS(terreslam::MetricAlignmentFrontend, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(terreslam::MetricAlignmentNodelet, nodelet::Nodelet);
 
 }
