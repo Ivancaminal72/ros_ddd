@@ -9,10 +9,14 @@
 #include <iostream>
 #include <algorithm>
 
+#include <opencv2/core/mat.hpp>
+#include <tf2/LinearMath/Matrix3x3.h>
+
 namespace terreslam
 {
 namespace util
 {
 	float calculateMedian(std::vector<float> scores);
+	cv::Mat quat2Mat(tf2::Quaternion q);
 }
 }

@@ -39,6 +39,7 @@ DDDKP/SIFT_min_contrast: 0.5
 DDDKP/FPFH_radius: 3.3
 
 # MA
+MA/KPs: true
 MA/joint_KPs: true
 MA/debug_Blobs_coarse: false
 MA/debug_KPs: false

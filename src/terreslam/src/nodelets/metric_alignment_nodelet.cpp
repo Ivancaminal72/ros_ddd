@@ -19,6 +19,9 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <nav_msgs/Odometry.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 //msgs
 #include <terreslam/BlobMatches.h>
@@ -53,9 +56,15 @@ private:
 			(MyExactSyncPolicy(queue_size_), blob_matches_sub_filter_, dd_keypoint_matches_sub_filter_, ddd_keypoint_matches_sub_filter_);
 		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3));
 
-		// Publishers
+		/// Publishers
 		cloud_keypoints_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_keypoints_topic, 10);
 		odom_pub_ = nh.advertise<nav_msgs::Odometry>(odom_topic, 1);
+
+		/// MA initialization
+		RTr_acc = (cv::Mat_<float>(4, 4)<<1, 0, 0, 0, 
+																			0, 1, 0, 0, 
+																			0, 0, 1, 0,
+																			0, 0, 0, 1);
 	} 
 
 	void callback(
@@ -91,7 +100,7 @@ private:
 		height_cur = bm_msg_ptr->height_cur;
 		radius_old = bm_msg_ptr->radius_old;
 		height_old = bm_msg_ptr->height_old;
-		for(i=0; i<sm; ++i)
+		for(size_t i=0; i<sm; ++i)
 		{
 			bm_cur.at(i) = cv::Point2f(bm_msg_ptr->x_cur.at(i), bm_msg_ptr->z_cur.at(i));
 			bm_old.at(i) = cv::Point2f(bm_msg_ptr->x_old.at(i), bm_msg_ptr->z_old.at(i));
@@ -104,12 +113,12 @@ private:
 					 dd_sm == dd_kpm_msg_ptr->y_old.size() &&
 					 dd_sm == dd_kpm_msg_ptr->z_old.size());
 		std::vector<cv::Point3f> dd_kpm_cur(dd_sm), dd_kpm_old(dd_sm);
-		for(i=0; i<dd_sm; ++i)
+		for(size_t i=0; i<dd_sm; ++i)
 		{
 			dd_kpm_cur.at(i) = cv::Point3f(dd_kpm_msg_ptr->x_cur.at(i), dd_kpm_msg_ptr->y_cur.at(i), dd_kpm_msg_ptr->z_cur.at(i));
 			dd_kpm_old.at(i) = cv::Point3f(dd_kpm_msg_ptr->x_old.at(i), dd_kpm_msg_ptr->y_old.at(i), dd_kpm_msg_ptr->z_old.at(i));
 		}
-		cout<<"Size dd_sm: "<<dd_sm<<endl;
+		// cout<<"Size dd_sm: "<<dd_sm<<endl;
 
 		size_t ddd_sm = ddd_kpm_msg_ptr->x_cur.size();
 		assert(ddd_sm == ddd_kpm_msg_ptr->y_cur.size() &&
@@ -118,7 +127,7 @@ private:
 					 ddd_sm == ddd_kpm_msg_ptr->y_old.size() &&
 					 ddd_sm == ddd_kpm_msg_ptr->z_old.size());
 		std::vector<cv::Point3f> ddd_kpm_cur(ddd_sm), ddd_kpm_old(ddd_sm);
-		for(i=0; i<ddd_sm; ++i)
+		for(size_t i=0; i<ddd_sm; ++i)
 		{
 			ddd_kpm_cur.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_cur.at(i), ddd_kpm_msg_ptr->y_cur.at(i), ddd_kpm_msg_ptr->z_cur.at(i));
 			ddd_kpm_old.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_old.at(i), ddd_kpm_msg_ptr->y_old.at(i), ddd_kpm_msg_ptr->z_old.at(i));
@@ -126,7 +135,6 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_load_msg);
 
 		///METRIC ALIGNMENT
-		cv::Mat RTr_KPs;
 		/// - MA Blobs Coarse
 		float best_param[3] = {0.0f};
 		bool inliers[sm] = {true};
@@ -136,58 +144,67 @@ private:
 		float theta = best_param[0];
 		float tx = best_param[1];
 		float tz = best_param[2];
-		cv::Mat RTr_Blob_Coarse(cv::Matx44f(cos(theta) , 0, sin(theta), tx, 
-																				0          , 1, 0 			  , 0 , 
-																				-sin(theta), 0, cos(theta), tz,
-																				0          , 0, 0         , 1));
+		cv::Mat RTr(cv::Matx44f(cos(theta) , 0, sin(theta), tx, 
+														0          , 1, 0 			  , 0 , 
+														-sin(theta), 0, cos(theta), tz,
+														0          , 0, 0         , 1));
 
 		// util::tick_high_resolution(start_t, tick, elapsed_Blob_coarse);
 		
-		// /// - MA Keypoints Coarse
-		// if(MA_joint_KPs)
-		// {
-		// 	ddd_kpm_cur.insert(
-		// 		ddd_kpm_cur.end(), 
-		// 		std::make_move_iterator(dd_kpm_cur.begin()),
-		// 		std::make_move_iterator(dd_kpm_cur.end()));
+		/// - MA Keypoints Coarse
+		if(MA_joint_KPs && MA_KPs)
+		{
+			ddd_kpm_cur.insert(
+				ddd_kpm_cur.end(), 
+				std::make_move_iterator(dd_kpm_cur.begin()),
+				std::make_move_iterator(dd_kpm_cur.end()));
 			
-		// 	ddd_kpm_old.insert(
-		// 		ddd_kpm_old.end(), 
-		// 		std::make_move_iterator(dd_kpm_old.begin()),
-		// 		std::make_move_iterator(dd_kpm_old.end()));
+			ddd_kpm_old.insert(
+				ddd_kpm_old.end(), 
+				std::make_move_iterator(dd_kpm_old.begin()),
+				std::make_move_iterator(dd_kpm_old.end()));
 
-		// 	cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
+			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
-		// 	float best_param[6] = {0.0f};
-		// 	size_t joint_sm = dd_sm+ddd_sm;
-		// 	bool inliers[joint_sm] = {true};
-		// 	fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
+			float best_param[6] = {0.0f};
+			size_t joint_sm = dd_sm+ddd_sm;
+			bool inliers[joint_sm] = {true};
+			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
 
-		// }
-		// else //separated KPs
-		// {
-		// 	cv::Mat RTr_2DKPs;
-		// 	cv::Mat RTr_3DKPs;
+		}
+		else if(MA_KPs) //separated KPs
+		{
+			cv::Mat RTr_2DKPs;
+			cv::Mat RTr_3DKPs;
 
-		// 	cv::transform(dd_kpm_old, dd_kpm_old, RTr_Blob_Coarse(cv::Rect( 0, 0, 4, 3 )));
+			cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
-		// 	float best_param_2D[6] = {0.0f};
-		// 	bool inliers_2D[dd_sm] = {true};
-		// 	fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
+			float best_param_2D[6] = {0.0f};
+			bool inliers_2D[dd_sm] = {true};
+			fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
 
-		// 	cv::Mat RTr_tmp = RTr_2DKPs * RTr_Blob_Coarse;
-		// 	cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_tmp(cv::Rect( 0, 0, 4, 3 )));
+			cv::Mat RTr_tmp = RTr_2DKPs * RTr;
+			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr_tmp(cv::Rect( 0, 0, 4, 3 )));
 
-		// 	float best_param_3D[6] = {0.0f};
-		// 	bool inliers_3D[ddd_sm] = {true};
-		// 	fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+			float best_param_3D[6] = {0.0f};
+			bool inliers_3D[ddd_sm] = {true};
+			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
 
-		// 	RTr_KPs = RTr_3DKPs * RTr_2DKPs;
-		// }
+			RTr = RTr_3DKPs * RTr_2DKPs;
+		}
 
 		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
 
 		/// Pre-PUBLISH
+		/// - Transformations
+		RTr_acc = RTr_acc * RTr.inv();
+		tf2::Matrix3x3 R_acc_tf2_m(RTr_acc.at<float>(0,0), RTr_acc.at<float>(0,1), RTr_acc.at<float>(0,2),
+															 RTr_acc.at<float>(1,0), RTr_acc.at<float>(1,1), RTr_acc.at<float>(1,2),
+															 RTr_acc.at<float>(2,0), RTr_acc.at<float>(2,1), RTr_acc.at<float>(2,2)); 
+		tf2::Quaternion R_acc_tf2_q;
+		R_acc_tf2_m.getRotation(R_acc_tf2_q);
+		
+		/// - Keypoints colorized
 		pcl::PointCloud<pcl::PointXYZRGBA> cloud;
 		cloud.points.resize (dd_kpm_cur.size()+dd_kpm_old.size()+ddd_kpm_cur.size()+ddd_kpm_old.size());
 		uint8_t a=255,r,g,b;
@@ -233,6 +250,30 @@ private:
 		msg_pcd.header.stamp = dd_kpm_msg_ptr->header.stamp;
 		cloud_keypoints_pub_.publish(msg_pcd);
 
+		/// - Trasnforms
+		static tf2_ros::TransformBroadcaster odom_broadcaster;
+		geometry_msgs::TransformStamped odom_trans;
+		geometry_msgs::Quaternion R_acc_msg_q = tf2::toMsg(R_acc_tf2_q);
+		odom_trans.header.stamp = dd_kpm_msg_ptr->header.stamp;
+		odom_trans.header.frame_id = odom_frame_id;
+		odom_trans.child_frame_id = sub_cam_frame_id;
+		odom_trans.transform.translation.x = RTr_acc.at<float>(0,3);
+		odom_trans.transform.translation.y = RTr_acc.at<float>(1,3);
+		odom_trans.transform.translation.z = RTr_acc.at<float>(2,3);
+		odom_trans.transform.rotation = R_acc_msg_q;
+		odom_broadcaster.sendTransform(odom_trans);
+		
+		/// - Odometry
+		nav_msgs::Odometry odom;
+		odom.header.stamp = dd_kpm_msg_ptr->header.stamp;
+		odom.header.frame_id = odom_frame_id;
+		odom.child_frame_id = sub_cam_frame_id;
+		odom.pose.pose.position.x = RTr_acc.at<float>(0,3);
+		odom.pose.pose.position.y = RTr_acc.at<float>(1,3);
+		odom.pose.pose.position.z = RTr_acc.at<float>(2,3);
+		odom.pose.pose.orientation = R_acc_msg_q;
+		odom_pub_.publish(odom);
+
 		entry_count++;
 
 		// util::tick_high_resolution(start_t, tick, elapsed);
@@ -266,14 +307,15 @@ private:
 		terreslam::KeyPointMatches> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy>* exactSync_;
 
-	///Chrono timmings
+	/// Chrono timmings
 	std::vector<double> elapsed;
 	std::vector<double> elapsed_load_msg;
 	std::vector<double> elapsed_Blob_coarse;
 	std::vector<double> elapsed_KPs;
 
-	/// Blobs
-	unsigned int i,j;
+	/// MA
+	cv::Mat RTr_acc;
+
 };
 
 PLUGINLIB_EXPORT_CLASS(terreslam::MetricAlignmentNodelet, nodelet::Nodelet);

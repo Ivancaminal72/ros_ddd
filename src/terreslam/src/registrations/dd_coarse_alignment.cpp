@@ -403,7 +403,7 @@ namespace terreslam
 				best_param[2] = param[2];
 				best_rmse = cur_rmse;
 
-				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<best_param[2]<<endl;
 
 				// exit condition
 				float inlier_ratio = (float)best_ninliers/N;
@@ -418,7 +418,7 @@ namespace terreslam
 				best_param[2] = param[2];
 				best_rmse = cur_rmse;
 
-				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<best_param[2]<<endl;
 			}
 		} // iterations
 
@@ -427,7 +427,7 @@ namespace terreslam
 
 		if(debug){
 			cout<<"Best iteration: "<<ninliers<<" inliers; recalculate: RMSE = "<<best_rmse<<endl;
-			cout<<" --- Final solution: "<< best_param[0]<<", "<<best_param[1]<<", "<<param[2]<<endl;
+			cout<<" --- Final solution: "<< best_param[0]<<", "<<best_param[1]<<", "<<best_param[2]<<endl;
 		}
 
 		return best_rmse;

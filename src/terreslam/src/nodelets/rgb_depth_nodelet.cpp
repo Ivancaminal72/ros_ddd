@@ -27,6 +27,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <tf2_eigen/tf2_eigen.h>
+#include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <Eigen/Geometry>
@@ -54,14 +55,16 @@ private:
 		
 		std::string subscribedTopicsMsg;
 
-		image_transport::ImageTransport rgb_it(nh);
-		image_transport::ImageTransport depth_it(nh);
+		image_transport::ImageTransport rgb_it_sub(nh);
+		image_transport::ImageTransport depth_it_sub(nh);
+		image_transport::ImageTransport rgb_it_pub(nh);
+		image_transport::ImageTransport depth_it_pub(nh);
 		image_transport::TransportHints hintsRgb("raw", ros::TransportHints(), pnh);
 		image_transport::TransportHints hintsDepth("raw", ros::TransportHints(), pnh);
 
 		/// Subscribers
-		rgb_sub_filter_.subscribe(rgb_it, sub_cam_topic, 1, hintsRgb);
-		depth_sub_filter_.subscribe(depth_it, sub_cam_depth_topic, 1, hintsDepth);
+		rgb_sub_filter_.subscribe(rgb_it_sub, sub_cam_topic, 1, hintsRgb);
+		depth_sub_filter_.subscribe(depth_it_sub, sub_cam_depth_topic, 1, hintsDepth);
 		info_sub_filter_.subscribe(nh, sub_cam_info_topic, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
@@ -69,31 +72,42 @@ private:
 		exactSync_->registerCallback(boost::bind(&RGBDepthNodelet::callback, this, _1, _2, _3));
 
 		// Publishers
+		image_rgb_pub_ = rgb_it_pub.advertiseCamera(pub_cam_topic,1);
+		image_depth_pub_ = depth_it_pub.advertiseCamera(pub_cam_depth_topic,1);
 		cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_topic, 10);
 		cloud_xy_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_xy_topic, 10);
 		// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
-		//Publish identity T_cam_cloud
-		geometry_msgs::TransformStamped Ts_cloud_lidar;
+		//Publish identity transforms
+		geometry_msgs::TransformStamped Ts_identity;
 		static tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
-		Ts_cloud_lidar.transform.rotation.x = 0;
-		Ts_cloud_lidar.transform.rotation.y = 0;
-		Ts_cloud_lidar.transform.rotation.z = 0;
-		Ts_cloud_lidar.transform.rotation.w = 1;
-		Ts_cloud_lidar.transform.translation.x = 0;
-		Ts_cloud_lidar.transform.translation.y = 0;
-		Ts_cloud_lidar.transform.translation.z = 0;
-		Ts_cloud_lidar.header.frame_id = sub_lidar_frame_id;
-		Ts_cloud_lidar.child_frame_id = cloud_frame_id;
-		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
-		Ts_cloud_lidar.child_frame_id = cloud_filtered_frame_id;
-		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
-		Ts_cloud_lidar.child_frame_id = cloud_plane_frame_id;
-		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
-		Ts_cloud_lidar.child_frame_id = cloud_filtered_blobs_frame_id;
-		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
-		Ts_cloud_lidar.child_frame_id = cloud_keypoints_frame_id;
-		static_tf_broadcaster.sendTransform(Ts_cloud_lidar);
+		Ts_identity.transform.rotation.x = 0;
+		Ts_identity.transform.rotation.y = 0;
+		Ts_identity.transform.rotation.z = 0;
+		Ts_identity.transform.rotation.w = 1;
+		Ts_identity.transform.translation.x = 0;
+		Ts_identity.transform.translation.y = 0;
+		Ts_identity.transform.translation.z = 0;
+		Ts_identity.header.frame_id = sub_cam_frame_id;
+		Ts_identity.child_frame_id = pub_cam_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = pub_cam_depth_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = cloud_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = cloud_filtered_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = cloud_plane_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = cloud_filtered_blobs_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = cloud_keypoints_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+
+		static tf2_ros::TransformBroadcaster odom_broadcaster;
+		Ts_identity.header.frame_id = odom_frame_id;
+		Ts_identity.child_frame_id = sub_cam_frame_id;
+		odom_broadcaster.sendTransform(Ts_identity);
 	} 
 
 	void callback(
@@ -211,6 +225,19 @@ private:
 		cloud_xy_pub_.publish(msg_pcd);
 
 		scan_->release();
+		
+		/// RE-PUBLISH images
+		sensor_msgs::Image rgb_msg_pub = *rgb_msg;
+		sensor_msgs::Image depth_msg_pub = *depth_msg;
+		sensor_msgs::CameraInfo info_msg_pub = *info_msg;
+		rgb_msg_pub.header.frame_id = pub_cam_frame_id;
+		info_msg_pub.header.frame_id = pub_cam_frame_id;
+		image_rgb_pub_.publish(rgb_msg_pub, info_msg_pub);
+		depth_msg_pub.header.frame_id = pub_cam_depth_frame_id;
+		info_msg_pub.header.frame_id = pub_cam_depth_frame_id;
+		image_depth_pub_.publish(depth_msg_pub, info_msg_pub);
+		
+		
 		entry_count++;
 
 		// util::tick_high_resolution(start_t, tick, elapsed);
@@ -233,6 +260,8 @@ private:
 	/// Comms
 	ros::Publisher cloud_pub_;
 	ros::Publisher cloud_xy_pub_;
+  image_transport::CameraPublisher image_rgb_pub_;
+  image_transport::CameraPublisher image_depth_pub_;
 	image_transport::SubscriberFilter rgb_sub_filter_;
 	image_transport::SubscriberFilter depth_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::CameraInfo> info_sub_filter_;

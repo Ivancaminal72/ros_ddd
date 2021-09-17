@@ -12,19 +12,41 @@
 		<rosparam file="$(find terreslam)/config/frontend.yaml" command="load"/>
 		<rosparam file="$(find terreslam)/config/backend.yaml" command="load"/>
 		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="nodelet_manager"  args="manager" output="screen"/>
-		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="rgb_depth_nodelet" args="load terreslam/rgb_depth_nodelet nodelet_manager" output="screen"></node>
-		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="dd_keypoint_nodelet" args="load terreslam/dd_keypoint_nodelet nodelet_manager" output="screen"></node>
+		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="rgb_depth_nodelet" args="load terreslam/rgb_depth_nodelet nodelet_manager" output="screen">
+			<remap from="adapt/lidar" to="/adapt/lidar"/>
+			<remap from="adapt/cam" to="/adapt/cam"/>
+			<remap from="adapt/cam_depth" to="/adapt/cam_depth"/>
+			<remap from="adapt/camera_info" to="/adapt/camera_info"/>
+		</node>
+		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="dd_keypoint_nodelet" args="load terreslam/dd_keypoint_nodelet nodelet_manager" output="screen">
+			<remap from="adapt/lidar" to="/adapt/lidar"/>
+			<remap from="adapt/cam" to="/adapt/cam"/>
+			<remap from="adapt/cam_depth" to="/adapt/cam_depth"/>
+			<remap from="adapt/camera_info" to="/adapt/camera_info"/>
+		</node>
 		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="plane_detector_nodelet" args="load terreslam/plane_detector_nodelet nodelet_manager" output="screen"></node>
 		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="ddd_keypoint_nodelet" args="load terreslam/ddd_keypoint_nodelet nodelet_manager" output="screen"></node>
 		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="blob_detector_nodelet" args="load terreslam/blob_detector_nodelet nodelet_manager" output="screen"></node>
 		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="metric_alignment_nodelet" args="load terreslam/metric_alignment_nodelet nodelet_manager" output="screen"></node>
+		<node if="$(arg load)" pkg="nodelet" type="nodelet" name="lc_corrector_nodelet" args="load terreslam/lc_corrector_nodelet nodelet_manager" output="screen"></node>
 		
-		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="rgb_depth_nodelet" args="standalone terreslam/rgb_depth_nodelet" output="screen"></node>
-		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="dd_keypoint_nodelet" args="standalone terreslam/dd_keypoint_nodelet" output="screen"></node>
+		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="rgb_depth_nodelet" args="standalone terreslam/rgb_depth_nodelet" output="screen">
+			<remap from="adapt/lidar" to="/adapt/lidar"/>
+			<remap from="adapt/cam" to="/adapt/cam"/>
+			<remap from="adapt/cam_depth" to="/adapt/cam_depth"/>
+			<remap from="adapt/camera_info" to="/adapt/camera_info"/>
+		</node>
+		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="dd_keypoint_nodelet" args="standalone terreslam/dd_keypoint_nodelet" output="screen">
+			<remap from="adapt/lidar" to="/adapt/lidar"/>
+			<remap from="adapt/cam" to="/adapt/cam"/>
+			<remap from="adapt/cam_depth" to="/adapt/cam_depth"/>
+			<remap from="adapt/camera_info" to="/adapt/camera_info"/>
+		</node>
 		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="plane_detector_nodelet" args="standalone terreslam/plane_detector_nodelet" output="screen"></node>
 		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="ddd_keypoint_nodelet" args="standalone terreslam/ddd_keypoint_nodelet" output="screen"></node>
 		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="blob_detector_nodelet" args="standalone terreslam/blob_detector_nodelet" output="screen"></node>
 		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="metric_alignment_nodelet" args="standalone terreslam/metric_alignment_nodelet" output="screen"></node>
+		<node unless="$(arg load)" pkg="nodelet" type="nodelet" name="lc_corrector_nodelet" args="standalone terreslam/lc_corrector_nodelet" output="screen"></node>
 	</group>
 
 </launch>

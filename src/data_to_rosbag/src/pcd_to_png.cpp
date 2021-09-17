@@ -252,10 +252,10 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
 
   while (nh_sub_.ok() && is_tf_ready_ == false)
   {
-    geometry_msgs::TransformStamped Ts_cam_lidar;
+    geometry_msgs::TransformStamped Ts_cam0_lidar;
     try
     {
-      Ts_cam_lidar = tf_buffer.lookupTransform(prefix_+lidar_frame_id_,
+      Ts_cam0_lidar = tf_buffer.lookupTransform(prefix_+lidar_frame_id_,
               sub_cam_frame_id_, ros::Time(0));
     }
     catch (tf2::TransformException &ex) {
@@ -264,26 +264,27 @@ PcdToPng::PcdToPng(const ros::NodeHandle& nh_sub,
       continue;
     }
 
-    T_cam0_lidar_= tf2::transformToEigen(Ts_cam_lidar);
+    T_cam0_lidar_= tf2::transformToEigen(Ts_cam0_lidar);
     static tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
 
     //Publish identity T_cam_lidar
-    Ts_cam_lidar.transform.rotation.x=0;
-    Ts_cam_lidar.transform.rotation.y=0;
-    Ts_cam_lidar.transform.rotation.z=0;
-    Ts_cam_lidar.transform.rotation.w=1;
-    Ts_cam_lidar.transform.translation.x=0;
-    Ts_cam_lidar.transform.translation.y=0;
-    Ts_cam_lidar.transform.translation.z=0;
-    Ts_cam_lidar.header.frame_id = pub_lidar_frame_id_;
-    Ts_cam_lidar.child_frame_id = pub_cam_frame_id_;
-    static_tf_broadcaster.sendTransform(Ts_cam_lidar);
+    geometry_msgs::TransformStamped Ts_identity;
+    Ts_identity.transform.rotation.x=0;
+    Ts_identity.transform.rotation.y=0;
+    Ts_identity.transform.rotation.z=0;
+    Ts_identity.transform.rotation.w=1;
+    Ts_identity.transform.translation.x=0;
+    Ts_identity.transform.translation.y=0;
+    Ts_identity.transform.translation.z=0;
+    Ts_identity.header.frame_id = pub_cam_frame_id_;
+    Ts_identity.child_frame_id = pub_lidar_frame_id_;
+    static_tf_broadcaster.sendTransform(Ts_identity);
 
-    Ts_cam_lidar.child_frame_id = pub_cam_frame_id_ + "_depth";
-    static_tf_broadcaster.sendTransform(Ts_cam_lidar);
+    Ts_identity.child_frame_id = pub_cam_frame_id_ + "_depth";
+    static_tf_broadcaster.sendTransform(Ts_identity);
 
-    //compute_intensity// Ts_cam_lidar.child_frame_id = pub_cam_frame_id_ + "_infrared";
-    //compute_intensity// static_tf_broadcaster.sendTransform(Ts_cam_lidar);
+    //compute_intensity// Ts_identity.child_frame_id = pub_cam_frame_id_ + "_infrared";
+    //compute_intensity// static_tf_broadcaster.sendTransform(Ts_identity);
 
     is_tf_ready_=true;
     ROS_INFO("OK - Tf is ready");

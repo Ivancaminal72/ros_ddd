@@ -37,6 +37,8 @@ protected:
 	std::string sub_cam_topic;
 	std::string sub_cam_depth_topic;
 	std::string sub_cam_info_topic;
+	std::string pub_cam_topic;
+	std::string pub_cam_depth_topic;
 
 	// General frame_id
 	std::string odom_frame_id;
@@ -54,6 +56,8 @@ protected:
 	std::string sub_cam_frame_id;
 	std::string sub_cam_depth_frame_id;
 	std::string sub_cam_info_frame_id;
+	std::string pub_cam_frame_id;
+	std::string pub_cam_depth_frame_id;
 	
 	/// General parameters
 	int entry_count = 0;
@@ -100,6 +104,7 @@ protected:
 	float DDDKP_FPFH_radius;
 
 	//MA
+	bool MA_KPs;
 	bool MA_joint_KPs;
 	bool MA_debug_Blobs_coarse;
 	bool MA_debug_KPs;

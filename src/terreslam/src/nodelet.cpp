@@ -43,6 +43,8 @@ void Nodelet::onInit()
 	nh.getParam("base_topic/sub_cam", sub_cam_topic);
 	nh.getParam("base_topic/sub_cam_depth", sub_cam_depth_topic);
 	nh.getParam("base_topic/sub_cam_info", sub_cam_info_topic);
+	nh.getParam("base_topic/pub_cam", pub_cam_topic);
+	nh.getParam("base_topic/pub_cam_depth", pub_cam_depth_topic);
 
 	odom_frame_id = (nh.getNamespace()+"/"+odom_topic).erase(0,1);
 	cloud_frame_id = (nh.getNamespace()+"/"+cloud_topic).erase(0,1);
@@ -55,10 +57,12 @@ void Nodelet::onInit()
 	blob_matches_frame_id = (nh.getNamespace()+"/"+blob_matches_topic).erase(0,1);
 	dd_keypoint_matches_frame_id = (nh.getNamespace()+"/"+dd_keypoint_matches_topic).erase(0,1);
 	ddd_keypoint_matches_frame_id = (nh.getNamespace()+"/"+ddd_keypoint_matches_topic).erase(0,1);
-	sub_lidar_frame_id = sub_lidar_topic.erase(0,1);
-	sub_cam_frame_id = sub_lidar_topic.erase(0,1);
-	sub_cam_depth_frame_id = sub_lidar_topic.erase(0,1);
-	sub_cam_info_frame_id = sub_lidar_topic.erase(0,1);
+	sub_lidar_frame_id = (nh.getNamespace()+"/"+sub_lidar_topic).erase(0,1);
+	sub_cam_frame_id = (nh.getNamespace()+"/"+sub_cam_topic).erase(0,1);
+	sub_cam_depth_frame_id = (nh.getNamespace()+"/"+sub_cam_depth_topic).erase(0,1);
+	sub_cam_info_frame_id = (nh.getNamespace()+"/"+sub_cam_info_topic).erase(0,1);
+	pub_cam_frame_id = (nh.getNamespace()+"/"+pub_cam_topic).erase(0,1);
+	pub_cam_depth_frame_id = (nh.getNamespace()+"/"+pub_cam_depth_topic).erase(0,1);
 		
 	/// - Plane filter parameters
 	nh.getParam("PF/threshold", PF_thresh);
@@ -95,6 +99,7 @@ void Nodelet::onInit()
 	nh.getParam("DDDKP/FPFH_radius", DDDKP_FPFH_radius);
 
 	/// - MA
+	nh.getParam("MA/KPs", MA_KPs);
 	nh.getParam("MA/joint_KPs", MA_joint_KPs);
 	nh.getParam("MA/debug_Blobs_coarse", MA_debug_Blobs_coarse);
 	nh.getParam("MA/debug_KPs", MA_debug_KPs);

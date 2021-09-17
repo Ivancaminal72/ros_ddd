@@ -108,7 +108,7 @@ private:
 		// float max_height=0;
 		std::vector<int> indices_to_delete;
 		j=0;
-		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, j+=1)
+		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, j+=1)
 		{
 			Blob blob;
 			// uint32_t rgba = util::rgba_palette((double)j/cluster_indices.size());
@@ -217,7 +217,7 @@ private:
 			}
 
 			i=0;
-			for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, i+=1)
+			for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, i+=1)
 			{
 				Eigen::MatrixXf::Index minIndexCol, minIndexRow;
 				blob_dist.row(i).minCoeff(&minIndexRow);
@@ -240,7 +240,7 @@ private:
 			}
 
 			j=0;
-			for (std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin (); it != old_cluster_indices.end (); ++it, j+=1)
+			for (std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin(); it != old_cluster_indices.end(); ++it, j+=1)
 			{
 				for (const auto& idx : it->indices)
 				{

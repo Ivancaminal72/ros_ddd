@@ -32,5 +32,19 @@ float calculateMedian(std::vector<float> scores)
   }
 }
 
+cv::Mat quat2Mat(tf2::Quaternion q)
+{
+    tf2::Matrix3x3 m(q); 
+    cv::Mat rotm_mat(3, 3, CV_32F); 
+    for(int i = 0; i < 3; i++)
+    {
+         tf2::Vector3 test = m.getRow(i);
+         rotm_mat.at<float>(i, 0) = test.getX();
+         rotm_mat.at<float>(i, 1) = test.getY();
+         rotm_mat.at<float>(i, 2) = test.getZ();
+    }
+return rotm_mat;
+}
+
 }
 }

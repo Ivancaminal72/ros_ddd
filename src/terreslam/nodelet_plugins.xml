@@ -48,4 +48,12 @@
 	</description>
   </class>
 
+	<class name="terreslam/lc_corrector_nodelet"
+		 type="terreslam::LCCorrectorNodelet"
+		 base_class_type="nodelet::Nodelet">
+	<description>
+	  Loop Closure Corrector
+	</description>
+  </class>
+
 </library>

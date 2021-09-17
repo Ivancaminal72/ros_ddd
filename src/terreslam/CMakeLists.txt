@@ -107,6 +107,7 @@ add_library(${PROJECT_NAME}_plugins
 	src/nodelets/ddd_keypoint_nodelet.cpp
 	src/nodelets/blob_detector_nodelet.cpp
 	src/nodelets/metric_alignment_nodelet.cpp
+	src/nodelets/lc_corrector_nodelet.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_plugins ${PROJECT_NAME} ${Libraries})
@@ -139,6 +140,10 @@ add_executable(metric_alignment_nodelet src/nodelets/executables/metric_alignmen
 target_link_libraries(metric_alignment_nodelet ${Libraries})
 set_target_properties(metric_alignment_nodelet PROPERTIES OUTPUT_NAME "metric_alignment_nodelet")
 
+add_executable(lc_corrector_nodelet src/nodelets/executables/lc_corrector_nodelet.cpp)
+target_link_libraries(lc_corrector_nodelet ${Libraries})
+set_target_properties(lc_corrector_nodelet PROPERTIES OUTPUT_NAME "lc_corrector_nodelet")
+
 ###########
 # INSTALL #
 ###########
@@ -150,6 +155,7 @@ install(TARGETS
 	ddd_keypoint_nodelet
 	blob_detector_nodelet
 	metric_alignment_nodelet
+	lc_corrector_nodelet
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
