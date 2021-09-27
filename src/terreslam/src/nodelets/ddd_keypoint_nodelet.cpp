@@ -69,7 +69,7 @@ private:
 		const sensor_msgs::PointCloud2::ConstPtr& cf_msg_ptr,
 		const sensor_msgs::PointCloud2::ConstPtr& nf_msg_ptr)
 	{
-		std::cout << "Entry DDD KP: " << entry_count << std::endl;
+		if(debug) std::cout << "Entry DDD KP: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -108,8 +108,7 @@ private:
 			est.setInputSource(old_desc);
 			est.setInputTarget(cur_desc);
 			est.determineCorrespondences(*matches_tmp);
-			// est.determineReciprocalCorrespondences(*matches);
-			// util::tick_high_resolution(start_t, tick, elapsed_matching);
+			// est.determineReciprocalCorrespondences(*matches_tmp);
 
 			// std::cout<<"Number of matches: "<<matches_tmp->size()<<std::endl;
 
@@ -118,10 +117,10 @@ private:
 			pcl::registration::CorrespondenceRejectorOneToOne rejector_one_to_one;
 			rejector_one_to_one.setInputCorrespondences(matches_tmp);
 			rejector_one_to_one.getCorrespondences(*matches);
-			// util::tick_high_resolution(start_t, tick, elapsed_rejector);
 
 			// std::cout<<"Number of filtered matches: "<<matches->size()<<std::endl;
 		}
+		// util::tick_high_resolution(start_t, tick, elapsed_matching);
 		
 		/// PRE-PUBLISH
 		size_t sm = matches->size();
@@ -164,7 +163,6 @@ private:
 		// util::printElapsed(elapsed_KP_detection, "KP_detection: ");
 		// util::printElapsed(elapsed_KP_description, "KP_description: ");
 		// util::printElapsed(elapsed_matching, "Matching: ");
-		// util::printElapsed(elapsed_rejector, "Rejector: ");
 		// util::printElapsed(elapsed_publish, "Publish: ");
 	}
 
@@ -185,12 +183,11 @@ private:
 
 	/// Chrono timmings
 	// std::vector<double> elapsed;
-	// std::vector<double> elapsed_initialization;
-	// std::vector<double> elapsed_KP_detection;
-	// std::vector<double> elapsed_KP_description;
-	// std::vector<double> elapsed_matching;
-	// std::vector<double> elapsed_rejector;
-	// std::vector<double> elapsed_publish;
+	std::vector<double> elapsed_initialization;
+	std::vector<double> elapsed_KP_detection;
+	std::vector<double> elapsed_KP_description;
+	std::vector<double> elapsed_matching;
+	std::vector<double> elapsed_publish;
 
 	///Kpts
 	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cur_kpts;

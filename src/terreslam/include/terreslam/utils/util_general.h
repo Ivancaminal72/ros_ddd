@@ -6,6 +6,7 @@
 #pragma once
 
 #include <vector>
+#include <deque>
 #include <iostream>
 #include <algorithm>
 
@@ -17,6 +18,7 @@ namespace terreslam
 namespace util
 {
 	float calculateMedian(std::vector<float> scores);
+	float calculateMedian(std::deque<float> scores);
 	cv::Mat quat2Mat(tf2::Quaternion q);
 }
 }

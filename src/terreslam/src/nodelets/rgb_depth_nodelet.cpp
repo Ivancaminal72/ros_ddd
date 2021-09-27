@@ -103,11 +103,15 @@ private:
 		static_tf_broadcaster.sendTransform(Ts_identity);
 		Ts_identity.child_frame_id = cloud_keypoints_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = visualization_kps_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
 
 		static tf2_ros::TransformBroadcaster odom_broadcaster;
 		Ts_identity.header.frame_id = odom_frame_id;
 		Ts_identity.child_frame_id = sub_cam_frame_id;
 		odom_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = visualization_trajectory_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
 	} 
 
 	void callback(
@@ -115,7 +119,7 @@ private:
 		const sensor_msgs::Image::ConstPtr& depth_msg,
 		const sensor_msgs::CameraInfo::ConstPtr& info_msg)
 	{
-		std::cout << "Entry: " << entry_count << std::endl;
+		if(debug) std::cout << "Entry: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;

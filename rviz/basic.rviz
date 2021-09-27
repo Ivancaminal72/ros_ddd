@@ -7,9 +7,11 @@ Panels:
         - /Global Options1
         - /Status1
         - /Camera1
+        - /Marker1
+        - /Marker1/Namespaces1
         - /PointCloud21
         - /Odometry1
-        - /Odometry1/Status1
+        - /Marker2
       Splitter Ratio: 0.5
     Tree Height: 456
   - Class: rviz/Selection
@@ -30,7 +32,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Camera
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -59,7 +61,7 @@ Visualization Manager:
     - Class: rviz/Camera
       Enabled: true
       Image Rendering: background and overlay
-      Image Topic: /adapt/cam
+      Image Topic: /terreslam/adapt/cam/pub
       Name: Camera
       Overlay Alpha: 0.5
       Queue Size: 2
@@ -68,10 +70,19 @@ Visualization Manager:
       Value: true
       Visibility:
         Grid: true
+        Marker: true
         Odometry: true
         PointCloud2: true
         Value: true
       Zoom Factor: 1
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /terreslam/visualization_kps
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -95,7 +106,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.10000000149011612
       Style: Flat Squares
-      Topic: /terreslam/cloud
+      Topic: /terreslam/cloud_keypoints
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -134,6 +145,14 @@ Visualization Manager:
         Value: Arrow
       Topic: /terreslam/odom
       Unreliable: true
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /terreslam/visualization_trajectory
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:

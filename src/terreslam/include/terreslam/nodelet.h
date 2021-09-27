@@ -23,6 +23,7 @@ public:
 protected:
 	// General topic
 	std::string odom_topic;
+	std::string blob_odom_topic;
 	std::string cloud_topic;
 	std::string cloud_xy_topic;
 	std::string cloud_filtered_topic;
@@ -39,9 +40,12 @@ protected:
 	std::string sub_cam_info_topic;
 	std::string pub_cam_topic;
 	std::string pub_cam_depth_topic;
+	std::string visualization_kps_topic;
+	std::string visualization_trajectory_topic;
 
 	// General frame_id
 	std::string odom_frame_id;
+	std::string blob_odom_frame_id;
 	std::string cloud_frame_id;
 	std::string cloud_xy_frame_id;
 	std::string cloud_filtered_frame_id;
@@ -58,11 +62,17 @@ protected:
 	std::string sub_cam_info_frame_id;
 	std::string pub_cam_frame_id;
 	std::string pub_cam_depth_frame_id;
+	std::string visualization_kps_frame_id;
+	std::string visualization_trajectory_frame_id;
 	
 	/// General parameters
 	int entry_count = 0;
+	bool debug;
 	std::string logs_dir;
 	double max_depth;
+	float max_steering_angle;
+	float max_rollaxis_acc;
+	float max_pitchaxis_acc;
 
 	/// Constants
 	const double depthScale = pow(2,16)/120;
@@ -104,10 +114,13 @@ protected:
 	float DDDKP_FPFH_radius;
 
 	//MA
+	bool MA_Blobs;
+	bool MA_blob_regularisation;
 	bool MA_KPs;
 	bool MA_joint_KPs;
 	bool MA_debug_Blobs_coarse;
 	bool MA_debug_KPs;
+	int MA_max_blob_heading_vels;
 	
 
 

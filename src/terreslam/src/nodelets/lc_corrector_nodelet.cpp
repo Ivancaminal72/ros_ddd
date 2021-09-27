@@ -41,7 +41,7 @@ private:
 	void callback(
 		const nav_msgs::Odometry::ConstPtr& o_msg_ptr)
 	{
-		std::cout << "Entry LCC: " << entry_count << std::endl;
+		if(debug) std::cout << "Entry LCC: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;

@@ -78,7 +78,7 @@ private:
 		const sensor_msgs::Image::ConstPtr& depth_msg,
 		const sensor_msgs::CameraInfo::ConstPtr& info_msg)
 	{
-		std::cout << "Entry DD KP: " << entry_count << std::endl;
+		if(debug) std::cout << "Entry DD KP: " << entry_count << std::endl;
 		///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;
@@ -249,13 +249,13 @@ private:
 	
 	///Chrono timmings
 	// std::vector<double> elapsed;
-	// std::vector<double> elapsed_initialization;
-	// std::vector<double> elapsed_KP_detection;
-	// std::vector<double> elapsed_KP_description;
-	// std::vector<double> elapsed_cam_model;
-	// std::vector<double> elapsed_matching;
-	// std::vector<double> elapsed_backprojection;
-	// std::vector<double> elapsed_publish;
+	std::vector<double> elapsed_initialization;
+	std::vector<double> elapsed_KP_detection;
+	std::vector<double> elapsed_KP_description;
+	std::vector<double> elapsed_cam_model;
+	std::vector<double> elapsed_matching;
+	std::vector<double> elapsed_backprojection;
+	std::vector<double> elapsed_publish;
 
 	///Kpts
 	std::vector<cv::KeyPoint> cur_kpts;

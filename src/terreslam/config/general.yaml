@@ -2,11 +2,16 @@
 #IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
 
 # General
+debug: true
 logsdir: '/home/ivan/outputs/terreslam/unorganized'
 max_depth: 120.0  #for Kinect 6.0
+max_steering_angle: 30
+max_rollaxis_acc: 28 #acc 8 dec 30
+max_pitchaxis_acc: 14 #sin(max_steering_angle)*max_rollaxis_acc
 
 # Comms
 base_topic/odom: 'odom'
+base_topic/blob_odom: 'blob_odom'
 base_topic/cloud: 'cloud'
 base_topic/cloud_xy: 'cloud_xy'
 base_topic/cloud_filtered: 'cloud_filtered'
@@ -23,3 +28,5 @@ base_topic/sub_cam_depth: 'adapt/cam_depth'
 base_topic/sub_cam_info: 'adapt/camera_info'
 base_topic/pub_cam: 'adapt/cam/pub'
 base_topic/pub_cam_depth: 'adapt/cam_depth/pub'
+base_topic/visualization_kps: 'visualization_kps'
+base_topic/visualization_trajectory: 'visualization_trajectory'

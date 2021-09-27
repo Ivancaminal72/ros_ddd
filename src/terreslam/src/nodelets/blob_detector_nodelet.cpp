@@ -67,13 +67,15 @@ private:
 	void callback(
 		const sensor_msgs::PointCloud2::ConstPtr& cf_msg_ptr)
 	{
-		std::cout << "Entry blob: " << entry_count << std::endl;
+		if(debug) std::cout << "Entry blob: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;
 		// start_t = std::chrono::high_resolution_clock::now();
 		// end_t = std::chrono::high_resolution_clock::now();
 		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+
+		ros::Time cur_stamp = cf_msg_ptr->header.stamp;
 
 		pcl::PointCloud<pcl::PointXYZRGBA>::Ptr points (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		pcl::fromROSMsg(*cf_msg_ptr, *points);
@@ -177,6 +179,7 @@ private:
 		///MATCHING
 		if(entry_count == 0 || reset) //First time initialize map
 		{
+			old_time = cur_stamp.toSec();
 			old_points = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr (new pcl::PointCloud<pcl::PointXYZRGBA>);
 			map_blobs=current_blobs;
 			old_cluster_indices=cluster_indices;
@@ -194,6 +197,8 @@ private:
 		}
 		else //Attempt matching
 		{
+			delta_time = cur_stamp.toSec() - old_time;
+			old_time = cur_stamp.toSec();
 			matches.clear();
 			int cur_size = cluster_indices.size();
 			int old_size = old_cluster_indices.size();
@@ -332,6 +337,7 @@ private:
 			radius_old[i] = map_blobs.at(matches.at(i).second).radius;
 			height_old[i] = map_blobs.at(matches.at(i).second).height;
 		}
+		bm_msg_ptr->delta_time = delta_time;
 		bm_msg_ptr->stability = stability;
 		bm_msg_ptr->x_cur = x_cur;
 		bm_msg_ptr->z_cur = z_cur;
@@ -387,6 +393,10 @@ private:
 	bool reset=false;
 
 	uint32_t rgba[50];
+
+	///Timming
+	double delta_time = -1;
+	double old_time = -1;
 
 	/// Logging
 	std::ofstream fp_;

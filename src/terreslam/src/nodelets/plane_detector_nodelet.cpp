@@ -70,7 +70,7 @@ private:
 		const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
 		const sensor_msgs::PointCloud2::ConstPtr& cloud_xy_msg_ptr)
 	{
-		std::cout << "Entry plane: " << entry_count << std::endl;
+		if(debug) std::cout << "Entry plane: " << entry_count << std::endl;
 		// ///Start chrono ticking
 		// std::chrono::duration<double> tick;
 		// std::chrono::high_resolution_clock::time_point end_t, start_t;

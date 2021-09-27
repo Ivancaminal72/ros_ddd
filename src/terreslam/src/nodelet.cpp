@@ -23,12 +23,9 @@ void Nodelet::onInit()
 	ros::NodeHandle & pnh = getPrivateNodeHandle();
 	const nodelet::V_string & str_argv = getMyArgv();
 
-	/// - General parameters
-	nh.getParam("logsdir", logs_dir);
-	nh.getParam("max_depth", max_depth);
-
 	/// - Comms parameters
 	nh.getParam("base_topic/odom", odom_topic);
+	nh.getParam("base_topic/blob_odom", blob_odom_topic);
 	nh.getParam("base_topic/cloud", cloud_topic);
 	nh.getParam("base_topic/cloud_xy", cloud_xy_topic);
 	nh.getParam("base_topic/cloud_filtered", cloud_filtered_topic);
@@ -45,8 +42,11 @@ void Nodelet::onInit()
 	nh.getParam("base_topic/sub_cam_info", sub_cam_info_topic);
 	nh.getParam("base_topic/pub_cam", pub_cam_topic);
 	nh.getParam("base_topic/pub_cam_depth", pub_cam_depth_topic);
+	nh.getParam("base_topic/visualization_kps", visualization_kps_topic);
+	nh.getParam("base_topic/visualization_trajectory", visualization_trajectory_topic);
 
 	odom_frame_id = (nh.getNamespace()+"/"+odom_topic).erase(0,1);
+	blob_odom_frame_id = (nh.getNamespace()+"/"+blob_odom_topic).erase(0,1);
 	cloud_frame_id = (nh.getNamespace()+"/"+cloud_topic).erase(0,1);
 	cloud_xy_frame_id = (nh.getNamespace()+"/"+cloud_xy_topic).erase(0,1);
 	cloud_filtered_frame_id = (nh.getNamespace()+"/"+cloud_filtered_topic).erase(0,1);
@@ -63,7 +63,17 @@ void Nodelet::onInit()
 	sub_cam_info_frame_id = (nh.getNamespace()+"/"+sub_cam_info_topic).erase(0,1);
 	pub_cam_frame_id = (nh.getNamespace()+"/"+pub_cam_topic).erase(0,1);
 	pub_cam_depth_frame_id = (nh.getNamespace()+"/"+pub_cam_depth_topic).erase(0,1);
+	visualization_kps_frame_id = (nh.getNamespace()+"/"+visualization_kps_topic).erase(0,1);
+	visualization_trajectory_frame_id = (nh.getNamespace()+"/"+visualization_trajectory_topic).erase(0,1);
 		
+	/// - General parameters
+	nh.getParam("debug", debug);
+	nh.getParam("logsdir", logs_dir);
+	nh.getParam("max_depth", max_depth);
+	nh.getParam("max_steering_angle", max_steering_angle);
+	nh.getParam("max_rollaxis_acc", max_rollaxis_acc);
+	nh.getParam("max_pitchaxis_acc", max_pitchaxis_acc);
+	
 	/// - Plane filter parameters
 	nh.getParam("PF/threshold", PF_thresh);
 	nh.getParam("PF/highpass", PF_highpass);	
@@ -99,10 +109,15 @@ void Nodelet::onInit()
 	nh.getParam("DDDKP/FPFH_radius", DDDKP_FPFH_radius);
 
 	/// - MA
+	nh.getParam("MA/Blobs", MA_Blobs);
+	nh.getParam("MA/blob_regularisation", MA_blob_regularisation);
 	nh.getParam("MA/KPs", MA_KPs);
+	assert(MA_Blobs || MA_KPs);
 	nh.getParam("MA/joint_KPs", MA_joint_KPs);
 	nh.getParam("MA/debug_Blobs_coarse", MA_debug_Blobs_coarse);
 	nh.getParam("MA/debug_KPs", MA_debug_KPs);
+	nh.getParam("MA/max_blob_heading_vels", MA_max_blob_heading_vels);
+	
 
 	onNodeletInit();
 }
