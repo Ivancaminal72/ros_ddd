@@ -300,7 +300,7 @@ namespace terreslam
 				best_param[3] = param[3];
 				best_param[4] = param[4];
 				best_param[5] = param[5];
-				best_param_RTr = param_RTr;
+				best_param_RTr = param_RTr.clone();
 				best_rmse = cur_rmse;
 
 				if(debug){
@@ -324,7 +324,7 @@ namespace terreslam
 				best_param[3] = param[3];
 				best_param[4] = param[4];
 				best_param[5] = param[5];
-				best_param_RTr = param_RTr;
+				best_param_RTr = param_RTr.clone();
 				best_rmse = cur_rmse;
 
 				if(debug){

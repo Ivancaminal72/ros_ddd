@@ -24,6 +24,7 @@ void Nodelet::onInit()
 	const nodelet::V_string & str_argv = getMyArgv();
 
 	/// - Comms parameters
+	nh.getParam("base_topic/base_link", base_link_topic);
 	nh.getParam("base_topic/odom", odom_topic);
 	nh.getParam("base_topic/blob_odom", blob_odom_topic);
 	nh.getParam("base_topic/cloud", cloud_topic);
@@ -45,6 +46,7 @@ void Nodelet::onInit()
 	nh.getParam("base_topic/visualization_kps", visualization_kps_topic);
 	nh.getParam("base_topic/visualization_trajectory", visualization_trajectory_topic);
 
+	base_link_frame_id = (nh.getNamespace()+"/"+base_link_topic).erase(0,1);
 	odom_frame_id = (nh.getNamespace()+"/"+odom_topic).erase(0,1);
 	blob_odom_frame_id = (nh.getNamespace()+"/"+blob_odom_topic).erase(0,1);
 	cloud_frame_id = (nh.getNamespace()+"/"+cloud_topic).erase(0,1);
@@ -73,6 +75,8 @@ void Nodelet::onInit()
 	nh.getParam("max_steering_angle", max_steering_angle);
 	nh.getParam("max_rollaxis_acc", max_rollaxis_acc);
 	nh.getParam("max_pitchaxis_acc", max_pitchaxis_acc);
+	nh.getParam("max_rollaxis_vel", max_rollaxis_vel);
+	nh.getParam("max_pitchaxis_vel", max_pitchaxis_vel);
 	
 	/// - Plane filter parameters
 	nh.getParam("PF/threshold", PF_thresh);

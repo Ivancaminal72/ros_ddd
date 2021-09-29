@@ -22,6 +22,7 @@ public:
 
 protected:
 	// General topic
+	std::string base_link_topic;
 	std::string odom_topic;
 	std::string blob_odom_topic;
 	std::string cloud_topic;
@@ -44,6 +45,7 @@ protected:
 	std::string visualization_trajectory_topic;
 
 	// General frame_id
+	std::string base_link_frame_id;
 	std::string odom_frame_id;
 	std::string blob_odom_frame_id;
 	std::string cloud_frame_id;
@@ -73,6 +75,8 @@ protected:
 	float max_steering_angle;
 	float max_rollaxis_acc;
 	float max_pitchaxis_acc;
+	float max_rollaxis_vel;
+	float max_pitchaxis_vel;
 
 	/// Constants
 	const double depthScale = pow(2,16)/120;

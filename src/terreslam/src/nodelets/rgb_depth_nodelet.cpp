@@ -27,6 +27,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <tf2_eigen/tf2_eigen.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
@@ -79,8 +80,8 @@ private:
 		// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
 		//Publish identity transforms
-		geometry_msgs::TransformStamped Ts_identity;
 		static tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
+		geometry_msgs::TransformStamped Ts_identity;
 		Ts_identity.transform.rotation.x = 0;
 		Ts_identity.transform.rotation.y = 0;
 		Ts_identity.transform.rotation.z = 0;
@@ -105,6 +106,20 @@ private:
 		static_tf_broadcaster.sendTransform(Ts_identity);
 		Ts_identity.child_frame_id = visualization_kps_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);
+
+		tf2::Quaternion quat;
+		quat.setEulerZYX(-M_PI_2, 0, -M_PI_2);
+		geometry_msgs::TransformStamped Ts_odom_vehicle;
+		Ts_odom_vehicle.transform.rotation.x = quat.x();
+		Ts_odom_vehicle.transform.rotation.y = quat.y();
+		Ts_odom_vehicle.transform.rotation.z = quat.z();
+		Ts_odom_vehicle.transform.rotation.w = quat.w();
+		Ts_odom_vehicle.transform.translation.x = 0;
+		Ts_odom_vehicle.transform.translation.y = 0;
+		Ts_odom_vehicle.transform.translation.z = 0;
+		Ts_odom_vehicle.header.frame_id = base_link_frame_id;
+		Ts_odom_vehicle.child_frame_id = odom_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_odom_vehicle);
 
 		static tf2_ros::TransformBroadcaster odom_broadcaster;
 		Ts_identity.header.frame_id = odom_frame_id;

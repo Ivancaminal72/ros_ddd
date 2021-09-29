@@ -21,6 +21,7 @@
 
 #include <nav_msgs/Odometry.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_broadcaster.h>
 
@@ -154,10 +155,10 @@ private:
 		float theta = best_param[0];
 		float tx = best_param[1];
 		float tz = best_param[2];
-		RTr = cv::Mat(cv::Matx44f(cos(theta) , 0, sin(theta), tx, 
-															0          , 1, 0 			  , 0 , 
-															-sin(theta), 0, cos(theta), tz,
-															0          , 0, 0         , 1));
+		RTr = cv::Mat(cv::Matx44f(cos(theta), 0, -sin(theta), tx, 
+															0         , 1, 0 			    , 0 , 
+															sin(theta), 0, cos(theta) , tz,
+															0         , 0, 0          , 1));
 		
 
 		/// - MA Blob Regularization
@@ -166,11 +167,20 @@ private:
 		if(entry_count < 3)
 		{
 			blob_v_cur = blob_d_cur / delta_time;
-			RTr_blob_old = RTr;
-			float v_mod2 = pow(tx/delta_time,2)+pow(tz/delta_time,2);
-			blob_heading_vels.push_back(sqrt(v_mod2));
-			blob_heading_vels2.push_back(v_mod2);
-			trajectory.color.g = 0.0; //red (default)
+			if(abs(blob_v_cur.x) > max_pitchaxis_vel 
+			|| abs(blob_v_cur.y) > max_rollaxis_vel)
+			{
+				RTr = RTr_blob_old.clone(); //Repeat transform
+				trajectory.color.g = 1.0; //yellow (repeat)
+			}
+			else //Valid transform
+			{
+				RTr_blob_old = RTr.clone();
+				float v_mod2 = pow(tx/delta_time,2)+pow(tz/delta_time,2);
+				blob_heading_vels.push_back(sqrt(v_mod2));
+				blob_heading_vels2.push_back(v_mod2);
+				trajectory.color.g = 0.0; //red (default)
+			}
 		}
 		else
 		{
@@ -192,12 +202,12 @@ private:
 			if(abs(blob_a_cur.x) > max_pitchaxis_acc 
 			|| abs(blob_a_cur.y) > max_rollaxis_acc)
 			{
-				RTr = RTr_blob_old; //Repeat transform
+				RTr = RTr_blob_old.clone(); //Repeat transform
 				trajectory.color.g = 1.0; //yellow (repeat)
 			}
 			else //Valid transform
 			{
-				RTr_blob_old = RTr;
+				RTr_blob_old = RTr.clone();
 				float v_mod2 = pow(tx/delta_time,2)+pow(tz/delta_time,2);
 				blob_heading_vels.push_back(sqrt(v_mod2));
 				blob_heading_vels2.push_back(v_mod2);
@@ -253,7 +263,7 @@ private:
 			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
 
 			if(MA_Blobs) RTr = RTr * RTr_KPs;
-			else RTr = RTr_KPs;
+			else RTr = RTr_KPs.clone();
 
 		}
 		else if(MA_KPs) //separated KPs
@@ -268,7 +278,7 @@ private:
 			fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
 
 			if(MA_Blobs) RTr = RTr * RTr_2DKPs;
-			else RTr = RTr_2DKPs;
+			else RTr = RTr_2DKPs.clone();
 
 			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
@@ -300,7 +310,26 @@ private:
 		p.z = RTr_acum.at<float>(2,3);
 		trajectory.points.push_back(p);
 
-		RTr_acum = RTr_acum * RTr.inv();
+		cv::Mat R_inv = RTr(cv::Rect( 0, 0, 3, 3 )).t();
+		cv::Mat RTr_inv = cv::Mat(cv::Matx44f(R_inv.at<float>(0,0), R_inv.at<float>(0,1), R_inv.at<float>(0,2), -RTr.at<float>(0,3), 
+																					R_inv.at<float>(1,0), R_inv.at<float>(1,1), R_inv.at<float>(1,2), -RTr.at<float>(1,3), 
+																					R_inv.at<float>(2,0), R_inv.at<float>(2,1), R_inv.at<float>(2,2), -RTr.at<float>(2,3),
+																					0										, 0										, 0										,	1									));
+		 
+		RTr_acum = RTr_acum * RTr_inv;
+
+		// cout<<"Tx: "<<RTr.at<float>(0,3)<<endl;
+		// cout<<"Ty: "<<RTr.at<float>(1,3)<<endl;
+		// cout<<"Tz: "<<RTr.at<float>(2,3)<<endl;
+		// cout<<"INVERSE"<<endl;
+		// cout<<"Tx: "<<RTr_inv.at<float>(0,3)<<endl;
+		// cout<<"Ty: "<<RTr_inv.at<float>(1,3)<<endl;
+		// cout<<"Tz: "<<RTr_inv.at<float>(2,3)<<endl;
+		// cout<<"ACCUMULATE"<<endl;
+		// cout<<"Tx: "<<RTr_acum.at<float>(0,3)<<endl;
+		// cout<<"Ty: "<<RTr_acum.at<float>(1,3)<<endl;
+		// cout<<"Tz: "<<RTr_acum.at<float>(2,3)<<endl<<endl;
+
 		tf2::Matrix3x3 R_acc_tf2_m(RTr_acum.at<float>(0,0), RTr_acum.at<float>(0,1), RTr_acum.at<float>(0,2),
 															 RTr_acum.at<float>(1,0), RTr_acum.at<float>(1,1), RTr_acum.at<float>(1,2),
 															 RTr_acum.at<float>(2,0), RTr_acum.at<float>(2,1), RTr_acum.at<float>(2,2)); 
@@ -473,7 +502,7 @@ private:
 	cv::Point2f blob_a_cur;
 	std::deque<float> blob_v_old_z;
 	std::deque<float> blob_v_old_x;
-	cv::Mat RTr_blob_old;
+	cv::Mat RTr_blob_old = RTr_acum.clone(); //identity
 	std::deque<float> blob_heading_vels;
 	std::deque<float> blob_heading_vels2;
 
