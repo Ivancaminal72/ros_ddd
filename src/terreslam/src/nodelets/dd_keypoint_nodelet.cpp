@@ -14,10 +14,6 @@
 #include "nodelet/nodelet.h"
 #include <pluginlib/class_list_macros.h>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <message_filters/sync_policies/exact_time.h>
-
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
 
@@ -26,6 +22,11 @@
 
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+
+#include <nav_msgs/Odometry.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
 
 #include <Eigen/Geometry>
 
@@ -69,8 +70,14 @@ private:
 			(MyExactSyncPolicy(queue_size_), rgb_sub_filter_, depth_sub_filter_, info_sub_filter_);
 		exactSync_->registerCallback(boost::bind(&DDKeypointNodelet::callback, this, _1, _2, _3));
 
-		// Publishers
+		blob_odom_sub_ = nh.subscribe(blob_odom_topic, queue_size_, &DDKeypointNodelet::updateBlobHeadingVel, this);
+
+		/// Publishers
 		dd_keypoint_matches_pub_ = nh.advertise<terreslam::KeyPointMatches>(dd_keypoint_matches_topic, 1);
+
+		/// Motion filter
+		possible_blob_heading_vel = -max_rollaxis_vel;
+
 	} 
 
 	void callback(
@@ -85,6 +92,8 @@ private:
 		// start_t = std::chrono::high_resolution_clock::now();
 		// end_t = std::chrono::high_resolution_clock::now();
 		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+
+		ros::Time cur_stamp = rgb_msg->header.stamp;
 
 		cv_bridge::CvImage::ConstPtr ptr_msg_rgb = cv_bridge::toCvShare(rgb_msg);
 		cv_bridge::CvImage::ConstPtr ptr_msg_depth = cv_bridge::toCvShare(depth_msg);
@@ -116,14 +125,13 @@ private:
 		// cam_model.printModel();
 
 		cur_P_inv = cam_model.P().inverse().matrix();
-		Eigen::Vector4d point_eigen;
-		Eigen::Vector4d point_eigen_backproj;
 		// util::tick_high_resolution(start_t, tick, elapsed_cam_model);
 		
 
 		///MATCHING
 		if(entry_count == 0 || reset) //First time initialize map
 		{
+			old_time = cur_stamp.toSec();
 			old_P_inv=cur_P_inv;
 			old_kpts=cur_kpts;
 			old_desc=cur_desc;
@@ -133,64 +141,96 @@ private:
 		}
 		else //Attempt matching
 		{
-			matches = matchTwoImage(cur_desc, old_desc);
+			delta_time = cur_stamp.toSec() - old_time;
+			old_time = cur_stamp.toSec();
+
+			///Motion Filter
+			valid_blob_velocity = forward ? std::max(possible_blob_heading_vel, -max_rollaxis_vel)
+														 				: std::min(possible_blob_heading_vel, max_rollaxis_vel);
+			if(!forward) {forward=true; valid_blob_velocity*=-1;} //Force forward
+			valid_abs_displacement = abs(valid_blob_velocity*delta_time);
+			// cout<<"Velocite: "<<valid_blob_velocity<<endl;
+			// cout<<"Displacement: "<<valid_abs_displacement<<endl;
+			
+			/// BACKPROJECTION
+			/// Backproject, if possible, all keypoints with depth value with lowest distance
+			old_kpts_bkpj = backprojectKeypoints(old_kpts, old_P_inv, depthScale, img_depth, DDKP_ws);
+			cur_kpts_bkpj = backprojectKeypoints(cur_kpts, old_P_inv, depthScale, img_depth, DDKP_ws);
+
+			//For each src kpt find valid dest kpts
+			// - filter by valid backprojection
+			// - filter by forward or backward direction
+			// - filter by distance
+			// - filter by max steering angle
+			// - apply correspondence estimator
+			// - append correspondences with point idx
+
+			matches.clear();
+			cv::Mat old_valid_desc;
+			cv::Mat cur_valid_desc;
+			int cur_idx, old_idx = -1;
+			for(const auto& old_kpt : old_kpts)
+			{
+				old_idx++;
+				float old_kpt_x = old_kpts_bkpj.at(old_idx).x;
+				float old_kpt_y = old_kpts_bkpj.at(old_idx).y;
+				float old_kpt_z = old_kpts_bkpj.at(old_idx).z;
+				if(old_kpt_x == 0 
+				&& old_kpt_y == 0 
+				&& old_kpt_z == 0) continue;
+
+				old_valid_desc = cv::Mat();
+				cur_valid_desc = cv::Mat();
+				cur_valid_idx.clear();
+				matches_lot.clear();
+				cur_idx = -1;
+				old_valid_desc.push_back(old_desc.row(old_idx));
+				for(const auto& cur_kpt : cur_kpts)
+				{
+					cur_idx++;
+					float cur_kpt_x = cur_kpts_bkpj.at(cur_idx).x;
+					float cur_kpt_y = cur_kpts_bkpj.at(cur_idx).y;
+					float cur_kpt_z = cur_kpts_bkpj.at(cur_idx).z;
+					if(cur_kpt_x == 0 
+					&& cur_kpt_y == 0 
+					&& cur_kpt_z == 0) continue;
+
+					float direction = -1*(cur_kpt_z-old_kpt_z);
+					if(forward && direction < 0) continue;
+					if(!forward && direction > 0) continue;
+					float displacement = sqrt(pow(old_kpt_x-cur_kpt_x,2)+pow(old_kpt_y-cur_kpt_y,2)+pow(old_kpt_z-cur_kpt_z,2));
+					if(displacement > valid_abs_displacement) continue;
+					float angle;
+					if(forward) angle = atan2(old_kpt_z-cur_kpt_z,old_kpt_x-cur_kpt_x);
+					if(!forward) angle = atan2(cur_kpt_z-old_kpt_z,cur_kpt_x-old_kpt_x);
+					if(angle < DEG2RAD*(90-max_steering_angle) || angle > DEG2RAD*(90+max_steering_angle)) continue;
+					cur_valid_desc.push_back(cur_desc.row(cur_idx));
+					cur_valid_idx.push_back(cur_idx);
+				}
+				if(cur_valid_desc.rows < 1) continue;
+				matches_lot = matchTwoImage(old_valid_desc, cur_valid_desc);
+
+				for(const auto& match : matches_lot)
+					matches.push_back(cv::DMatch(old_idx, cur_valid_idx.at(match.trainIdx), match.imgIdx, match.distance));
+			}
 		}
+
+		// std::cout<<"Matches size: "<<matches.size()<<std::endl;
 
 		// util::tick_high_resolution(start_t, tick, elapsed_matching);
 
-
-		/// BACKPROJECTION
-		/// For every KP match backproject it using the depth value with lowest distance
-		cv::KeyPoint kpt;
-		double depth_yx;
-		int old_u,old_v,cur_u,cur_v,ws;
-		std::vector<float> x_cur, y_cur, z_cur;
+		/// PRE-PUBLISH
 		std::vector<float> x_old, y_old, z_old;
-		for (const cv::DMatch& match : matches)
+		std::vector<float> x_cur, y_cur, z_cur;
+		for (const auto& match : matches)
 		{
-			///Query KeyPoint
-			kpt = cur_kpts[match.queryIdx];
-			cur_u = kpt.pt.x;
-			cur_v = kpt.pt.y;
-			for(ws=1; ws<=DDKP_ws; ++ws)
-			{
-				if(img_depth.at<ushort>(cur_v,cur_u) != 0) break;
-				nonZeroWindowContourLookUp(cur_v, cur_u, ws, img_depth);
-			}
-			if(img_depth.at<ushort>(cur_v,cur_u) == 0) continue;
-			
-			///Train KeyPoint
-			kpt = old_kpts[match.trainIdx];
-			old_u = kpt.pt.x;
-			old_v = kpt.pt.y;
-			for(ws=1; ws<=DDKP_ws; ++ws)
-			{
-				if(img_depth.at<ushort>(old_v,old_u) != 0) break;
-				nonZeroWindowContourLookUp(old_v, old_u, ws, img_depth);
-			}
-			if(img_depth.at<ushort>(old_v,old_u) == 0) continue;
-
-			//Save valid Match
-			depth_yx = (double) img_depth.at<ushort>(cur_v, cur_u) / depthScale;
-			point_eigen << (double) cur_u * depth_yx, (double) cur_v * depth_yx, (double) depth_yx, 1;
-			point_eigen_backproj = cur_P_inv * point_eigen;
-			x_cur.emplace_back((float) point_eigen_backproj(0));
-			y_cur.emplace_back((float) point_eigen_backproj(1));
-			z_cur.emplace_back((float) point_eigen_backproj(2));
-
-			depth_yx = (double) img_depth.at<ushort>(old_v,old_u) / depthScale;
-			point_eigen << (double) old_u * depth_yx, (double) old_v * depth_yx, (double) depth_yx, 1;
-			point_eigen_backproj = old_P_inv * point_eigen;
-			x_old.emplace_back((float) point_eigen_backproj(0));
-			y_old.emplace_back((float) point_eigen_backproj(1));
-			z_old.emplace_back((float) point_eigen_backproj(2));
+			x_old.emplace_back(old_kpts_bkpj.at(match.queryIdx).x);
+			y_old.emplace_back(old_kpts_bkpj.at(match.queryIdx).y);
+			z_old.emplace_back(old_kpts_bkpj.at(match.queryIdx).z);
+			x_cur.emplace_back(cur_kpts_bkpj.at(match.trainIdx).x);
+			y_cur.emplace_back(cur_kpts_bkpj.at(match.trainIdx).y);
+			z_cur.emplace_back(cur_kpts_bkpj.at(match.trainIdx).z);
 		}
-
-		//Log Matches size
-		// std::cout<<"Original Matches size: "<<matches.size()<<std::endl;
-		// std::cout<<"Final Matches size: "<<x_cur.size()<<std::endl;
-
-		// util::tick_high_resolution(start_t, tick, elapsed_backprojection);
 
 		/// PUBLISH
 		/// - KeyPoint Matches
@@ -220,9 +260,35 @@ private:
 		// util::printElapsed(elapsed_KP_description, "KP_description: ");
 		// util::printElapsed(elapsed_cam_model, "Cam_model: ");
 		// util::printElapsed(elapsed_matching, "Matching: ");
-		// util::printElapsed(elapsed_backprojection, "Backprojection: ");
 		// util::printElapsed(elapsed_publish, "Publish: ");
 		
+	}
+
+	void updateBlobHeadingVel(
+		const nav_msgs::Odometry::ConstPtr& o_msg_ptr)
+	{
+		float blob_vel_x = o_msg_ptr->twist.twist.linear.x;
+		float blob_vel_z = o_msg_ptr->twist.twist.linear.z;
+		float blob_vel_x_var = o_msg_ptr->twist.covariance.at(0);
+		float blob_vel_z_var = o_msg_ptr->twist.covariance.at(14);
+		
+		float possible_blob_vel_x = abs(blob_vel_x)+2*sqrt(blob_vel_x_var)+max_pitchaxis_acc*delta_time;
+		float possible_blob_vel_z = abs(blob_vel_z)+2*sqrt(blob_vel_z_var)+max_rollaxis_acc*delta_time;
+		
+		forward = blob_vel_z <= 0 ? true : false;
+		possible_blob_heading_vel = sqrt(pow(possible_blob_vel_x,2)+pow(possible_blob_vel_z,2));
+		if(forward) possible_blob_heading_vel *= -1;
+
+		// cout<<"UPDATE --> blob_vel_x: "<<blob_vel_x<<endl;
+		// cout<<"UPDATE --> blob_vel_z: "<<blob_vel_z<<endl;
+		// cout<<"UPDATE --> blob_vel_x_var: "<<blob_vel_x_var<<endl;
+		// cout<<"UPDATE --> blob_vel_z_var: "<<blob_vel_z_var<<endl;
+		// cout<<"UPDATE --> possible_blob_vel_x: "<<possible_blob_vel_x<<endl;
+		// cout<<"UPDATE --> possible_blob_vel_z: "<<possible_blob_vel_z<<endl;
+		// cout<<"UPDATE --> max_blob_vel_x: "<<max_pitchaxis_acc*delta_time<<endl;
+		// cout<<"UPDATE --> max_blob_vel_z: "<<max_rollaxis_acc*delta_time<<endl;
+		// cout<<"UPDATE --> Velocity: "<<possible_blob_heading_vel<<endl;
+		// cout<<endl;
 	}
 
 	void skipFrame(std::string msg)
@@ -236,6 +302,7 @@ private:
 	int queue_size_;
 
 	/// Comms
+	ros::Subscriber blob_odom_sub_;
 	ros::Publisher dd_keypoint_matches_pub_;
 	image_transport::SubscriberFilter rgb_sub_filter_;
 	image_transport::SubscriberFilter depth_sub_filter_;
@@ -247,24 +314,37 @@ private:
 		sensor_msgs::CameraInfo> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
 	
-	///Chrono timmings
+	/// Chrono timmings
 	// std::vector<double> elapsed;
 	std::vector<double> elapsed_initialization;
 	std::vector<double> elapsed_KP_detection;
 	std::vector<double> elapsed_KP_description;
 	std::vector<double> elapsed_cam_model;
 	std::vector<double> elapsed_matching;
-	std::vector<double> elapsed_backprojection;
 	std::vector<double> elapsed_publish;
 
-	///Kpts
-	std::vector<cv::KeyPoint> cur_kpts;
+	/// Blob motion filter
+	bool forward = true;
+	float valid_blob_velocity;
+	float valid_abs_displacement;
+	float possible_blob_heading_vel;
+
+	/// Timming
+	float delta_time = -1;
+	float old_time = -1;
+
+	/// Kpts
 	std::vector<cv::KeyPoint> old_kpts;
-	cv::Mat cur_desc;
+	std::vector<cv::KeyPoint> cur_kpts;
 	cv::Mat old_desc;
+	cv::Mat cur_desc;
+	std::vector<cv::Point3f> old_kpts_bkpj;
+	std::vector<cv::Point3f> cur_kpts_bkpj;
+	std::vector<uint> cur_valid_idx;
 	std::vector<cv::DMatch> matches;
-	Eigen::Matrix4d cur_P_inv;
+	std::vector<cv::DMatch> matches_lot;
 	Eigen::Matrix4d old_P_inv;
+	Eigen::Matrix4d cur_P_inv;
 	bool reset=false;
 
 	

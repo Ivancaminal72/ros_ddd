@@ -11,7 +11,8 @@
 namespace terreslam
 {
 
-	std::vector<cv::DMatch> matchTwoImage(const cv::Mat &descriptor1, const cv::Mat &descriptor2);
+	std::vector<cv::DMatch> matchTwoImage(const cv::Mat& query_desc, const cv::Mat& train_desc);
 	void nonZeroWindowContourLookUp(int& v, int& u, const int& ws, const cv::Mat& img);
+	std::vector<cv::Point3f> backprojectKeypoints(const std::vector<cv::KeyPoint>& kpts, const Eigen::Matrix4d& P_inv, const double& depth_scale, const cv::Mat& img_depth, const int& max_ws);
 
 }

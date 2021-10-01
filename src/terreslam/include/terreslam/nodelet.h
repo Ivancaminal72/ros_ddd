@@ -81,6 +81,8 @@ protected:
 	/// Constants
 	const double depthScale = pow(2,16)/120;
 	const float bad_point = std::numeric_limits<float>::quiet_NaN();
+	const float RAD2DEG = 180.0/M_PI;
+	const float DEG2RAD = M_PI/180.0;
 
 	/// Plane Filter
 	bool use_normal_integral = false;

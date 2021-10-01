@@ -84,56 +84,56 @@ private:
 		// end_t = std::chrono::high_resolution_clock::now();
 		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
-		size_t sm = bm_msg_ptr->x_cur.size();
+		size_t sm = bm_msg_ptr->x_old.size();
 		assert(sm == bm_msg_ptr->stability.size() &&
-					 sm == bm_msg_ptr->z_cur.size() &&
-					 sm == bm_msg_ptr->radius_cur.size() &&
-					 sm == bm_msg_ptr->height_cur.size() &&
-					 sm == bm_msg_ptr->x_old.size() &&
 					 sm == bm_msg_ptr->z_old.size() &&
 					 sm == bm_msg_ptr->radius_old.size() &&
-					 sm == bm_msg_ptr->height_old.size());
+					 sm == bm_msg_ptr->height_old.size() &&
+					 sm == bm_msg_ptr->x_cur.size() &&
+					 sm == bm_msg_ptr->z_cur.size() &&
+					 sm == bm_msg_ptr->radius_cur.size() &&
+					 sm == bm_msg_ptr->height_cur.size());
 		std::vector<uint8_t> stability(sm);
-		std::vector<float> radius_cur(sm), height_cur(sm);
 		std::vector<float> radius_old(sm), height_old(sm);
-		std::vector<cv::Point2f> bm_cur(sm), bm_old(sm);
+		std::vector<float> radius_cur(sm), height_cur(sm);
+		std::vector<cv::Point2f> bm_old(sm), bm_cur(sm);
 		delta_time = bm_msg_ptr->delta_time;
 		stability = bm_msg_ptr->stability;
-		radius_cur = bm_msg_ptr->radius_cur;
-		height_cur = bm_msg_ptr->height_cur;
 		radius_old = bm_msg_ptr->radius_old;
 		height_old = bm_msg_ptr->height_old;
+		radius_cur = bm_msg_ptr->radius_cur;
+		height_cur = bm_msg_ptr->height_cur;
 		for(size_t i=0; i<sm; ++i)
 		{
-			bm_cur.at(i) = cv::Point2f(bm_msg_ptr->x_cur.at(i), bm_msg_ptr->z_cur.at(i));
 			bm_old.at(i) = cv::Point2f(bm_msg_ptr->x_old.at(i), bm_msg_ptr->z_old.at(i));
+			bm_cur.at(i) = cv::Point2f(bm_msg_ptr->x_cur.at(i), bm_msg_ptr->z_cur.at(i));
 		}
 
-		size_t dd_sm  = dd_kpm_msg_ptr->x_cur.size();
-		assert(dd_sm == dd_kpm_msg_ptr->y_cur.size() &&
-					 dd_sm == dd_kpm_msg_ptr->z_cur.size() &&
-					 dd_sm == dd_kpm_msg_ptr->x_old.size() &&
-					 dd_sm == dd_kpm_msg_ptr->y_old.size() &&
-					 dd_sm == dd_kpm_msg_ptr->z_old.size());
-		std::vector<cv::Point3f> dd_kpm_cur(dd_sm), dd_kpm_old(dd_sm);
+		size_t dd_sm  = dd_kpm_msg_ptr->x_old.size();
+		assert(dd_sm == dd_kpm_msg_ptr->y_old.size() &&
+					 dd_sm == dd_kpm_msg_ptr->z_old.size() &&
+					 dd_sm == dd_kpm_msg_ptr->x_cur.size() &&
+					 dd_sm == dd_kpm_msg_ptr->y_cur.size() &&
+					 dd_sm == dd_kpm_msg_ptr->z_cur.size());
+		std::vector<cv::Point3f> dd_kpm_old(dd_sm), dd_kpm_cur(dd_sm);
 		for(size_t i=0; i<dd_sm; ++i)
 		{
-			dd_kpm_cur.at(i) = cv::Point3f(dd_kpm_msg_ptr->x_cur.at(i), dd_kpm_msg_ptr->y_cur.at(i), dd_kpm_msg_ptr->z_cur.at(i));
 			dd_kpm_old.at(i) = cv::Point3f(dd_kpm_msg_ptr->x_old.at(i), dd_kpm_msg_ptr->y_old.at(i), dd_kpm_msg_ptr->z_old.at(i));
+			dd_kpm_cur.at(i) = cv::Point3f(dd_kpm_msg_ptr->x_cur.at(i), dd_kpm_msg_ptr->y_cur.at(i), dd_kpm_msg_ptr->z_cur.at(i));
 		}
 		// cout<<"Size dd_sm: "<<dd_sm<<endl;
 
-		size_t ddd_sm = ddd_kpm_msg_ptr->x_cur.size();
-		assert(ddd_sm == ddd_kpm_msg_ptr->y_cur.size() &&
-					 ddd_sm == ddd_kpm_msg_ptr->z_cur.size() &&
-					 ddd_sm == ddd_kpm_msg_ptr->x_old.size() &&
-					 ddd_sm == ddd_kpm_msg_ptr->y_old.size() &&
-					 ddd_sm == ddd_kpm_msg_ptr->z_old.size());
-		std::vector<cv::Point3f> ddd_kpm_cur(ddd_sm), ddd_kpm_old(ddd_sm);
+		size_t ddd_sm = ddd_kpm_msg_ptr->x_old.size();
+		assert(ddd_sm == ddd_kpm_msg_ptr->y_old.size() &&
+					 ddd_sm == ddd_kpm_msg_ptr->z_old.size() &&
+					 ddd_sm == ddd_kpm_msg_ptr->x_cur.size() &&
+					 ddd_sm == ddd_kpm_msg_ptr->y_cur.size() &&
+					 ddd_sm == ddd_kpm_msg_ptr->z_cur.size());
+		std::vector<cv::Point3f> ddd_kpm_old(ddd_sm), ddd_kpm_cur(ddd_sm);
 		for(size_t i=0; i<ddd_sm; ++i)
 		{
-			ddd_kpm_cur.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_cur.at(i), ddd_kpm_msg_ptr->y_cur.at(i), ddd_kpm_msg_ptr->z_cur.at(i));
 			ddd_kpm_old.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_old.at(i), ddd_kpm_msg_ptr->y_old.at(i), ddd_kpm_msg_ptr->z_old.at(i));
+			ddd_kpm_cur.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_cur.at(i), ddd_kpm_msg_ptr->y_cur.at(i), ddd_kpm_msg_ptr->z_cur.at(i));
 		}
 
 		ros::Time cur_stamp = bm_msg_ptr->header.stamp;
@@ -164,9 +164,10 @@ private:
 		/// - MA Blob Regularization
 		if(MA_blob_regularisation){
 		blob_d_cur = cv::Point2f(tx, tz);
+		blob_v_cur = blob_d_cur / delta_time;
+		
 		if(entry_count < 3)
 		{
-			blob_v_cur = blob_d_cur / delta_time;
 			if(abs(blob_v_cur.x) > max_pitchaxis_vel 
 			|| abs(blob_v_cur.y) > max_rollaxis_vel)
 			{
@@ -176,18 +177,17 @@ private:
 			else //Valid transform
 			{
 				RTr_blob_old = RTr.clone();
-				float v_mod2 = pow(tx/delta_time,2)+pow(tz/delta_time,2);
-				blob_heading_vels.push_back(sqrt(v_mod2));
-				blob_heading_vels2.push_back(v_mod2);
+				blob_vels_x.push_back(blob_v_cur.x);
+				blob_vels_z.push_back(blob_v_cur.y);
+				blob_vels2_x.push_back(pow(blob_v_cur.x,2));
+				blob_vels2_z.push_back(pow(blob_v_cur.y,2));
 				trajectory.color.g = 0.0; //red (default)
 			}
 		}
 		else
 		{
-			blob_v_cur = blob_d_cur / delta_time;
 			cv::Point2f blob_v_old = cv::Point2f(util::calculateMedian(blob_v_old_x), util::calculateMedian(blob_v_old_z));
 			blob_a_cur = (blob_v_cur - blob_v_old) / delta_time;
-
 			// cout<<"deltaTime: "<<delta_time<<endl;
 			// cout<<"Dis Z: "<<blob_d_cur.y<<endl;
 			// cout<<"Vel Z: "<<blob_v_cur.y<<endl;
@@ -198,7 +198,7 @@ private:
 			// cout<<"Vel Old X: "<<blob_v_old.x<<endl;
 			// cout<<"Acc X: "<<blob_a_cur.x<<endl;
 			// cout<<endl;
-
+		 
 			if(abs(blob_a_cur.x) > max_pitchaxis_acc 
 			|| abs(blob_a_cur.y) > max_rollaxis_acc)
 			{
@@ -208,31 +208,43 @@ private:
 			else //Valid transform
 			{
 				RTr_blob_old = RTr.clone();
-				float v_mod2 = pow(tx/delta_time,2)+pow(tz/delta_time,2);
-				blob_heading_vels.push_back(sqrt(v_mod2));
-				blob_heading_vels2.push_back(v_mod2);
+				blob_vels_x.push_back(blob_v_cur.x);
+				blob_vels_z.push_back(blob_v_cur.y);
+				blob_vels2_x.push_back(pow(blob_v_cur.x,2));
+				blob_vels2_z.push_back(pow(blob_v_cur.y,2));
 				trajectory.color.g = 0.0; //red (default)
 			}
-
-			if(blob_heading_vels.size() > MA_max_blob_heading_vels) 
-			{
-				blob_v_old_x.pop_front();
-				blob_v_old_z.pop_front();
-				blob_heading_vels.pop_front();
-				blob_heading_vels2.pop_front();
-
-				float v_mean = accumulate(blob_heading_vels.begin(), blob_heading_vels.end(), 0) / blob_heading_vels.size();
-				float v_mean2 = accumulate(blob_heading_vels2.begin(), blob_heading_vels2.end(), 0) / blob_heading_vels2.size();
-
-				nav_msgs::Odometry odom;
-				odom.header.stamp = cur_stamp;
-				odom.header.frame_id = blob_odom_frame_id;
-				odom.child_frame_id = sub_cam_frame_id;
-				odom.twist.twist.linear.z = v_mean;
-				odom.twist.covariance.at(15) = v_mean2 - pow(v_mean,2);
-				blob_odom_pub_.publish(odom);
-			}
 		}
+
+		if(blob_vels_x.size() > MA_max_blob_heading_vels) 
+		{
+			blob_vels_x.pop_front();
+			blob_vels_z.pop_front();
+			blob_vels2_x.pop_front();
+			blob_vels2_z.pop_front();
+
+			float vx_avg = accumulate(blob_vels_x.begin(), blob_vels_x.end(), 0.0f) / blob_vels_x.size();
+			float vz_avg = accumulate(blob_vels_z.begin(), blob_vels_z.end(), 0.0f) / blob_vels_z.size();
+			float vx2_avg = accumulate(blob_vels2_x.begin(), blob_vels2_x.end(), 0.0f) / blob_vels2_x.size();
+			float vz2_avg = accumulate(blob_vels2_z.begin(), blob_vels2_z.end(), 0.0f) / blob_vels2_z.size();
+
+			nav_msgs::Odometry odom;
+			odom.header.stamp = cur_stamp;
+			odom.header.frame_id = blob_odom_frame_id;
+			odom.child_frame_id = sub_cam_frame_id;
+			odom.twist.twist.linear.x = vx_avg;
+			odom.twist.twist.linear.z = vz_avg;
+			odom.twist.covariance.at(0) = vx2_avg - pow(vx_avg,2);
+			odom.twist.covariance.at(14) = vz2_avg - pow(vz_avg,2);
+			blob_odom_pub_.publish(odom);
+		}
+
+		if(blob_v_old_x.size() > MA_max_blob_heading_vels) 
+		{
+			blob_v_old_x.pop_front();
+			blob_v_old_z.pop_front();
+		}
+
 		blob_v_old_x.push_back(blob_v_cur.x);
 		blob_v_old_z.push_back(blob_v_cur.y);
 		}
@@ -503,8 +515,10 @@ private:
 	std::deque<float> blob_v_old_z;
 	std::deque<float> blob_v_old_x;
 	cv::Mat RTr_blob_old = RTr_acum.clone(); //identity
-	std::deque<float> blob_heading_vels;
-	std::deque<float> blob_heading_vels2;
+	std::deque<float> blob_vels_x;
+	std::deque<float> blob_vels_z;
+	std::deque<float> blob_vels2_x;
+	std::deque<float> blob_vels2_z;
 
 };
 
