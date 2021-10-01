@@ -115,8 +115,9 @@ void Nodelet::onInit()
 	/// - MA
 	nh.getParam("MA/Blobs", MA_Blobs);
 	nh.getParam("MA/blob_regularisation", MA_blob_regularisation);
-	nh.getParam("MA/KPs", MA_KPs);
-	assert(MA_Blobs || MA_KPs);
+	nh.getParam("MA/DDKPs", MA_DDKPs);
+	nh.getParam("MA/DDDKPs", MA_DDDKPs);
+	assert(MA_Blobs || MA_DDKPs || MA_DDDKPs);
 	nh.getParam("MA/joint_KPs", MA_joint_KPs);
 	nh.getParam("MA/debug_Blobs_coarse", MA_debug_Blobs_coarse);
 	nh.getParam("MA/debug_KPs", MA_debug_KPs);

@@ -41,7 +41,8 @@ DDDKP/FPFH_radius: 3.3
 # MA
 MA/Blobs: true
 MA/blob_regularisation: true
-MA/KPs: false
+MA/DDKPs: true
+MA/DDDKPs: true
 MA/joint_KPs: true
 MA/debug_Blobs_coarse: false
 MA/debug_KPs: false

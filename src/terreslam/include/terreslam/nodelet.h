@@ -122,7 +122,8 @@ protected:
 	//MA
 	bool MA_Blobs;
 	bool MA_blob_regularisation;
-	bool MA_KPs;
+	bool MA_DDKPs;
+	bool MA_DDDKPs;
 	bool MA_joint_KPs;
 	bool MA_debug_Blobs_coarse;
 	bool MA_debug_KPs;

@@ -254,20 +254,23 @@ private:
 		}
 		
 		/// - MA Keypoints Coarse
-		if(MA_joint_KPs && MA_KPs)
+		if(MA_DDKPs || MA_DDDKPs)
+		{
+		if(MA_joint_KPs && MA_DDKPs && MA_DDDKPs)
 		{
 			cv::Mat RTr_KPs;
-			ddd_kpm_cur.insert(
-				ddd_kpm_cur.end(), 
-				std::make_move_iterator(dd_kpm_cur.begin()),
-				std::make_move_iterator(dd_kpm_cur.end()));
-			
+
 			ddd_kpm_old.insert(
 				ddd_kpm_old.end(), 
 				std::make_move_iterator(dd_kpm_old.begin()),
 				std::make_move_iterator(dd_kpm_old.end()));
 
-			if(MA_Blobs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
+			ddd_kpm_cur.insert(
+				ddd_kpm_cur.end(), 
+				std::make_move_iterator(dd_kpm_cur.begin()),
+				std::make_move_iterator(dd_kpm_cur.end()));
+
+			if(MA_Blobs) cv::transform(ddd_kpm_old, ddd_kpm_cur, RTr(cv::Rect( 0, 0, 4, 3 )));
 
 			float best_param[6] = {0.0f};
 			size_t joint_sm = dd_sm+ddd_sm;
@@ -278,27 +281,36 @@ private:
 			else RTr = RTr_KPs.clone();
 
 		}
-		else if(MA_KPs) //separated KPs
+		else //separated KPs
 		{
-			cv::Mat RTr_2DKPs;
-			cv::Mat RTr_3DKPs;
+			if(MA_DDKPs)
+			{
+				cv::Mat RTr_2DKPs;
 
-			if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
+				if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
-			float best_param_2D[6] = {0.0f};
-			bool inliers_2D[dd_sm] = {true};
-			fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
+				float best_param_2D[6] = {0.0f};
+				bool inliers_2D[dd_sm] = {true};
+				fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
 
-			if(MA_Blobs) RTr = RTr * RTr_2DKPs;
-			else RTr = RTr_2DKPs.clone();
+				if(MA_Blobs) RTr = RTr * RTr_2DKPs;
+				else RTr = RTr_2DKPs.clone();
+			}
 
-			cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
+			if(MA_DDDKPs)
+			{
+				cv::Mat RTr_3DKPs;
 
-			float best_param_3D[6] = {0.0f};
-			bool inliers_3D[ddd_sm] = {true};
-			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+				cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
-			RTr = RTr * RTr_3DKPs;
+				float best_param_3D[6] = {0.0f};
+				bool inliers_3D[ddd_sm] = {true};
+				fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+
+				RTr = RTr * RTr_3DKPs;
+			}
+
+		}
 		}
 
 		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
