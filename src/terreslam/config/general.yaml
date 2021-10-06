@@ -2,10 +2,11 @@
 #IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
 
 # General
-debug: true
+debug: false
 logsdir: '/home/ivan/outputs/terreslam/unorganized'
 max_depth: 120.0  #for Kinect 6.0
 max_steering_angle: 30
+max_slope_angle: 10
 max_rollaxis_acc: 28 #acc 8 dec 30
 max_pitchaxis_acc: 14 #sin(max_steering_angle)*max_rollaxis_acc
 max_rollaxis_vel: 28

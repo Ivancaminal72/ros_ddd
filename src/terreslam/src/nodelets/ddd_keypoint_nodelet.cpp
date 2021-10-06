@@ -67,7 +67,8 @@ private:
 		ddd_keypoint_matches_pub_ = nh.advertise<terreslam::KeyPointMatches>(ddd_keypoint_matches_topic, 1);
 
 		/// Motion filter
-		possible_blob_heading_vel = -max_rollaxis_vel;
+		max_possible_blob_heading_vel = -max_rollaxis_vel;
+		min_possible_blob_heading_vel = 0;
 
 	} 
 
@@ -115,12 +116,17 @@ private:
 		old_time = cur_stamp.toSec();
 
 		///Motion Filter
-		valid_blob_velocity = forward ? std::max(possible_blob_heading_vel, -max_rollaxis_vel)
-																	: std::min(possible_blob_heading_vel, max_rollaxis_vel);
-		if(!forward) {forward=true; valid_blob_velocity*=-1;} //Force forward
-		valid_abs_displacement = abs(valid_blob_velocity*delta_time);
-		// cout<<"Velocite: "<<valid_blob_velocity<<endl;
-		// cout<<"Displacement: "<<valid_abs_displacement<<endl;
+		max_valid_blob_velocity = forward ? std::max(max_possible_blob_heading_vel, -max_rollaxis_vel)
+																			: std::min(max_possible_blob_heading_vel, max_rollaxis_vel);
+		min_valid_blob_velocity = forward ? std::min(min_possible_blob_heading_vel, 0.0f)
+																			: std::max(min_possible_blob_heading_vel, 0.0f);																			
+		if(!forward) {forward=true; max_valid_blob_velocity*=-1; min_valid_blob_velocity*=-1;} //Force forward
+		max_valid_abs_displacement = abs(max_valid_blob_velocity*delta_time);
+		min_valid_abs_displacement = abs(min_valid_blob_velocity*delta_time);
+		cout<<"Max velocite: "<<max_valid_blob_velocity<<endl;
+		cout<<"Min velocite: "<<min_valid_blob_velocity<<endl;
+		cout<<"Max displacement: "<<max_valid_abs_displacement<<endl;
+		cout<<"Min displacement: "<<min_valid_abs_displacement<<endl;
 
 		//For each src kpt find valid dest kpts
 		// - filter by forward or backward direction
@@ -149,11 +155,15 @@ private:
 				if(forward && direction < 0) continue;
 				if(!forward && direction > 0) continue;
 				float displacement = sqrt(pow(old_kpt.x-cur_kpt.x,2)+pow(old_kpt.y-cur_kpt.y,2)+pow(old_kpt.z-cur_kpt.z,2));
-				if(displacement > valid_abs_displacement) continue;
+				if(displacement > max_valid_abs_displacement) continue;
+				if(displacement < min_valid_abs_displacement) continue;
 				float angle;
-				if(forward) angle = atan2(old_kpt.z-cur_kpt.z,old_kpt.x-cur_kpt.x);
-				if(!forward) angle = atan2(cur_kpt.z-old_kpt.z,cur_kpt.x-old_kpt.x);
-				if(angle < DEG2RAD*(90-max_steering_angle) || angle > DEG2RAD*(90+max_steering_angle)) continue;
+				if(forward) angle = atan2(old_kpt.x-cur_kpt.x, old_kpt.z-cur_kpt.z);
+				if(!forward) angle = atan2(cur_kpt.x-old_kpt.x, cur_kpt.z-old_kpt.z);
+				if(abs(angle) > DEG2RAD*max_steering_angle) continue;
+				if(forward) angle = atan2(old_kpt.y-cur_kpt.y, old_kpt.z-cur_kpt.z);
+				if(!forward) angle = atan2(cur_kpt.y-old_kpt.y, cur_kpt.z-old_kpt.z);
+				if(abs(angle) > DEG2RAD*max_slope_angle) continue;
 				cur_valid_desc->points.push_back(cur_desc->points.at(cur_idx));
 				cur_valid_idx.push_back(cur_idx);
 			}
@@ -231,23 +241,30 @@ private:
 		float blob_vel_x_var = o_msg_ptr->twist.covariance.at(0);
 		float blob_vel_z_var = o_msg_ptr->twist.covariance.at(14);
 		
-		float possible_blob_vel_x = abs(blob_vel_x)+2*sqrt(blob_vel_x_var)+max_pitchaxis_acc*delta_time;
-		float possible_blob_vel_z = abs(blob_vel_z)+2*sqrt(blob_vel_z_var)+max_rollaxis_acc*delta_time;
+		float max_possible_blob_vel_x = abs(blob_vel_x)+2*sqrt(blob_vel_x_var)+max_pitchaxis_acc*delta_time;
+		float max_possible_blob_vel_z = abs(blob_vel_z)+2*sqrt(blob_vel_z_var)+max_rollaxis_acc*delta_time;
+		float min_possible_blob_vel_x = abs(blob_vel_x)-2*sqrt(blob_vel_x_var)-max_pitchaxis_acc*delta_time;
+		float min_possible_blob_vel_z = abs(blob_vel_z)-2*sqrt(blob_vel_z_var)-max_rollaxis_acc*delta_time;
 		
 		forward = blob_vel_z <= 0 ? true : false;
-		possible_blob_heading_vel = sqrt(pow(possible_blob_vel_x,2)+pow(possible_blob_vel_z,2));
-		if(forward) possible_blob_heading_vel *= -1;
+		max_possible_blob_heading_vel = sqrt(pow(max_possible_blob_vel_x,2)+pow(max_possible_blob_vel_z,2));
+		min_possible_blob_heading_vel = sqrt(pow(min_possible_blob_vel_x,2)+pow(min_possible_blob_vel_z,2));
+		if(forward) max_possible_blob_heading_vel *= -1;
+		if(forward) min_possible_blob_heading_vel *= -1;
 
-		// cout<<"UPDATE --> blob_vel_x: "<<blob_vel_x<<endl;
-		// cout<<"UPDATE --> blob_vel_z: "<<blob_vel_z<<endl;
-		// cout<<"UPDATE --> blob_vel_x_var: "<<blob_vel_x_var<<endl;
-		// cout<<"UPDATE --> blob_vel_z_var: "<<blob_vel_z_var<<endl;
-		// cout<<"UPDATE --> possible_blob_vel_x: "<<possible_blob_vel_x<<endl;
-		// cout<<"UPDATE --> possible_blob_vel_z: "<<possible_blob_vel_z<<endl;
-		// cout<<"UPDATE --> max_blob_vel_x: "<<max_pitchaxis_acc*delta_time<<endl;
-		// cout<<"UPDATE --> max_blob_vel_z: "<<max_rollaxis_acc*delta_time<<endl;
-		// cout<<"UPDATE --> Velocity: "<<possible_blob_heading_vel<<endl;
-		// cout<<endl;
+		cout<<"UPDATE --> blob_vel_x: "<<blob_vel_x<<endl;
+		cout<<"UPDATE --> blob_vel_z: "<<blob_vel_z<<endl;
+		cout<<"UPDATE --> blob_vel_x_var: "<<blob_vel_x_var<<endl;
+		cout<<"UPDATE --> blob_vel_z_var: "<<blob_vel_z_var<<endl;
+		cout<<"UPDATE --> max_blob_vel_x: "<<max_pitchaxis_acc*delta_time<<endl;
+		cout<<"UPDATE --> max_blob_vel_z: "<<max_rollaxis_acc*delta_time<<endl;
+		cout<<"UPDATE --> max_possible_blob_vel_x: "<<max_possible_blob_vel_x<<endl;
+		cout<<"UPDATE --> max_possible_blob_vel_z: "<<max_possible_blob_vel_z<<endl;
+		cout<<"UPDATE --> min_possible_blob_vel_x: "<<min_possible_blob_vel_x<<endl;
+		cout<<"UPDATE --> min_possible_blob_vel_z: "<<min_possible_blob_vel_z<<endl;
+		cout<<"UPDATE --> Max velocity: "<<max_possible_blob_heading_vel<<endl;
+		cout<<"UPDATE --> Min velocity: "<<min_possible_blob_heading_vel<<endl;
+		cout<<endl;
 	}
 
 private:
@@ -276,9 +293,12 @@ private:
 
 	/// Blob motion filter
 	bool forward = true;
-	float valid_blob_velocity;
-	float valid_abs_displacement;
-	float possible_blob_heading_vel;
+	float max_valid_blob_velocity;
+	float min_valid_blob_velocity;
+	float max_valid_abs_displacement;
+	float min_valid_abs_displacement;
+	float max_possible_blob_heading_vel;
+	float min_possible_blob_heading_vel;
 
 	/// Timming
 	float delta_time = -1;

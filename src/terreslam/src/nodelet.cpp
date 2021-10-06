@@ -73,6 +73,7 @@ void Nodelet::onInit()
 	nh.getParam("logsdir", logs_dir);
 	nh.getParam("max_depth", max_depth);
 	nh.getParam("max_steering_angle", max_steering_angle);
+	nh.getParam("max_slope_angle", max_slope_angle);
 	nh.getParam("max_rollaxis_acc", max_rollaxis_acc);
 	nh.getParam("max_pitchaxis_acc", max_pitchaxis_acc);
 	nh.getParam("max_rollaxis_vel", max_rollaxis_vel);

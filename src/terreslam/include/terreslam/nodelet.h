@@ -73,6 +73,7 @@ protected:
 	std::string logs_dir;
 	double max_depth;
 	float max_steering_angle;
+	float max_slope_angle;
 	float max_rollaxis_acc;
 	float max_pitchaxis_acc;
 	float max_rollaxis_vel;
