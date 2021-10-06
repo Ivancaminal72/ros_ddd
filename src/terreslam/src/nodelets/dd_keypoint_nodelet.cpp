@@ -139,81 +139,83 @@ private:
 			entry_count++;
 			return;
 		}
-		else //Attempt matching
+
+		//Attempt matching
+		delta_time = cur_stamp.toSec() - old_time;
+		old_time = cur_stamp.toSec();
+
+		///Motion Filter
+		valid_blob_velocity = forward ? std::max(possible_blob_heading_vel, -max_rollaxis_vel)
+																	: std::min(possible_blob_heading_vel, max_rollaxis_vel);
+		if(!forward) {forward=true; valid_blob_velocity*=-1;} //Force forward
+		valid_abs_displacement = abs(valid_blob_velocity*delta_time);
+		// cout<<"Velocite: "<<valid_blob_velocity<<endl;
+		// cout<<"Displacement: "<<valid_abs_displacement<<endl;
+		
+		/// BACKPROJECTION
+		/// Backproject, if possible, all keypoints with depth value with lowest distance
+		old_kpts_bkpj = backprojectKeypoints(old_kpts, old_P_inv, depthScale, img_depth, DDKP_ws);
+		cur_kpts_bkpj = backprojectKeypoints(cur_kpts, old_P_inv, depthScale, img_depth, DDKP_ws);
+
+		//For each src kpt find valid dest kpts
+		// - filter by valid backprojection
+		// - filter by forward or backward direction
+		// - filter by distance
+		// - filter by max steering angle
+		// - apply correspondence estimator
+		// - append correspondences with point idx
+
+		matches.clear();
+		cv::Mat old_valid_desc;
+		cv::Mat cur_valid_desc;
+		int cur_idx, old_idx = -1;
+		for(const auto& old_kpt : old_kpts)
 		{
-			delta_time = cur_stamp.toSec() - old_time;
-			old_time = cur_stamp.toSec();
+			old_idx++;
+			float old_kpt_x = old_kpts_bkpj.at(old_idx).x;
+			float old_kpt_y = old_kpts_bkpj.at(old_idx).y;
+			float old_kpt_z = old_kpts_bkpj.at(old_idx).z;
+			if(old_kpt_x == 0 
+			&& old_kpt_y == 0 
+			&& old_kpt_z == 0) continue;
 
-			///Motion Filter
-			valid_blob_velocity = forward ? std::max(possible_blob_heading_vel, -max_rollaxis_vel)
-														 				: std::min(possible_blob_heading_vel, max_rollaxis_vel);
-			if(!forward) {forward=true; valid_blob_velocity*=-1;} //Force forward
-			valid_abs_displacement = abs(valid_blob_velocity*delta_time);
-			// cout<<"Velocite: "<<valid_blob_velocity<<endl;
-			// cout<<"Displacement: "<<valid_abs_displacement<<endl;
-			
-			/// BACKPROJECTION
-			/// Backproject, if possible, all keypoints with depth value with lowest distance
-			old_kpts_bkpj = backprojectKeypoints(old_kpts, old_P_inv, depthScale, img_depth, DDKP_ws);
-			cur_kpts_bkpj = backprojectKeypoints(cur_kpts, old_P_inv, depthScale, img_depth, DDKP_ws);
-
-			//For each src kpt find valid dest kpts
-			// - filter by valid backprojection
-			// - filter by forward or backward direction
-			// - filter by distance
-			// - filter by max steering angle
-			// - apply correspondence estimator
-			// - append correspondences with point idx
-
-			matches.clear();
-			cv::Mat old_valid_desc;
-			cv::Mat cur_valid_desc;
-			int cur_idx, old_idx = -1;
-			for(const auto& old_kpt : old_kpts)
+			old_valid_desc = cv::Mat();
+			cur_valid_desc = cv::Mat();
+			cur_valid_idx.clear();
+			matches_lot.clear();
+			cur_idx = -1;
+			old_valid_desc.push_back(old_desc.row(old_idx));
+			for(const auto& cur_kpt : cur_kpts)
 			{
-				old_idx++;
-				float old_kpt_x = old_kpts_bkpj.at(old_idx).x;
-				float old_kpt_y = old_kpts_bkpj.at(old_idx).y;
-				float old_kpt_z = old_kpts_bkpj.at(old_idx).z;
-				if(old_kpt_x == 0 
-				&& old_kpt_y == 0 
-				&& old_kpt_z == 0) continue;
+				cur_idx++;
+				float cur_kpt_x = cur_kpts_bkpj.at(cur_idx).x;
+				float cur_kpt_y = cur_kpts_bkpj.at(cur_idx).y;
+				float cur_kpt_z = cur_kpts_bkpj.at(cur_idx).z;
+				if(cur_kpt_x == 0 
+				&& cur_kpt_y == 0 
+				&& cur_kpt_z == 0) continue;
 
-				old_valid_desc = cv::Mat();
-				cur_valid_desc = cv::Mat();
-				cur_valid_idx.clear();
-				matches_lot.clear();
-				cur_idx = -1;
-				old_valid_desc.push_back(old_desc.row(old_idx));
-				for(const auto& cur_kpt : cur_kpts)
-				{
-					cur_idx++;
-					float cur_kpt_x = cur_kpts_bkpj.at(cur_idx).x;
-					float cur_kpt_y = cur_kpts_bkpj.at(cur_idx).y;
-					float cur_kpt_z = cur_kpts_bkpj.at(cur_idx).z;
-					if(cur_kpt_x == 0 
-					&& cur_kpt_y == 0 
-					&& cur_kpt_z == 0) continue;
-
-					float direction = -1*(cur_kpt_z-old_kpt_z);
-					if(forward && direction < 0) continue;
-					if(!forward && direction > 0) continue;
-					float displacement = sqrt(pow(old_kpt_x-cur_kpt_x,2)+pow(old_kpt_y-cur_kpt_y,2)+pow(old_kpt_z-cur_kpt_z,2));
-					if(displacement > valid_abs_displacement) continue;
-					float angle;
-					if(forward) angle = atan2(old_kpt_z-cur_kpt_z,old_kpt_x-cur_kpt_x);
-					if(!forward) angle = atan2(cur_kpt_z-old_kpt_z,cur_kpt_x-old_kpt_x);
-					if(angle < DEG2RAD*(90-max_steering_angle) || angle > DEG2RAD*(90+max_steering_angle)) continue;
-					cur_valid_desc.push_back(cur_desc.row(cur_idx));
-					cur_valid_idx.push_back(cur_idx);
-				}
-				if(cur_valid_desc.rows < 1) continue;
-				matches_lot = matchTwoImage(old_valid_desc, cur_valid_desc);
-
-				for(const auto& match : matches_lot)
-					matches.push_back(cv::DMatch(old_idx, cur_valid_idx.at(match.trainIdx), match.imgIdx, match.distance));
+				float direction = -1*(cur_kpt_z-old_kpt_z);
+				if(forward && direction < 0) continue;
+				if(!forward && direction > 0) continue;
+				float displacement = sqrt(pow(old_kpt_x-cur_kpt_x,2)+pow(old_kpt_y-cur_kpt_y,2)+pow(old_kpt_z-cur_kpt_z,2));
+				if(displacement > valid_abs_displacement) continue;
+				float angle;
+				if(forward) angle = atan2(old_kpt_z-cur_kpt_z,old_kpt_x-cur_kpt_x);
+				if(!forward) angle = atan2(cur_kpt_z-old_kpt_z,cur_kpt_x-old_kpt_x);
+				if(angle < DEG2RAD*(90-max_steering_angle) || angle > DEG2RAD*(90+max_steering_angle)) continue;
+				cur_valid_desc.push_back(cur_desc.row(cur_idx));
+				cur_valid_idx.push_back(cur_idx);
 			}
+			if(cur_valid_desc.rows < 1) continue;
+			matches_lot = matchTwoImage(old_valid_desc, cur_valid_desc);
+
+			for(const auto& match : matches_lot)
+				matches.push_back(cv::DMatch(old_idx, cur_valid_idx.at(match.trainIdx), match.imgIdx, match.distance));
 		}
+
+		// Delete one to many matches
+		matches = matchesRejectorOneToOne(matches);
 
 		// std::cout<<"Matches size: "<<matches.size()<<std::endl;
 

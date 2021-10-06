@@ -195,119 +195,118 @@ private:
 			entry_count++;
 			return;
 		}
-		else //Attempt matching
+		
+		//Attempt matching
+		delta_time = cur_stamp.toSec() - old_time;
+		old_time = cur_stamp.toSec();
+		matches.clear();
+		int cur_size = cluster_indices.size();
+		int old_size = old_cluster_indices.size();
+		Eigen::MatrixXf blob_dist(cur_size,old_size);
+		Eigen::MatrixXf blob_dist_xz(cur_size,old_size);
+		float centroid_dist, radius_dist, height_dist;
+		i=0;
+		for(const Blob& blob : current_blobs)
 		{
-			delta_time = cur_stamp.toSec() - old_time;
-			old_time = cur_stamp.toSec();
-			matches.clear();
-			int cur_size = cluster_indices.size();
-			int old_size = old_cluster_indices.size();
-			Eigen::MatrixXf blob_dist(cur_size,old_size);
-			Eigen::MatrixXf blob_dist_xz(cur_size,old_size);
-			float centroid_dist, radius_dist, height_dist;
-			i=0;
-			for(const Blob& blob : current_blobs)
-			{
-				j=0;
-				for(const Blob& blob_old : map_blobs)
-				{
-					centroid_dist = sqrt(pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2));
-					radius_dist = blob.radius - blob_old.radius;
-					height_dist = blob.height - blob_old.height;
-					blob_dist(i,j) = pow(centroid_dist,2) + pow(radius_dist,2) + pow(height_dist,2);
-					blob_dist_xz(i,j) = centroid_dist;
-					j+=1;
-				}
-				i+=1;
-			}
-
-			i=0;
-			for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, i+=1)
-			{
-				Eigen::MatrixXf::Index minIndexCol, minIndexRow;
-				blob_dist.row(i).minCoeff(&minIndexRow);
-				blob_dist.col(minIndexRow).minCoeff(&minIndexCol);
-				if(i == minIndexCol) //MATCHED
-				{
-					// int randNum = rand()%50; // [0, 50[
-					// current_blobs.at(i).palette = rgba[randNum];
-					current_blobs.at(i).stability = map_blobs.at(minIndexRow).stability + 1;
-					current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
-					matches.emplace_back(i,minIndexRow);
-					matches_dist_xz.emplace_back(blob_dist_xz(i,minIndexRow));
-				}
-				else //NOT MATCHED
-				{
-					int randNum = rand()%50; // [0, 50[
-					current_blobs.at(i).palette = rgba[randNum];
-					current_blobs.at(i).stability = 0;
-				}
-			}
-
 			j=0;
-			for (std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin(); it != old_cluster_indices.end(); ++it, j+=1)
+			for(const Blob& blob_old : map_blobs)
 			{
-				for (const auto& idx : it->indices)
-				{
-					(*old_points)[idx].rgba=map_blobs.at(j).palette;
-				}
+				centroid_dist = sqrt(pow(blob.x - blob_old.x,2)+pow(blob.z - blob_old.z,2));
+				radius_dist = blob.radius - blob_old.radius;
+				height_dist = blob.height - blob_old.height;
+				blob_dist(i,j) = pow(centroid_dist,2) + pow(radius_dist,2) + pow(height_dist,2);
+				blob_dist_xz(i,j) = centroid_dist;
+				j+=1;
 			}
-
-			// //DYNAMIC Blobs
-			// indices_to_delete.clear();
-			// std::vector<float> matches_dist_xz_small = matches_dist_xz;
-			
-			// for(i=0; i<matches.size(); ++i)
-			// {
-			// 	if(current_blobs.at(matches.at(i).first).radius > (2*BD_thres_radius))
-			// 	{
-			// 		indices_to_delete.emplace_back(i);		
-			// 		// std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
-			// 		// for (const auto& idx : it->indices)
-			// 		// {
-			// 		// 	uint32_t rgba_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
-			// 		// 	(*old_points)[idx].rgba= rgba_color;
-			// 		// }
-			// 	}
-			// }
-			// for(i=0; i<indices_to_delete.size(); ++i)
-			// {
-			// 	matches_dist_xz_small.erase(matches_dist_xz_small.begin()+indices_to_delete.at(i)-i);
-			// }
-
-			
-			// float median_xz_curr = util::calculateMedian(matches_dist_xz_small);
-			// if(entry_count == 0) median_xz = median_xz_curr;
-			// median_xz = BD_alpha * median_xz_curr + (1-BD_alpha) * median_xz;
-
-			// if(median_xz > 0)
-			// {
-			// 	indices_to_delete.clear();
-			// 	for(i=0; i<matches.size(); ++i)
-			// 	{
-			// 		// fp_<<matches_dist_xz.at(i)<<std::endl;
-			// 		// if((abs(matches_dist_xz.at(i) - median_xz) > 0.035) && (abs(acos(x_avg*xi+z_avg*zi)) > M_PI/10)) //DYNAMIC
-			// 		if(abs(matches_dist_xz.at(i) - median_xz) > BD_thres_xz) //DYNAMIC
-			// 		{
-			// 			indices_to_delete.emplace_back(i);
-			// 			std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
-			// 			for (const auto& idx : it->indices)
-			// 			{
-			// 				uint32_t rgba_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
-			// 				(*old_points)[idx].rgba= rgba_color;
-			// 			}
-			// 		} 
-						
-			// 	}
-			// 	for(i=0; i<indices_to_delete.size(); ++i)
-			// 	{
-			// 		//old_cluster_indices.erase(old_cluster_indices.begin()+matches.at(indices_to_delete.at(i)).second-i);
-			// 		matches.erase(matches.begin()+indices_to_delete.at(i)-i);
-			// 		matches_dist_xz.erase(matches_dist_xz.begin()+indices_to_delete.at(i)-i);
-			// 	}
-			// }
-
+			i+=1;
 		}
+
+		i=0;
+		for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it, i+=1)
+		{
+			Eigen::MatrixXf::Index minIndexCol, minIndexRow;
+			blob_dist.row(i).minCoeff(&minIndexRow);
+			blob_dist.col(minIndexRow).minCoeff(&minIndexCol);
+			if(i == minIndexCol) //MATCHED
+			{
+				// int randNum = rand()%50; // [0, 50[
+				// current_blobs.at(i).palette = rgba[randNum];
+				current_blobs.at(i).stability = map_blobs.at(minIndexRow).stability + 1;
+				current_blobs.at(i).palette = map_blobs.at(minIndexRow).palette;
+				matches.emplace_back(i,minIndexRow);
+				matches_dist_xz.emplace_back(blob_dist_xz(i,minIndexRow));
+			}
+			else //NOT MATCHED
+			{
+				int randNum = rand()%50; // [0, 50[
+				current_blobs.at(i).palette = rgba[randNum];
+				current_blobs.at(i).stability = 0;
+			}
+		}
+
+		j=0;
+		for (std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin(); it != old_cluster_indices.end(); ++it, j+=1)
+		{
+			for (const auto& idx : it->indices)
+			{
+				(*old_points)[idx].rgba=map_blobs.at(j).palette;
+			}
+		}
+
+		// //DYNAMIC Blobs
+		// indices_to_delete.clear();
+		// std::vector<float> matches_dist_xz_small = matches_dist_xz;
+		
+		// for(i=0; i<matches.size(); ++i)
+		// {
+		// 	if(current_blobs.at(matches.at(i).first).radius > (2*BD_thres_radius))
+		// 	{
+		// 		indices_to_delete.emplace_back(i);		
+		// 		// std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
+		// 		// for (const auto& idx : it->indices)
+		// 		// {
+		// 		// 	uint32_t rgba_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+		// 		// 	(*old_points)[idx].rgba= rgba_color;
+		// 		// }
+		// 	}
+		// }
+		// for(i=0; i<indices_to_delete.size(); ++i)
+		// {
+		// 	matches_dist_xz_small.erase(matches_dist_xz_small.begin()+indices_to_delete.at(i)-i);
+		// }
+
+		
+		// float median_xz_curr = util::calculateMedian(matches_dist_xz_small);
+		// if(entry_count == 0) median_xz = median_xz_curr;
+		// median_xz = BD_alpha * median_xz_curr + (1-BD_alpha) * median_xz;
+
+		// if(median_xz > 0)
+		// {
+		// 	indices_to_delete.clear();
+		// 	for(i=0; i<matches.size(); ++i)
+		// 	{
+		// 		// fp_<<matches_dist_xz.at(i)<<std::endl;
+		// 		// if((abs(matches_dist_xz.at(i) - median_xz) > 0.035) && (abs(acos(x_avg*xi+z_avg*zi)) > M_PI/10)) //DYNAMIC
+		// 		if(abs(matches_dist_xz.at(i) - median_xz) > BD_thres_xz) //DYNAMIC
+		// 		{
+		// 			indices_to_delete.emplace_back(i);
+		// 			std::vector<pcl::PointIndices>::const_iterator it = old_cluster_indices.begin()+matches.at(i).second;
+		// 			for (const auto& idx : it->indices)
+		// 			{
+		// 				uint32_t rgba_color = ((uint8_t)255 << 16) + ((uint8_t)255 << 8) + (uint8_t)255; //white
+		// 				(*old_points)[idx].rgba= rgba_color;
+		// 			}
+		// 		} 
+					
+		// 	}
+		// 	for(i=0; i<indices_to_delete.size(); ++i)
+		// 	{
+		// 		//old_cluster_indices.erase(old_cluster_indices.begin()+matches.at(indices_to_delete.at(i)).second-i);
+		// 		matches.erase(matches.begin()+indices_to_delete.at(i)-i);
+		// 		matches_dist_xz.erase(matches_dist_xz.begin()+indices_to_delete.at(i)-i);
+		// 	}
+		// }
+
 
 		/// PUBLISH
 		/// - Cloud Filtered Blobs

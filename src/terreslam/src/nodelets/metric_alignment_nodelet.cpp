@@ -287,7 +287,7 @@ private:
 			{
 				cv::Mat RTr_2DKPs;
 
-				if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
+				if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_cur, RTr(cv::Rect( 0, 0, 4, 3 )));
 
 				float best_param_2D[6] = {0.0f};
 				bool inliers_2D[dd_sm] = {true};
@@ -301,13 +301,14 @@ private:
 			{
 				cv::Mat RTr_3DKPs;
 
-				cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
+				if(MA_Blobs || MA_DDKPs) cv::transform(ddd_kpm_old, ddd_kpm_cur, RTr(cv::Rect( 0, 0, 4, 3 )));
 
 				float best_param_3D[6] = {0.0f};
 				bool inliers_3D[ddd_sm] = {true};
 				fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
 
-				RTr = RTr * RTr_3DKPs;
+				if(MA_Blobs || MA_DDKPs) RTr = RTr * RTr_3DKPs;
+				else RTr = RTr_3DKPs.clone();
 			}
 
 		}

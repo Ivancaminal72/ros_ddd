@@ -10,6 +10,36 @@
 namespace terreslam
 {
 
+struct sortMatchesByMatchIndexAndDistance
+{
+		inline bool operator() (const cv::DMatch& a, const cv::DMatch& b)
+		{
+			if (a.trainIdx < b.trainIdx) return (true);
+		 	else if ((a.trainIdx == b.trainIdx) && (a.distance < b.distance)) return (true);
+			return (false);
+		}
+};
+
+std::vector<cv::DMatch> matchesRejectorOneToOne(std::vector<cv::DMatch>& matches_in)
+{
+	std::sort(matches_in.begin(),
+						matches_in.end(),
+						sortMatchesByMatchIndexAndDistance());
+
+	std::vector<cv::DMatch> matches_out(matches_in.size());
+	int index_last = -1;
+	unsigned int number_valid_correspondences = 0;
+	for (const auto& match : matches_in) {
+		if (match.trainIdx != index_last) {
+			matches_out[number_valid_correspondences] = match;
+			index_last = match.trainIdx;
+			++number_valid_correspondences;
+		}
+	}
+	matches_out.resize(number_valid_correspondences);
+	return matches_out;
+}
+
 std::vector<cv::DMatch> matchTwoImage(const cv::Mat& query_desc, const cv::Mat& train_desc)
 {
 	auto matcher = cv::DescriptorMatcher::create("BruteForce");

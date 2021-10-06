@@ -110,75 +110,73 @@ private:
 			entry_count++;
 			return;
 		}
-		else //Attempt matching
+		//Attempt matching
+		delta_time = cur_stamp.toSec() - old_time;
+		old_time = cur_stamp.toSec();
+
+		///Motion Filter
+		valid_blob_velocity = forward ? std::max(possible_blob_heading_vel, -max_rollaxis_vel)
+																	: std::min(possible_blob_heading_vel, max_rollaxis_vel);
+		if(!forward) {forward=true; valid_blob_velocity*=-1;} //Force forward
+		valid_abs_displacement = abs(valid_blob_velocity*delta_time);
+		// cout<<"Velocite: "<<valid_blob_velocity<<endl;
+		// cout<<"Displacement: "<<valid_abs_displacement<<endl;
+
+		//For each src kpt find valid dest kpts
+		// - filter by forward or backward direction
+		// - filter by distance
+		// - filter by max steering angle
+		// - apply correspondence estimator
+		// - append correspondences with point idx
+		matches_tmp_lot = pcl::CorrespondencesPtr(new pcl::Correspondences());
+		matches_tmp = pcl::CorrespondencesPtr(new pcl::Correspondences());
+		old_valid_desc = pcl::PointCloud<pcl::FPFHSignature33>::Ptr(new pcl::PointCloud<pcl::FPFHSignature33>());
+		cur_valid_desc = pcl::PointCloud<pcl::FPFHSignature33>::Ptr(new pcl::PointCloud<pcl::FPFHSignature33>());
+		int cur_idx, old_idx = -1;
+		for(const auto& old_kpt : *old_kpts)
 		{
-			delta_time = cur_stamp.toSec() - old_time;
-			old_time = cur_stamp.toSec();
-
-			///Motion Filter
-			valid_blob_velocity = forward ? std::max(possible_blob_heading_vel, -max_rollaxis_vel)
-														 				: std::min(possible_blob_heading_vel, max_rollaxis_vel);
-			if(!forward) {forward=true; valid_blob_velocity*=-1;} //Force forward
-			valid_abs_displacement = abs(valid_blob_velocity*delta_time);
-			// cout<<"Velocite: "<<valid_blob_velocity<<endl;
-			// cout<<"Displacement: "<<valid_abs_displacement<<endl;
-
-			//For each src kpt find valid dest kpts
-			// - filter by forward or backward direction
-			// - filter by distance
-			// - filter by max steering angle
-			// - apply correspondence estimator
-			// - append correspondences with point idx
-			matches_tmp_lot = pcl::CorrespondencesPtr(new pcl::Correspondences());
-			matches_tmp = pcl::CorrespondencesPtr(new pcl::Correspondences());
-			old_valid_desc = pcl::PointCloud<pcl::FPFHSignature33>::Ptr(new pcl::PointCloud<pcl::FPFHSignature33>());
-			cur_valid_desc = pcl::PointCloud<pcl::FPFHSignature33>::Ptr(new pcl::PointCloud<pcl::FPFHSignature33>());
-			int cur_idx, old_idx = -1;
-			for(const auto& old_kpt : *old_kpts)
+			old_idx++;
+			old_valid_desc->points.clear();
+			cur_valid_desc->points.clear();
+			cur_valid_idx.clear();
+			matches_tmp_lot->clear();
+			cur_idx = -1;
+			old_valid_desc->points.push_back(old_desc->points.at(old_idx));
+			for(const auto& cur_kpt : *cur_kpts)
 			{
-				old_idx++;
-				old_valid_desc->points.clear();
-				cur_valid_desc->points.clear();
-				cur_valid_idx.clear();
-				matches_tmp_lot->clear();
-				cur_idx = -1;
-				old_valid_desc->points.push_back(old_desc->points.at(old_idx));
-				for(const auto& cur_kpt : *cur_kpts)
-				{
-					cur_idx++;
-					float direction = -1*(cur_kpt.z-old_kpt.z);
-					if(forward && direction < 0) continue;
-					if(!forward && direction > 0) continue;
-					float displacement = sqrt(pow(old_kpt.x-cur_kpt.x,2)+pow(old_kpt.y-cur_kpt.y,2)+pow(old_kpt.z-cur_kpt.z,2));
-					if(displacement > valid_abs_displacement) continue;
-					float angle;
-					if(forward) angle = atan2(old_kpt.z-cur_kpt.z,old_kpt.x-cur_kpt.x);
-					if(!forward) angle = atan2(cur_kpt.z-old_kpt.z,cur_kpt.x-old_kpt.x);
-					if(angle < DEG2RAD*(90-max_steering_angle) || angle > DEG2RAD*(90+max_steering_angle)) continue;
-					cur_valid_desc->points.push_back(cur_desc->points.at(cur_idx));
-					cur_valid_idx.push_back(cur_idx);
-				}
-				if(cur_valid_desc->points.size() < 1) continue;
-				pcl::registration::CorrespondenceEstimation<pcl::FPFHSignature33, pcl::FPFHSignature33> est;
-				est.setInputSource(old_valid_desc);
-				est.setInputTarget(cur_valid_desc);
-				est.determineCorrespondences(*matches_tmp_lot);
-				// est.determineReciprocalCorrespondences(*matches_tmp_lot);
-
-				for(const auto& match : *matches_tmp_lot)
-					matches_tmp->push_back(pcl::Correspondence(old_idx,cur_valid_idx.at(match.index_match),match.distance));
+				cur_idx++;
+				float direction = -1*(cur_kpt.z-old_kpt.z);
+				if(forward && direction < 0) continue;
+				if(!forward && direction > 0) continue;
+				float displacement = sqrt(pow(old_kpt.x-cur_kpt.x,2)+pow(old_kpt.y-cur_kpt.y,2)+pow(old_kpt.z-cur_kpt.z,2));
+				if(displacement > valid_abs_displacement) continue;
+				float angle;
+				if(forward) angle = atan2(old_kpt.z-cur_kpt.z,old_kpt.x-cur_kpt.x);
+				if(!forward) angle = atan2(cur_kpt.z-old_kpt.z,cur_kpt.x-old_kpt.x);
+				if(angle < DEG2RAD*(90-max_steering_angle) || angle > DEG2RAD*(90+max_steering_angle)) continue;
+				cur_valid_desc->points.push_back(cur_desc->points.at(cur_idx));
+				cur_valid_idx.push_back(cur_idx);
 			}
+			if(cur_valid_desc->points.size() < 1) continue;
+			pcl::registration::CorrespondenceEstimation<pcl::FPFHSignature33, pcl::FPFHSignature33> est;
+			est.setInputSource(old_valid_desc);
+			est.setInputTarget(cur_valid_desc);
+			est.determineCorrespondences(*matches_tmp_lot);
+			// est.determineReciprocalCorrespondences(*matches_tmp_lot);
 
-			// std::cout<<"Number of matches: "<<matches_tmp->size()<<std::endl;
-
-			// Delete one to many matches
-			matches = pcl::CorrespondencesPtr(new pcl::Correspondences());
-			pcl::registration::CorrespondenceRejectorOneToOne rejector_one_to_one;
-			rejector_one_to_one.setInputCorrespondences(matches_tmp);
-			rejector_one_to_one.getCorrespondences(*matches);
-
-			// std::cout<<"Number of filtered matches: "<<matches->size()<<std::endl;
+			for(const auto& match : *matches_tmp_lot)
+				matches_tmp->push_back(pcl::Correspondence(old_idx,cur_valid_idx.at(match.index_match),match.distance));
 		}
+
+		// std::cout<<"Number of matches: "<<matches_tmp->size()<<std::endl;
+
+		// Delete one to many matches
+		matches = pcl::CorrespondencesPtr(new pcl::Correspondences());
+		pcl::registration::CorrespondenceRejectorOneToOne rejector_one_to_one;
+		rejector_one_to_one.setInputCorrespondences(matches_tmp);
+		rejector_one_to_one.getCorrespondences(*matches);
+
+		// std::cout<<"Number of filtered matches: "<<matches->size()<<std::endl;
 		// util::tick_high_resolution(start_t, tick, elapsed_matching);
 		
 		/// PRE-PUBLISH
