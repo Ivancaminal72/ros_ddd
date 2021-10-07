@@ -254,8 +254,6 @@ private:
 		}
 		
 		/// - MA Keypoints Coarse
-		if(MA_DDKPs || MA_DDDKPs)
-		{
 		if(MA_joint_KPs && MA_DDKPs && MA_DDDKPs)
 		{
 			cv::Mat RTr_KPs;
@@ -270,7 +268,8 @@ private:
 				std::make_move_iterator(dd_kpm_cur.begin()),
 				std::make_move_iterator(dd_kpm_cur.end()));
 
-			if(MA_Blobs) cv::transform(ddd_kpm_old, ddd_kpm_cur, RTr(cv::Rect( 0, 0, 4, 3 )));
+			// if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 ))); //just for visualization purposes
+			if(MA_Blobs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
 			float best_param[6] = {0.0f};
 			size_t joint_sm = dd_sm+ddd_sm;
@@ -279,7 +278,6 @@ private:
 
 			if(MA_Blobs) RTr = RTr * RTr_KPs;
 			else RTr = RTr_KPs.clone();
-
 		}
 		else //separated KPs
 		{
@@ -287,7 +285,7 @@ private:
 			{
 				cv::Mat RTr_2DKPs;
 
-				if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_cur, RTr(cv::Rect( 0, 0, 4, 3 )));
+				if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
 				float best_param_2D[6] = {0.0f};
 				bool inliers_2D[dd_sm] = {true};
@@ -301,7 +299,7 @@ private:
 			{
 				cv::Mat RTr_3DKPs;
 
-				if(MA_Blobs || MA_DDKPs) cv::transform(ddd_kpm_old, ddd_kpm_cur, RTr(cv::Rect( 0, 0, 4, 3 )));
+				if(MA_Blobs || MA_DDKPs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
 				float best_param_3D[6] = {0.0f};
 				bool inliers_3D[ddd_sm] = {true};
@@ -310,8 +308,6 @@ private:
 				if(MA_Blobs || MA_DDKPs) RTr = RTr * RTr_3DKPs;
 				else RTr = RTr_3DKPs.clone();
 			}
-
-		}
 		}
 
 		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
