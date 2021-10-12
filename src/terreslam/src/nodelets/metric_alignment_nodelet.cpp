@@ -143,10 +143,11 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_load_msg);
 
 		///METRIC ALIGNMENT
-		cv::Mat RTr;
+		cv::Mat RTr = RTr_identity.clone();
+		
+		/// - MA Coarse Blobs
 		if(MA_Blobs)
 		{
-		/// - MA Blobs Coarse
 		float best_param[3] = {0.0f};
 		bool inliers[sm] = {true};
 		fit3DofRANSAC(bm_old, bm_cur, best_param, inliers, cv::Point2f(0,0), 0.1, 2*sm, MA_debug_Blobs_coarse);
@@ -160,10 +161,69 @@ private:
 															sin(theta), 0, cos(theta) , tz,
 															0         , 0, 0          , 1));
 		
+		}
 
-		/// - MA Blob Regularization
-		if(MA_blob_regularisation){
-		blob_d_cur = cv::Point2f(tx, tz);
+		// util::tick_high_resolution(start_t, tick, elapsed_Blob_coarse);
+		
+		
+		/// - MA Coarse Keypoints
+		if(cv::countNonZero(RTr != RTr_identity)){}
+		else{ //Compute KPs MA
+		if(MA_joint_KPs && MA_DDKPs && MA_DDDKPs) //Joint KPs
+		{
+			cv::Mat RTr_KPs;
+
+			ddd_kpm_old.insert(
+				ddd_kpm_old.end(), 
+				std::make_move_iterator(dd_kpm_old.begin()),
+				std::make_move_iterator(dd_kpm_old.end()));
+
+			ddd_kpm_cur.insert(
+				ddd_kpm_cur.end(), 
+				std::make_move_iterator(dd_kpm_cur.begin()),
+				std::make_move_iterator(dd_kpm_cur.end()));
+
+			float best_param[6] = {0.0f};
+			size_t joint_sm = dd_sm+ddd_sm;
+			bool inliers[joint_sm] = {true};
+			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
+
+			RTr = RTr_KPs.clone();
+		}
+		else //separated KPs
+		{
+			if(MA_DDKPs)
+			{
+				cv::Mat RTr_2DKPs;
+
+				float best_param_2D[6] = {0.0f};
+				bool inliers_2D[dd_sm] = {true};
+				fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
+
+				RTr = RTr_2DKPs.clone();
+			}
+
+			if(MA_DDDKPs)
+			{
+				cv::Mat RTr_3DKPs;
+
+				if(MA_DDKPs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
+
+				float best_param_3D[6] = {0.0f};
+				bool inliers_3D[ddd_sm] = {true};
+				fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+
+				if(MA_DDKPs) RTr = RTr * RTr_3DKPs;
+				else RTr = RTr_3DKPs.clone();
+			}
+		}
+		}
+		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
+
+		
+		/// - MA Coarse Regularization
+		if(MA_regularisation){
+		blob_d_cur = cv::Point2f(RTr.at<float>(0,3), RTr.at<float>(2,3)); // x & z components
 		blob_v_cur = blob_d_cur / delta_time;
 		
 		if(entry_count < 3)
@@ -250,67 +310,10 @@ private:
 		}
 		else trajectory.color.g = 0.0; //default
 
-		// util::tick_high_resolution(start_t, tick, elapsed_Blob_coarse);
-		}
-		
-		/// - MA Keypoints Coarse
-		if(MA_joint_KPs && MA_DDKPs && MA_DDDKPs)
-		{
-			cv::Mat RTr_KPs;
+		/// - MA Fine 
 
-			ddd_kpm_old.insert(
-				ddd_kpm_old.end(), 
-				std::make_move_iterator(dd_kpm_old.begin()),
-				std::make_move_iterator(dd_kpm_old.end()));
-
-			ddd_kpm_cur.insert(
-				ddd_kpm_cur.end(), 
-				std::make_move_iterator(dd_kpm_cur.begin()),
-				std::make_move_iterator(dd_kpm_cur.end()));
-
-			// if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 ))); //just for visualization purposes
-			if(MA_Blobs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
-
-			float best_param[6] = {0.0f};
-			size_t joint_sm = dd_sm+ddd_sm;
-			bool inliers[joint_sm] = {true};
-			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
-
-			if(MA_Blobs) RTr = RTr * RTr_KPs;
-			else RTr = RTr_KPs.clone();
-		}
-		else //separated KPs
-		{
-			if(MA_DDKPs)
-			{
-				cv::Mat RTr_2DKPs;
-
-				if(MA_Blobs) cv::transform(dd_kpm_old, dd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
-
-				float best_param_2D[6] = {0.0f};
-				bool inliers_2D[dd_sm] = {true};
-				fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
-
-				if(MA_Blobs) RTr = RTr * RTr_2DKPs;
-				else RTr = RTr_2DKPs.clone();
-			}
-
-			if(MA_DDDKPs)
-			{
-				cv::Mat RTr_3DKPs;
-
-				if(MA_Blobs || MA_DDKPs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
-
-				float best_param_3D[6] = {0.0f};
-				bool inliers_3D[ddd_sm] = {true};
-				fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
-
-				if(MA_Blobs || MA_DDKPs) RTr = RTr * RTr_3DKPs;
-				else RTr = RTr_3DKPs.clone();
-			}
-		}
-
-		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
+		// cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
+		// RTr = RTr * RTr_ICP;
 
 		/// Pre-PUBLISH
 		/// - Transformations
@@ -510,10 +513,11 @@ private:
 	std::vector<double> elapsed_KPs;
 
 	/// MA
-	cv::Mat RTr_acum = (cv::Mat_<float>(4, 4)<<1, 0, 0, 0, 
-																						 0, 1, 0, 0, 
-																						 0, 0, 1, 0,
-																						 0, 0, 0, 1);
+	cv::Mat RTr_identity = (cv::Mat_<float>(4, 4)<<1, 0, 0, 0, 
+																								 0, 1, 0, 0, 
+																								 0, 0, 1, 0,
+																								 0, 0, 0, 1);
+	cv::Mat RTr_acum = RTr_identity.clone();
 
 	///MA Blob Regulatization
 	visualization_msgs::Marker trajectory;
@@ -523,7 +527,7 @@ private:
 	cv::Point2f blob_a_cur;
 	std::deque<float> blob_v_old_z;
 	std::deque<float> blob_v_old_x;
-	cv::Mat RTr_blob_old = RTr_acum.clone(); //identity
+	cv::Mat RTr_blob_old = RTr_identity.clone();
 	std::deque<float> blob_vels_x;
 	std::deque<float> blob_vels_z;
 	std::deque<float> blob_vels2_x;

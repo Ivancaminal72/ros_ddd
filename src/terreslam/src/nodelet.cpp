@@ -114,8 +114,8 @@ void Nodelet::onInit()
 	nh.getParam("DDDKP/FPFH_radius", DDDKP_FPFH_radius);
 
 	/// - MA
+	nh.getParam("MA/regularisation", MA_regularisation);
 	nh.getParam("MA/Blobs", MA_Blobs);
-	nh.getParam("MA/blob_regularisation", MA_blob_regularisation);
 	nh.getParam("MA/DDKPs", MA_DDKPs);
 	nh.getParam("MA/DDDKPs", MA_DDDKPs);
 	assert(MA_Blobs || MA_DDKPs || MA_DDDKPs);

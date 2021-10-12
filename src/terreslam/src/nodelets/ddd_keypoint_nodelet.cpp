@@ -123,10 +123,10 @@ private:
 		if(!forward) {forward=true; max_valid_blob_velocity*=-1; min_valid_blob_velocity*=-1;} //Force forward
 		max_valid_abs_displacement = abs(max_valid_blob_velocity*delta_time);
 		min_valid_abs_displacement = abs(min_valid_blob_velocity*delta_time);
-		cout<<"Max velocite: "<<max_valid_blob_velocity<<endl;
-		cout<<"Min velocite: "<<min_valid_blob_velocity<<endl;
-		cout<<"Max displacement: "<<max_valid_abs_displacement<<endl;
-		cout<<"Min displacement: "<<min_valid_abs_displacement<<endl;
+		// cout<<"Max velocite: "<<max_valid_blob_velocity<<endl;
+		// cout<<"Min velocite: "<<min_valid_blob_velocity<<endl;
+		// cout<<"Max displacement: "<<max_valid_abs_displacement<<endl;
+		// cout<<"Min displacement: "<<min_valid_abs_displacement<<endl;
 
 		//For each src kpt find valid dest kpts
 		// - filter by forward or backward direction
@@ -252,19 +252,19 @@ private:
 		if(forward) max_possible_blob_heading_vel *= -1;
 		if(forward) min_possible_blob_heading_vel *= -1;
 
-		cout<<"UPDATE --> blob_vel_x: "<<blob_vel_x<<endl;
-		cout<<"UPDATE --> blob_vel_z: "<<blob_vel_z<<endl;
-		cout<<"UPDATE --> blob_vel_x_var: "<<blob_vel_x_var<<endl;
-		cout<<"UPDATE --> blob_vel_z_var: "<<blob_vel_z_var<<endl;
-		cout<<"UPDATE --> max_blob_vel_x: "<<max_pitchaxis_acc*delta_time<<endl;
-		cout<<"UPDATE --> max_blob_vel_z: "<<max_rollaxis_acc*delta_time<<endl;
-		cout<<"UPDATE --> max_possible_blob_vel_x: "<<max_possible_blob_vel_x<<endl;
-		cout<<"UPDATE --> max_possible_blob_vel_z: "<<max_possible_blob_vel_z<<endl;
-		cout<<"UPDATE --> min_possible_blob_vel_x: "<<min_possible_blob_vel_x<<endl;
-		cout<<"UPDATE --> min_possible_blob_vel_z: "<<min_possible_blob_vel_z<<endl;
-		cout<<"UPDATE --> Max velocity: "<<max_possible_blob_heading_vel<<endl;
-		cout<<"UPDATE --> Min velocity: "<<min_possible_blob_heading_vel<<endl;
-		cout<<endl;
+		// cout<<"UPDATE --> blob_vel_x: "<<blob_vel_x<<endl;
+		// cout<<"UPDATE --> blob_vel_z: "<<blob_vel_z<<endl;
+		// cout<<"UPDATE --> blob_vel_x_var: "<<blob_vel_x_var<<endl;
+		// cout<<"UPDATE --> blob_vel_z_var: "<<blob_vel_z_var<<endl;
+		// cout<<"UPDATE --> max_blob_vel_x: "<<max_pitchaxis_acc*delta_time<<endl;
+		// cout<<"UPDATE --> max_blob_vel_z: "<<max_rollaxis_acc*delta_time<<endl;
+		// cout<<"UPDATE --> max_possible_blob_vel_x: "<<max_possible_blob_vel_x<<endl;
+		// cout<<"UPDATE --> max_possible_blob_vel_z: "<<max_possible_blob_vel_z<<endl;
+		// cout<<"UPDATE --> min_possible_blob_vel_x: "<<min_possible_blob_vel_x<<endl;
+		// cout<<"UPDATE --> min_possible_blob_vel_z: "<<min_possible_blob_vel_z<<endl;
+		// cout<<"UPDATE --> Max velocity: "<<max_possible_blob_heading_vel<<endl;
+		// cout<<"UPDATE --> Min velocity: "<<min_possible_blob_heading_vel<<endl;
+		// cout<<endl;
 	}
 
 private:

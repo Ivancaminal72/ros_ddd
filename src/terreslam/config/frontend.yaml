@@ -39,8 +39,8 @@ DDDKP/SIFT_min_contrast: 0.5
 DDDKP/FPFH_radius: 3.3
 
 # MA
+MA/regularisation: true
 MA/Blobs: true
-MA/blob_regularisation: true
 MA/DDKPs: true
 MA/DDDKPs: true
 MA/joint_KPs: true

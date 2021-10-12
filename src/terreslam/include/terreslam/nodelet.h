@@ -121,8 +121,8 @@ protected:
 	float DDDKP_FPFH_radius;
 
 	//MA
+	bool MA_regularisation;
 	bool MA_Blobs;
-	bool MA_blob_regularisation;
 	bool MA_DDKPs;
 	bool MA_DDDKPs;
 	bool MA_joint_KPs;
