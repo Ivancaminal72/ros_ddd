@@ -22,6 +22,7 @@
 
 //msgs
 #include <terreslam/BlobMatches.h>
+#include <terreslam/BlobPoints.h>
 
 namespace terreslam
 {
@@ -49,6 +50,7 @@ private:
 		// Publishers
 		cloud_blobs_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_topic, 10);
 		blob_matches_pub_ = nh.advertise<terreslam::BlobMatches>(blob_matches_topic, 1);
+		blob_points_pub_ = nh.advertise<terreslam::BlobPoints>(blob_points_topic, 1);
 
 		// Initialize palette
 		for(i=0; i<50; ++i)
@@ -117,11 +119,11 @@ private:
 			float height, height_acc=0, height2_acc=0, height_avg, height2_avg, height_dev;
 			float centroid_dev;
 			float x, z, x_acc=0, z_acc=0, x2_acc=0, z2_acc=0, x_avg, z_avg, x2_avg, z2_avg;
-			for (const auto& idx1 : it->indices)
+			for (const auto& idx : it->indices)
 			{
-				x=(*points)[idx1].x;
-				z=(*points)[idx1].z;
-				height = (*points)[idx1].y;
+				x=(*points)[idx].x;
+				z=(*points)[idx].z;
+				height = (*points)[idx].y;
 				if(height > 3) continue;
 				else height = -1*height+3;
 				// if(height > max_height) max_height=height;
@@ -131,7 +133,7 @@ private:
 				z2_acc += z*z;
 				height_acc += height;
 				height2_acc += pow(height, 2);
-				// (*points_ori)[idx1].rgba=rgba;
+				// (*points_ori)[idx].rgba=rgba;
 			}
 			x_avg = x_acc / it->indices.size(); //Centroide (x_avg, z_avg)
 			z_avg = z_acc / it->indices.size();
@@ -276,9 +278,9 @@ private:
 		// }
 
 		
-		// float median_xz_curr = util::calculateMedian(matches_dist_xz_small);
-		// if(entry_count == 0) median_xz = median_xz_curr;
-		// median_xz = BD_alpha * median_xz_curr + (1-BD_alpha) * median_xz;
+		// float median_xbm_z_curr = util::calculateMedian(matches_dist_xz_small);
+		// if(entry_count == 0) median_xz = median_xbm_z_curr;
+		// median_xz = BD_alpha * median_xbm_z_curr + (1-BD_alpha) * median_xz;
 
 		// if(median_xz > 0)
 		// {
@@ -307,6 +309,47 @@ private:
 		// 	}
 		// }
 
+		/// PRE-PUBLISH
+		size_t sm = matches.size();
+		size_t sp_old = (*old_points).size();
+		size_t sp_cur = (*points).size();
+		std::vector<uint8_t> stability(sm);
+		std::vector<float> bm_x_old(sm), bm_z_old(sm), bm_radius_old(sm), bm_height_old(sm);
+		std::vector<float> bm_x_cur(sm), bm_z_cur(sm), bm_radius_cur(sm), bm_height_cur(sm);
+		std::vector<float> bp_x_old(sp_old), bp_y_old(sp_old), bp_z_old(sp_old);
+		std::vector<float> bp_x_cur(sp_cur), bp_y_cur(sp_cur), bp_z_cur(sp_cur);
+		std::vector<unsigned int> bp_s_old(sp_old), bp_s_cur(sp_cur);
+		unsigned int j_old = 0, j_cur = 0;
+		for(i=0; i<matches.size(); ++i)
+		{
+			stability[i] = current_blobs.at(matches.at(i).first).stability;
+			bm_x_cur[i] = current_blobs.at(matches.at(i).first).x;
+			bm_z_cur[i] = current_blobs.at(matches.at(i).first).z;
+			bm_radius_cur[i] = current_blobs.at(matches.at(i).first).radius;
+			bm_height_cur[i] = current_blobs.at(matches.at(i).first).height;
+			bm_x_old[i] = map_blobs.at(matches.at(i).second).x;
+			bm_z_old[i] = map_blobs.at(matches.at(i).second).z;
+			bm_radius_old[i] = map_blobs.at(matches.at(i).second).radius;
+			bm_height_old[i] = map_blobs.at(matches.at(i).second).height;
+
+			for (const auto& idx : old_cluster_indices.at(matches.at(i).second).indices)
+			{
+				bp_x_old[j_old] = (*old_points)[idx].x;
+				bp_y_old[j_old] = (*old_points)[idx].y;
+				bp_z_old[j_old] = (*old_points)[idx].z;
+				bp_s_old[j_old] = i;
+				j_old+=1;
+			}
+
+			for (const auto& idx : cluster_indices.at(matches.at(i).first).indices)
+			{
+				bp_x_cur[j_cur] = (*points)[idx].x;
+				bp_y_cur[j_cur] = (*points)[idx].y;
+				bp_z_cur[j_cur] = (*points)[idx].z;
+				bp_s_cur[j_cur] = i;
+				j_cur+=1;
+			}
+		}
 
 		/// PUBLISH
 		/// - Cloud Filtered Blobs
@@ -316,37 +359,35 @@ private:
 		msg_pcd.header.stamp = cf_msg_ptr->header.stamp;
 		cloud_blobs_pub_.publish(msg_pcd);
 
-		/// - Blobs
+		/// - Blob Params
 		terreslam::BlobMatchesPtr bm_msg_ptr(new terreslam::BlobMatches);
 		bm_msg_ptr->header.frame_id = blob_matches_frame_id;
 		bm_msg_ptr->header.stamp = cf_msg_ptr->header.stamp;
-		size_t sm = matches.size();
-		std::vector<uint8_t> stability(sm);
-		std::vector<float> x_cur(sm), z_cur(sm), radius_cur(sm), height_cur(sm);
-		std::vector<float> x_old(sm), z_old(sm), radius_old(sm), height_old(sm);
-		for(i=0; i<matches.size(); ++i)
-		{
-			stability[i] = current_blobs.at(matches.at(i).first).stability;
-			x_cur[i] = current_blobs.at(matches.at(i).first).x;
-			z_cur[i] = current_blobs.at(matches.at(i).first).z;
-			radius_cur[i] = current_blobs.at(matches.at(i).first).radius;
-			height_cur[i] = current_blobs.at(matches.at(i).first).height;
-			x_old[i] = map_blobs.at(matches.at(i).second).x;
-			z_old[i] = map_blobs.at(matches.at(i).second).z;
-			radius_old[i] = map_blobs.at(matches.at(i).second).radius;
-			height_old[i] = map_blobs.at(matches.at(i).second).height;
-		}
 		bm_msg_ptr->delta_time = delta_time;
 		bm_msg_ptr->stability = stability;
-		bm_msg_ptr->x_cur = x_cur;
-		bm_msg_ptr->z_cur = z_cur;
-		bm_msg_ptr->radius_cur = radius_cur;
-		bm_msg_ptr->height_cur = height_cur;
-		bm_msg_ptr->x_old = x_old;
-		bm_msg_ptr->z_old = z_old;
-		bm_msg_ptr->radius_old = radius_old;
-		bm_msg_ptr->height_old = height_old;
+		bm_msg_ptr->x_old = bm_x_old;
+		bm_msg_ptr->z_old = bm_z_old;
+		bm_msg_ptr->radius_old = bm_radius_old;
+		bm_msg_ptr->height_old = bm_height_old;
+		bm_msg_ptr->x_cur = bm_x_cur;
+		bm_msg_ptr->z_cur = bm_z_cur;
+		bm_msg_ptr->radius_cur = bm_radius_cur;
+		bm_msg_ptr->height_cur = bm_height_cur;
 		blob_matches_pub_.publish(bm_msg_ptr);
+
+		/// - Blob Points
+		terreslam::BlobPointsPtr bp_msg_ptr(new terreslam::BlobPoints);
+		bp_msg_ptr->header.frame_id = blob_points_frame_id;
+		bp_msg_ptr->header.stamp = cf_msg_ptr->header.stamp;
+		bp_msg_ptr->x_old = bp_x_old;
+		bp_msg_ptr->y_old = bp_y_old;
+		bp_msg_ptr->z_old = bp_z_old;
+		bp_msg_ptr->s_old = bp_s_old;
+		bp_msg_ptr->x_cur = bp_x_cur;
+		bp_msg_ptr->y_cur = bp_y_cur;
+		bp_msg_ptr->z_cur = bp_z_cur;
+		bp_msg_ptr->s_cur = bp_s_cur;
+		blob_points_pub_.publish(bp_msg_ptr);
 
 		//Update old data
 		map_blobs=current_blobs;
@@ -374,6 +415,7 @@ private:
 	/// Comms
 	ros::Publisher cloud_blobs_pub_;
 	ros::Publisher blob_matches_pub_;
+	ros::Publisher blob_points_pub_;
 	ros::Subscriber cloud_filtered_sub_;
 
 	/// Chrono timmings

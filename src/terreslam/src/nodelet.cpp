@@ -35,6 +35,7 @@ void Nodelet::onInit()
 	nh.getParam("base_topic/cloud_plane", cloud_plane_topic);
 	nh.getParam("base_topic/normal_filtered", normal_filtered_topic);
 	nh.getParam("base_topic/blob_matches", blob_matches_topic);
+	nh.getParam("base_topic/blob_points", blob_points_topic);
 	nh.getParam("base_topic/dd_keypoint_matches", dd_keypoint_matches_topic);
 	nh.getParam("base_topic/ddd_keypoint_matches", ddd_keypoint_matches_topic);
 	nh.getParam("base_topic/sub_lidar", sub_lidar_topic);
@@ -57,6 +58,7 @@ void Nodelet::onInit()
 	cloud_plane_frame_id = (nh.getNamespace()+"/"+cloud_plane_topic).erase(0,1);
 	normal_filtered_frame_id = (nh.getNamespace()+"/"+normal_filtered_topic).erase(0,1);
 	blob_matches_frame_id = (nh.getNamespace()+"/"+blob_matches_topic).erase(0,1);
+	blob_points_frame_id = (nh.getNamespace()+"/"+blob_points_topic).erase(0,1);
 	dd_keypoint_matches_frame_id = (nh.getNamespace()+"/"+dd_keypoint_matches_topic).erase(0,1);
 	ddd_keypoint_matches_frame_id = (nh.getNamespace()+"/"+ddd_keypoint_matches_topic).erase(0,1);
 	sub_lidar_frame_id = (nh.getNamespace()+"/"+sub_lidar_topic).erase(0,1);

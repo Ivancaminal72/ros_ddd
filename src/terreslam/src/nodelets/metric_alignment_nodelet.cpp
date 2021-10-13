@@ -18,6 +18,7 @@
 
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/registration/icp.h>
 
 #include <nav_msgs/Odometry.h>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -32,6 +33,7 @@
 
 //msgs
 #include <terreslam/BlobMatches.h>
+#include <terreslam/BlobPoints.h>
 #include <terreslam/KeyPointMatches.h>
 
 namespace terreslam
@@ -56,12 +58,19 @@ private:
 
 		/// Subscribers
 		blob_matches_sub_filter_.subscribe(nh, blob_matches_topic, 1);
+		blob_points_sub_filter_.subscribe(nh, blob_points_topic, 1);
 		dd_keypoint_matches_sub_filter_.subscribe(nh, dd_keypoint_matches_topic, 1);
 		ddd_keypoint_matches_sub_filter_.subscribe(nh, ddd_keypoint_matches_topic, 1);
+		cloud_sub_filter_.subscribe(nh, cloud_topic, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
-			(MyExactSyncPolicy(queue_size_), blob_matches_sub_filter_, dd_keypoint_matches_sub_filter_, ddd_keypoint_matches_sub_filter_);
-		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3));
+			(MyExactSyncPolicy(queue_size_), 
+			blob_matches_sub_filter_, 
+			blob_points_sub_filter_, 
+			dd_keypoint_matches_sub_filter_, 
+			ddd_keypoint_matches_sub_filter_,
+			cloud_sub_filter_);
+		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3,_4,_5));
 
 		/// Publishers
 		cloud_keypoints_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_keypoints_topic, 10);
@@ -73,8 +82,10 @@ private:
 
 	void callback(
 		const terreslam::BlobMatches::ConstPtr& bm_msg_ptr,
+		const terreslam::BlobPoints::ConstPtr& bp_msg_ptr,
 		const terreslam::KeyPointMatches::ConstPtr& dd_kpm_msg_ptr,
-		const terreslam::KeyPointMatches::ConstPtr& ddd_kpm_msg_ptr)
+		const terreslam::KeyPointMatches::ConstPtr& ddd_kpm_msg_ptr,
+		const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 	{
 		if(debug) std::cout << "Entry MA: " << entry_count << std::endl;
 		// ///Start chrono ticking
@@ -109,6 +120,32 @@ private:
 			bm_cur.at(i) = cv::Point2f(bm_msg_ptr->x_cur.at(i), bm_msg_ptr->z_cur.at(i));
 		}
 
+		size_t sp_old = bp_msg_ptr->s_old.size();
+		size_t sp_cur = bp_msg_ptr->s_cur.size();
+		assert(sp_old == bp_msg_ptr->x_old.size() &&
+					 sp_old == bp_msg_ptr->y_old.size() &&
+					 sp_old == bp_msg_ptr->z_old.size());
+		assert(sp_cur == bp_msg_ptr->x_cur.size() &&
+					 sp_cur == bp_msg_ptr->y_cur.size() &&
+					 sp_cur == bp_msg_ptr->z_cur.size());
+		pcl::PointXYZ point_pcl;
+		std::vector<pcl::PointCloud<pcl::PointXYZ>> old_blobs_pts;
+		pcl::PointCloud<pcl::PointXYZ>::Ptr old_blob_pts_ptr (new pcl::PointCloud<pcl::PointXYZ>);
+		unsigned int blob_seg = bp_msg_ptr->s_old.at(0);
+		for(size_t i=0; i<sp_old; ++i)
+		{
+			if(bp_msg_ptr->x_old.at(i) != blob_seg)
+			{
+				blob_seg = bp_msg_ptr->x_old.at(i);
+				old_blobs_pts.push_back(*old_blob_pts_ptr);
+				old_blob_pts_ptr->clear();
+			}
+			point_pcl.x = bp_msg_ptr->x_old.at(i);
+			point_pcl.y = bp_msg_ptr->y_old.at(i);
+			point_pcl.z = bp_msg_ptr->z_old.at(i);
+			old_blob_pts_ptr->points.push_back(point_pcl);
+		}
+
 		size_t dd_sm  = dd_kpm_msg_ptr->x_old.size();
 		assert(dd_sm == dd_kpm_msg_ptr->y_old.size() &&
 					 dd_sm == dd_kpm_msg_ptr->z_old.size() &&
@@ -135,6 +172,9 @@ private:
 			ddd_kpm_old.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_old.at(i), ddd_kpm_msg_ptr->y_old.at(i), ddd_kpm_msg_ptr->z_old.at(i));
 			ddd_kpm_cur.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_cur.at(i), ddd_kpm_msg_ptr->y_cur.at(i), ddd_kpm_msg_ptr->z_cur.at(i));
 		}
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cur_pts (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::fromROSMsg(*cloud_msg_ptr, *cur_pts);
 
 		ros::Time cur_stamp = bm_msg_ptr->header.stamp;
 		assert(cur_stamp == dd_kpm_msg_ptr->header.stamp &&
@@ -167,11 +207,11 @@ private:
 		
 		
 		/// - MA Coarse Keypoints
-		if(cv::countNonZero(RTr != RTr_identity)){}
+		if(cv::countNonZero(RTr != RTr_identity)) trajectory.color.b = 0.0;
 		else{ //Compute KPs MA
 		if(MA_joint_KPs && MA_DDKPs && MA_DDDKPs) //Joint KPs
 		{
-			cv::Mat RTr_KPs;
+			cv::Mat RTr_KPs = RTr_identity.clone();
 
 			ddd_kpm_old.insert(
 				ddd_kpm_old.end(), 
@@ -194,7 +234,7 @@ private:
 		{
 			if(MA_DDKPs)
 			{
-				cv::Mat RTr_2DKPs;
+				cv::Mat RTr_2DKPs = RTr_identity.clone();
 
 				float best_param_2D[6] = {0.0f};
 				bool inliers_2D[dd_sm] = {true};
@@ -205,7 +245,7 @@ private:
 
 			if(MA_DDDKPs)
 			{
-				cv::Mat RTr_3DKPs;
+				cv::Mat RTr_3DKPs = RTr_identity.clone();
 
 				if(MA_DDKPs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
@@ -217,6 +257,7 @@ private:
 				else RTr = RTr_3DKPs.clone();
 			}
 		}
+		trajectory.color.b = 1.0;
 		}
 		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
 
@@ -310,12 +351,47 @@ private:
 		}
 		else trajectory.color.g = 0.0; //default
 
-		/// - MA Fine 
+		/// - MA Fine
+		pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
+		std::vector<cv::Mat> RTr_blob_fines;
+		cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
+		Eigen::Matrix4f ei_RTr;
+		cv::cv2eigen(RTr, ei_RTr);
+		for(size_t x=0; x<old_blobs_pts.size(); ++x)
+		{
+			pcl::transformPointCloud(old_blobs_pts.at(x), *old_blob_pts_ptr, ei_RTr);
+			pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+			icp.setInputSource(old_blob_pts_ptr);
+			icp.setInputTarget(cur_pts);
+			icp.setMaxCorrespondenceDistance(0.05);
+			icp.setMaximumIterations(1);
+			icp.setTransformationEpsilon(1e-8);
+			icp.setEuclideanFitnessEpsilon(1);
+			icp.align(*old_blob_pts_ptr);
+
+			Eigen::Matrix4f transformation = icp.getFinalTransformation();
+			cv::Mat RTr_blob_fine;
+			cv::eigen2cv(transformation, RTr_blob_fine);
+			RTr_blob_fines.push_back(RTr_blob_fine);
+
+			pts_trans(cv::Rect( x, 0, 1, 3 )) = RTr_blob_fine(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(0, 0, 0, 1));
+			
+		}
+		cv::Mat col_avg, row_sum;
+		reduce(pts_trans,col_avg, 1, cv::REDUCE_AVG);
+		cv::Mat RTr_subtract_avg = RTr_identity.clone();
+		RTr_subtract_avg(cv::Rect( 3, 0, 1, 3 )) = col_avg*-1;
+		cv::Mat pts_trans_dev = RTr_subtract_avg(cv::Rect( 0, 0, 4, 3 ))*pts_trans;
+		reduce(cv::abs(pts_trans_dev),row_sum, 0, cv::REDUCE_SUM);
+		cv::Point min_loc;
+		cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
+		RTr = RTr * RTr_blob_fines.at(min_loc.x);
+
 
 		// cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 		// RTr = RTr * RTr_ICP;
 
-		/// Pre-PUBLISH
+		/// PRE-PUBLISH
 		/// - Transformations
 		trajectory.header.frame_id = visualization_trajectory_frame_id;
 		trajectory.header.stamp = cur_stamp;
@@ -325,7 +401,6 @@ private:
 		trajectory.pose.orientation.w = 1.0;
 		trajectory.scale.x = 0.05; //width
 		trajectory.color.r = 1.0;
-		trajectory.color.b = 0.0;
 		trajectory.color.a = 1.0;
 		trajectory.points.clear();
 		geometry_msgs::Point p;
@@ -366,8 +441,8 @@ private:
 		trajectory.points.push_back(p);
 		
 		/// - Keypoints & Matching lines colorized
-		pcl::PointCloud<pcl::PointXYZRGBA> cloud;
-		cloud.points.resize(dd_kpm_cur.size()+dd_kpm_old.size()+ddd_kpm_cur.size()+ddd_kpm_old.size());
+		pcl::PointCloud<pcl::PointXYZRGBA> kpm_cloud;
+		kpm_cloud.points.resize(dd_kpm_cur.size()+dd_kpm_old.size()+ddd_kpm_cur.size()+ddd_kpm_old.size());
 		
 		visualization_msgs::Marker rm_line_matches, dd_line_matches, ddd_line_matches;
 		rm_line_matches.header.frame_id = visualization_kps_frame_id;
@@ -391,14 +466,14 @@ private:
 		r = 0; g = 255; b = 255; rgba_cur = (a << 24 | r << 16 | g << 8 | b);
 		r = 0; g = 255; b = 0; rgba_old = (a << 24 | r << 16 | g << 8 | b);
 		for (size_t i=0; i<dd_sm; ++i) {
-			cloud.points[i*2].x = dd_kpm_cur[i].x;
-			cloud.points[i*2].y = dd_kpm_cur[i].y;
-			cloud.points[i*2].z = dd_kpm_cur[i].z;
-			cloud.points[i*2].rgba = rgba_cur;
-			cloud.points[i*2+1].x = dd_kpm_old[i].x;
-			cloud.points[i*2+1].y = dd_kpm_old[i].y;
-			cloud.points[i*2+1].z = dd_kpm_old[i].z;
-			cloud.points[i*2+1].rgba = rgba_old;
+			kpm_cloud.points[i*2].x = dd_kpm_cur[i].x;
+			kpm_cloud.points[i*2].y = dd_kpm_cur[i].y;
+			kpm_cloud.points[i*2].z = dd_kpm_cur[i].z;
+			kpm_cloud.points[i*2].rgba = rgba_cur;
+			kpm_cloud.points[i*2+1].x = dd_kpm_old[i].x;
+			kpm_cloud.points[i*2+1].y = dd_kpm_old[i].y;
+			kpm_cloud.points[i*2+1].z = dd_kpm_old[i].z;
+			kpm_cloud.points[i*2+1].rgba = rgba_old;
 			p.x = dd_kpm_cur[i].x;
 			p.y = dd_kpm_cur[i].y;
 			p.z = dd_kpm_cur[i].z;
@@ -416,14 +491,14 @@ private:
 		r = 255; g = 255; b = 0; rgba_cur = (a << 24 | r << 16 | g << 8 | b);
 		r = 255; g = 0; b = 0; rgba_old = (a << 24 | r << 16 | g << 8 | b);
 		for (size_t i=0; i<ddd_sm; ++i) {
-			cloud.points[i*2+dd_sm*2].x = ddd_kpm_cur[i].x;
-			cloud.points[i*2+dd_sm*2].y = ddd_kpm_cur[i].y;
-			cloud.points[i*2+dd_sm*2].z = ddd_kpm_cur[i].z;
-			cloud.points[i*2+dd_sm*2].rgba = rgba_cur;
-			cloud.points[i*2+1+dd_sm*2].x = ddd_kpm_old[i].x;
-			cloud.points[i*2+1+dd_sm*2].y = ddd_kpm_old[i].y;
-			cloud.points[i*2+1+dd_sm*2].z = ddd_kpm_old[i].z;
-			cloud.points[i*2+1+dd_sm*2].rgba = rgba_old;
+			kpm_cloud.points[i*2+dd_sm*2].x = ddd_kpm_cur[i].x;
+			kpm_cloud.points[i*2+dd_sm*2].y = ddd_kpm_cur[i].y;
+			kpm_cloud.points[i*2+dd_sm*2].z = ddd_kpm_cur[i].z;
+			kpm_cloud.points[i*2+dd_sm*2].rgba = rgba_cur;
+			kpm_cloud.points[i*2+1+dd_sm*2].x = ddd_kpm_old[i].x;
+			kpm_cloud.points[i*2+1+dd_sm*2].y = ddd_kpm_old[i].y;
+			kpm_cloud.points[i*2+1+dd_sm*2].z = ddd_kpm_old[i].z;
+			kpm_cloud.points[i*2+1+dd_sm*2].rgba = rgba_old;
 			p.x = ddd_kpm_cur[i].x;
 			p.y = ddd_kpm_cur[i].y;
 			p.z = ddd_kpm_cur[i].z;
@@ -438,7 +513,7 @@ private:
 		/// - Keypoint matches
 		visualization_kps_pub_.publish(rm_line_matches); //Delete ALL previous lines
 		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(cloud, msg_pcd);
+		pcl::toROSMsg(kpm_cloud, msg_pcd);
 		msg_pcd.header.frame_id = cloud_keypoints_frame_id;
 		msg_pcd.header.stamp = cur_stamp;
 		cloud_keypoints_pub_.publish(msg_pcd);
@@ -472,6 +547,7 @@ private:
 
 		entry_count++;
 
+
 		// util::tick_high_resolution(start_t, tick, elapsed);
 		// util::printElapsed(elapsed, "Callback blob detector: ");
 		// util::printElapsed(elapsed_load_msg, "Load msg: ");
@@ -497,13 +573,17 @@ private:
 	ros::Publisher odom_pub_;
 	ros::Publisher blob_odom_pub_;
 	message_filters::Subscriber<terreslam::BlobMatches> blob_matches_sub_filter_;
+	message_filters::Subscriber<terreslam::BlobPoints> blob_points_sub_filter_;
 	message_filters::Subscriber<terreslam::KeyPointMatches> dd_keypoint_matches_sub_filter_;
 	message_filters::Subscriber<terreslam::KeyPointMatches> ddd_keypoint_matches_sub_filter_;
+	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_filter_;
 	
 	typedef message_filters::sync_policies::ExactTime
 		<terreslam::BlobMatches,
+		terreslam::BlobPoints,
 		terreslam::KeyPointMatches,
-		terreslam::KeyPointMatches> MyExactSyncPolicy;
+		terreslam::KeyPointMatches,
+		sensor_msgs::PointCloud2> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy>* exactSync_;
 
 	/// Chrono timmings

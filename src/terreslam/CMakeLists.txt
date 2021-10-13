@@ -33,6 +33,7 @@ add_definitions(${PCL_DEFINITIONS}) # To include -march=native if set
 add_message_files(
 	 FILES
 	 BlobMatches.msg
+	 BlobPoints.msg
 	 KeyPointMatches.msg
 )
 

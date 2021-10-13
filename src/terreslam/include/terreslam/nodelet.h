@@ -33,6 +33,7 @@ protected:
 	std::string cloud_plane_topic;
 	std::string normal_filtered_topic;
 	std::string blob_matches_topic;
+	std::string blob_points_topic;
 	std::string dd_keypoint_matches_topic;
 	std::string ddd_keypoint_matches_topic;
 	std::string sub_lidar_topic;
@@ -56,6 +57,7 @@ protected:
 	std::string cloud_plane_frame_id;
 	std::string normal_filtered_frame_id;
 	std::string blob_matches_frame_id;
+	std::string blob_points_frame_id;
 	std::string dd_keypoint_matches_frame_id;
 	std::string ddd_keypoint_matches_frame_id;
 	std::string sub_lidar_frame_id;

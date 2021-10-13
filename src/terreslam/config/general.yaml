@@ -2,7 +2,7 @@
 #IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
 
 # General
-debug: false
+debug: true
 logsdir: '/home/ivan/outputs/terreslam/unorganized'
 max_depth: 120.0  #for Kinect 6.0
 max_steering_angle: 30
@@ -24,6 +24,7 @@ base_topic/cloud_keypoints: 'cloud_keypoints'
 base_topic/cloud_plane: 'cloud_plane'
 base_topic/normal_filtered: 'normal_filtered'
 base_topic/blob_matches: 'blob_matches'
+base_topic/blob_points: 'blob_points'
 base_topic/dd_keypoint_matches: 'dd_keypoint_matches'
 base_topic/ddd_keypoint_matches: 'ddd_keypoint_matches'
 base_topic/sub_lidar: 'adapt/lidar'
