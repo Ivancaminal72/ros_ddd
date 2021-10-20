@@ -19,6 +19,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/registration/icp.h>
+#include <pcl/registration/gicp.h>
 
 #include <nav_msgs/Odometry.h>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -134,9 +135,9 @@ private:
 		unsigned int blob_seg = bp_msg_ptr->s_old.at(0);
 		for(size_t i=0; i<sp_old; ++i)
 		{
-			if(bp_msg_ptr->x_old.at(i) != blob_seg)
+			if(bp_msg_ptr->s_old.at(i) != blob_seg)
 			{
-				blob_seg = bp_msg_ptr->x_old.at(i);
+				blob_seg = bp_msg_ptr->s_old.at(i);
 				old_blobs_pts.push_back(*old_blob_pts_ptr);
 				old_blob_pts_ptr->clear();
 			}
@@ -203,7 +204,7 @@ private:
 		
 		}
 
-		// util::tick_high_resolution(start_t, tick, elapsed_Blob_coarse);
+		// util::tick_high_resolution(start_t, tick, elapsed_blob_coarse);
 		
 		
 		/// - MA Coarse Keypoints
@@ -259,7 +260,7 @@ private:
 		}
 		trajectory.color.b = 1.0;
 		}
-		// util::tick_high_resolution(start_t, tick, elapsed_KPs);
+		// util::tick_high_resolution(start_t, tick, elapsed_kps);
 
 		
 		/// - MA Coarse Regularization
@@ -351,8 +352,14 @@ private:
 		}
 		else trajectory.color.g = 0.0; //default
 
-		/// - MA Fine
-		pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
+		// util::tick_high_resolution(start_t, tick, elapsed_regularization);
+
+		/// - MA Plannar Fine
+		pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp;
+
+		/// - MA Blob Fine
+		if(old_blobs_pts.size() != 0){
+		// pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
 		std::vector<cv::Mat> RTr_blob_fines;
 		cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
 		Eigen::Matrix4f ei_RTr;
@@ -364,7 +371,7 @@ private:
 			icp.setInputSource(old_blob_pts_ptr);
 			icp.setInputTarget(cur_pts);
 			icp.setMaxCorrespondenceDistance(0.05);
-			icp.setMaximumIterations(1);
+			icp.setMaximumIterations(50);
 			icp.setTransformationEpsilon(1e-8);
 			icp.setEuclideanFitnessEpsilon(1);
 			icp.align(*old_blob_pts_ptr);
@@ -386,10 +393,10 @@ private:
 		cv::Point min_loc;
 		cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
 		RTr = RTr * RTr_blob_fines.at(min_loc.x);
+		
+		// util::tick_high_resolution(start_t, tick, elapsed_blob_fine);
+		}
 
-
-		// cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
-		// RTr = RTr * RTr_ICP;
 
 		/// PRE-PUBLISH
 		/// - Transformations
@@ -551,8 +558,11 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed);
 		// util::printElapsed(elapsed, "Callback blob detector: ");
 		// util::printElapsed(elapsed_load_msg, "Load msg: ");
-		// util::printElapsed(elapsed_Blob_coarse, "MA Blob Coarse: ");
-		// util::printElapsed(elapsed_KPs, "MA Keypoints: ");
+		// util::printElapsed(elapsed_blob_coarse, "MA Blob Coarse: ");
+		// util::printElapsed(elapsed_kps, "MA Keypoints: ");
+		// util::printElapsed(elapsed_regularization, "Regularization: ");
+		// util::printElapsed(elapsed_blob_fine, "MA Blob fine: ");
+
 	}
 
 	void skipFrame(std::string msg)
@@ -589,8 +599,10 @@ private:
 	/// Chrono timmings
 	std::vector<double> elapsed;
 	std::vector<double> elapsed_load_msg;
-	std::vector<double> elapsed_Blob_coarse;
-	std::vector<double> elapsed_KPs;
+	std::vector<double> elapsed_blob_coarse;
+	std::vector<double> elapsed_kps;
+	std::vector<double> elapsed_regularization;
+	std::vector<double> elapsed_blob_fine;
 
 	/// MA
 	cv::Mat RTr_identity = (cv::Mat_<float>(4, 4)<<1, 0, 0, 0, 
