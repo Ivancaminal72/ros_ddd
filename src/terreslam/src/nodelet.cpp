@@ -29,11 +29,13 @@ void Nodelet::onInit()
 	nh.getParam("base_topic/blob_odom", blob_odom_topic);
 	nh.getParam("base_topic/cloud", cloud_topic);
 	nh.getParam("base_topic/cloud_xy", cloud_xy_topic);
-	nh.getParam("base_topic/cloud_filtered", cloud_filtered_topic);
+	nh.getParam("base_topic/cloud_filtered_high", cloud_filtered_high_topic);
+	nh.getParam("base_topic/cloud_filtered_low", cloud_filtered_low_topic);
+	nh.getParam("base_topic/old_cloud_filtered_low", old_cloud_filtered_low_topic);
 	nh.getParam("base_topic/cloud_filtered_blobs", cloud_filtered_blobs_topic);
 	nh.getParam("base_topic/cloud_keypoints", cloud_keypoints_topic);
 	nh.getParam("base_topic/cloud_plane", cloud_plane_topic);
-	nh.getParam("base_topic/normal_filtered", normal_filtered_topic);
+	nh.getParam("base_topic/normal_filtered_high", normal_filtered_high_topic);
 	nh.getParam("base_topic/blob_matches", blob_matches_topic);
 	nh.getParam("base_topic/blob_points", blob_points_topic);
 	nh.getParam("base_topic/dd_keypoint_matches", dd_keypoint_matches_topic);
@@ -52,11 +54,13 @@ void Nodelet::onInit()
 	blob_odom_frame_id = (nh.getNamespace()+"/"+blob_odom_topic).erase(0,1);
 	cloud_frame_id = (nh.getNamespace()+"/"+cloud_topic).erase(0,1);
 	cloud_xy_frame_id = (nh.getNamespace()+"/"+cloud_xy_topic).erase(0,1);
-	cloud_filtered_frame_id = (nh.getNamespace()+"/"+cloud_filtered_topic).erase(0,1);
+	cloud_filtered_high_frame_id = (nh.getNamespace()+"/"+cloud_filtered_high_topic).erase(0,1);
+	cloud_filtered_low_frame_id = (nh.getNamespace()+"/"+cloud_filtered_low_topic).erase(0,1);
+	old_cloud_filtered_low_frame_id = (nh.getNamespace()+"/"+old_cloud_filtered_low_topic).erase(0,1);
 	cloud_filtered_blobs_frame_id = (nh.getNamespace()+"/"+cloud_filtered_blobs_topic).erase(0,1);
 	cloud_keypoints_frame_id = (nh.getNamespace()+"/"+cloud_keypoints_topic).erase(0,1);
 	cloud_plane_frame_id = (nh.getNamespace()+"/"+cloud_plane_topic).erase(0,1);
-	normal_filtered_frame_id = (nh.getNamespace()+"/"+normal_filtered_topic).erase(0,1);
+	normal_filtered_high_frame_id = (nh.getNamespace()+"/"+normal_filtered_high_topic).erase(0,1);
 	blob_matches_frame_id = (nh.getNamespace()+"/"+blob_matches_topic).erase(0,1);
 	blob_points_frame_id = (nh.getNamespace()+"/"+blob_points_topic).erase(0,1);
 	dd_keypoint_matches_frame_id = (nh.getNamespace()+"/"+dd_keypoint_matches_topic).erase(0,1);
@@ -83,7 +87,6 @@ void Nodelet::onInit()
 	
 	/// - Plane filter parameters
 	nh.getParam("PF/threshold", PF_thresh);
-	nh.getParam("PF/highpass", PF_highpass);	
 	
 	/// - Plane detector parameters
 	nh.getParam("PD/debug", PD_debug);

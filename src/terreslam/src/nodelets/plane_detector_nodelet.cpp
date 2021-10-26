@@ -18,6 +18,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/features/normal_3d_omp.h>
+#include <pcl/filters/normal_space.h>
 
 namespace terreslam
 {
@@ -61,8 +62,10 @@ private:
 		exactSync_->registerCallback(boost::bind(&PlaneDetectorNodelet::callback, this, _1, _2));
 
 		// Publishers
-		cloud_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_topic, 10);
-		normal_filtered_pub_ = nh.advertise<sensor_msgs::PointCloud2>(normal_filtered_topic, 10);
+		cloud_filtered_high_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_high_topic, 10);
+		old_cloud_filtered_low_pub_ = nh.advertise<sensor_msgs::PointCloud2>(old_cloud_filtered_low_topic, 10);
+		cloud_filtered_low_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_low_topic, 10);
+		normal_filtered_high_pub_ = nh.advertise<sensor_msgs::PointCloud2>(normal_filtered_high_topic, 10);
 		plane_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_plane_topic, 10);
 	} 
 
@@ -111,31 +114,35 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_normal);
 
 		/// Eliminate points with low curvature
+		cur_high_points = ptrPointCloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		cur_high_normals = ptrNormalCloud (new pcl::PointCloud<pcl::Normal>);
+		cur_low_points = ptrPointCloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+		cur_low_normals = ptrNormalCloud (new pcl::PointCloud<pcl::Normal>);
 		size_t fivepercent = points->size() * 0.05f;
 		float min_step = 0.01;
 		float increment = min_step;
 		float PF_thresh_opt = PF_thresh;
 		size_t old_size, reduction, remain;
 		
-		util::curvatureFilter(points, normals, PF_thresh, PF_highpass);
+		util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, cur_low_points, cur_low_normals, PF_thresh);
 
 		/// Optimize elimination
-		if(points->size() >= fivepercent)
+		if(cur_high_points->size() >= fivepercent)
 		{
-			old_size = points->size();
+			old_size = cur_high_points->size();
 			PF_thresh_opt += increment;
-			util::curvatureFilter(points, normals, PF_thresh_opt, PF_highpass);
+			util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, cur_low_points, cur_low_normals, PF_thresh_opt);
 		}
 
-		while(points->size() >= fivepercent)
+		while(cur_high_points->size() >= fivepercent)
 		{
-			remain = points->size() - fivepercent;
-			reduction = old_size - points->size();
+			remain = cur_high_points->size() - fivepercent;
+			reduction = old_size - cur_high_points->size();
 			increment = remain * increment / reduction;
 			increment = (increment > min_step) ? increment : min_step;
-			old_size = points->size();
+			old_size = cur_high_points->size();
 			PF_thresh_opt += increment;
-			util::curvatureFilter(points, normals, PF_thresh_opt, PF_highpass);
+			util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, cur_low_points, cur_low_normals, PF_thresh_opt);
 		}
 
 		/// PLANE DETECTOR
@@ -172,23 +179,51 @@ private:
 		// }
 
 		/// PUBLISH
+		/// - Pairwise scans
+		if(entry_count > 0)
+		{
+			//subsample old
+			// pcl::NormalSpaceSampling<pcl::PointXYZRGBA, pcl::Normal> nss;
+			// nss.setInputCloud(old_low_points);
+			// nss.setNormals(old_low_normals);
+			// nss.setSample((unsigned int) points->size() * 0.005f);
+			// nss.setSeed(std::rand());
+			// nss.setBins(2,2,2);
+			// nss.filter(*old_low_points);
+
+			pcl::toROSMsg(*old_low_points, msg_pcd);
+			msg_pcd.header.frame_id = old_cloud_filtered_low_frame_id;
+			msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
+			old_cloud_filtered_low_pub_.publish(msg_pcd);
+
+			pcl::toROSMsg(*cur_low_points, msg_pcd);
+			msg_pcd.header.frame_id = cloud_filtered_low_frame_id;
+			msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
+			cloud_filtered_low_pub_.publish(msg_pcd);
+		} 
+
 		/// - Cloud Filtered
-		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*points, msg_pcd);
-		msg_pcd.header.frame_id = cloud_filtered_frame_id;
+		pcl::toROSMsg(*cur_high_points, msg_pcd);
+		msg_pcd.header.frame_id = cloud_filtered_high_frame_id;
 		msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
-		cloud_filtered_pub_.publish(msg_pcd);
+		cloud_filtered_high_pub_.publish(msg_pcd);
 
 		/// - Normal Filtered
-		pcl::toROSMsg(*normals, msg_pcd);
-		msg_pcd.header.frame_id = normal_filtered_frame_id;
+		pcl::toROSMsg(*cur_high_normals, msg_pcd);
+		msg_pcd.header.frame_id = normal_filtered_high_frame_id;
 		msg_pcd.header.stamp = cloud_msg_ptr->header.stamp;
-		normal_filtered_pub_.publish(msg_pcd);
+		normal_filtered_high_pub_.publish(msg_pcd);
 
 		/// - Planes
 		// pcl::toROSMsg(*scan_planes, msg_pcd);
 		// msg_pcd.header.frame_id = cloud_plane_frame_id;
 		// plane_pub.publish(msg_pcd);
+
+		//Update old data
+		old_high_points = cur_high_points;
+		old_low_points = cur_low_points;
+		old_high_normals = cur_high_normals;
+		old_low_normals = cur_low_normals;
 
 		entry_count++;
 
@@ -209,9 +244,12 @@ private:
 	int queue_size_;
 
 	/// Comms
+	sensor_msgs::PointCloud2 msg_pcd;
 	// ros::Subscriber cloud_sub;
-	ros::Publisher cloud_filtered_pub_;
-	ros::Publisher normal_filtered_pub_;
+	ros::Publisher cloud_filtered_high_pub_;
+	ros::Publisher old_cloud_filtered_low_pub_;
+	ros::Publisher cloud_filtered_low_pub_;
+	ros::Publisher normal_filtered_high_pub_;
 	ros::Publisher plane_pub_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_xy_sub_filter_;
@@ -230,6 +268,16 @@ private:
 
 	/// Types
 	Scan* scan_;
+
+	/// Plane Filtering
+	ptrPointCloud old_high_points;
+	ptrPointCloud old_low_points;
+	ptrPointCloud cur_high_points;
+	ptrPointCloud cur_low_points;
+	ptrNormalCloud old_high_normals;
+	ptrNormalCloud old_low_normals;
+	ptrNormalCloud cur_high_normals;
+	ptrNormalCloud cur_low_normals;
 };
 
 PLUGINLIB_EXPORT_CLASS(terreslam::PlaneDetectorNodelet, nodelet::Nodelet);

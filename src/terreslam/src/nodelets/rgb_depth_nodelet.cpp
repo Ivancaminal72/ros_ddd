@@ -96,7 +96,11 @@ private:
 		static_tf_broadcaster.sendTransform(Ts_identity);
 		Ts_identity.child_frame_id = cloud_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);
-		Ts_identity.child_frame_id = cloud_filtered_frame_id;
+		Ts_identity.child_frame_id = cloud_filtered_high_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = cloud_filtered_low_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = old_cloud_filtered_low_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);
 		Ts_identity.child_frame_id = cloud_plane_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);

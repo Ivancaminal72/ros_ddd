@@ -38,7 +38,7 @@ namespace util
 			return (alpha << 24) + (red << 16) + (grn << 8) + blu;
 	}
 
-	void curvatureFilter(ptrPointCloud points, ptrNormalCloud normals, float thresh, bool high_pass)
+	void curvatureFilter(ptrPointCloud points, ptrNormalCloud normals, ptrPointCloud high_points, ptrNormalCloud high_normals, ptrPointCloud low_points, ptrNormalCloud low_normals, float thresh)
  {
 	std::vector<int> inidices;
 	// Reserve enough space for the indices
@@ -47,7 +47,7 @@ namespace util
 	int j = 0;
 	for (int i = 0; i < static_cast<int>(points->size()); ++i)
 	{
-		if(high_pass && normals->at(i).curvature < thresh) 
+		if(normals->at(i).curvature < thresh) 
 			continue;
 		inidices[j] = i;
 		j++;
@@ -57,8 +57,8 @@ namespace util
 		// Resize to the correct size
 		inidices.resize (j);
 	}
-	util::subtractPointsXYZRGBA(points, inidices);
-	util::subtractPointsNormal(normals, inidices);
+	util::splitPointsXYZRGBA(points, high_points, low_points, inidices);
+	util::splitPointsNormal(normals, high_normals, low_normals, inidices);
  }
 
 	void printEigenMatrix(Eigen::MatrixXd mat)
@@ -70,7 +70,7 @@ namespace util
 		std::cout << std::endl << std::endl;
 	}
 	
-	void subtractPointsXYZRGBA(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud, const std::vector<int>& indices)
+	void splitPointsXYZRGBA(ptrPointCloud cloud, ptrPointCloud high_cloud, ptrPointCloud low_cloud, const std::vector<int>& indices)
 	{
 		pcl::PointIndices::Ptr fIndices (new pcl::PointIndices);
 
@@ -80,10 +80,12 @@ namespace util
 		extract.setInputCloud (cloud);
 		extract.setIndices (fIndices);
 		extract.setNegative(false);
-		extract.filter(*cloud);
+		extract.filter(*high_cloud);
+		extract.setNegative(true);
+		extract.filter(*low_cloud);
 	}
 
-	void subtractPointsNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud, const std::vector<int>& indices)
+	void splitPointsNormal(ptrNormalCloud cloud, ptrNormalCloud high_cloud, ptrNormalCloud low_cloud, const std::vector<int>& indices)
 	{
 		pcl::PointIndices::Ptr fIndices (new pcl::PointIndices);
 
@@ -93,8 +95,11 @@ namespace util
 		extract.setInputCloud (cloud);
 		extract.setIndices (fIndices);
 		extract.setNegative(false);
-		extract.filter(*cloud);
+		extract.filter(*high_cloud);
+		extract.setNegative(true);
+		extract.filter(*low_cloud);
 	}
+
 	void subtractPointsXY(pcl::PointCloud<pcl::PointXY>::Ptr cloud, const std::vector<int>& indices)
 	{
 		pcl::PointIndices::Ptr fIndices (new pcl::PointIndices);

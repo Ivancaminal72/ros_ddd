@@ -45,7 +45,7 @@ private:
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
 
 		/// Subscribers
-		cloud_filtered_sub_ = nh.subscribe(cloud_filtered_topic, queue_size_, &BlobDetectorNodelet::callback, this);
+		cloud_filtered_sub_ = nh.subscribe(cloud_filtered_high_topic, queue_size_, &BlobDetectorNodelet::callback, this);
 
 		// Publishers
 		cloud_blobs_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_filtered_blobs_topic, 10);

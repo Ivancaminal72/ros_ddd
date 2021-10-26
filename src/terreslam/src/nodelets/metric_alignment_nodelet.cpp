@@ -58,11 +58,13 @@ private:
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
 
 		/// Subscribers
-		blob_matches_sub_filter_.subscribe(nh, blob_matches_topic, 1);
-		blob_points_sub_filter_.subscribe(nh, blob_points_topic, 1);
-		dd_keypoint_matches_sub_filter_.subscribe(nh, dd_keypoint_matches_topic, 1);
-		ddd_keypoint_matches_sub_filter_.subscribe(nh, ddd_keypoint_matches_topic, 1);
-		cloud_sub_filter_.subscribe(nh, cloud_topic, 1);
+		blob_matches_sub_filter_.subscribe(nh, blob_matches_topic, 3);
+		blob_points_sub_filter_.subscribe(nh, blob_points_topic, 3);
+		dd_keypoint_matches_sub_filter_.subscribe(nh, dd_keypoint_matches_topic, 3);
+		ddd_keypoint_matches_sub_filter_.subscribe(nh, ddd_keypoint_matches_topic, 3);
+		old_cloud_filtered_low_sub_filter_.subscribe(nh, old_cloud_filtered_low_topic, 3);
+		cloud_filtered_low_sub_filter_.subscribe(nh, cloud_filtered_low_topic, 3);
+		cloud_sub_filter_.subscribe(nh, cloud_topic, 3);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), 
@@ -70,8 +72,10 @@ private:
 			blob_points_sub_filter_, 
 			dd_keypoint_matches_sub_filter_, 
 			ddd_keypoint_matches_sub_filter_,
+			old_cloud_filtered_low_sub_filter_,
+			cloud_filtered_low_sub_filter_,
 			cloud_sub_filter_);
-		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3,_4,_5));
+		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3,_4,_5,_6,_7));
 
 		/// Publishers
 		cloud_keypoints_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_keypoints_topic, 10);
@@ -86,15 +90,17 @@ private:
 		const terreslam::BlobPoints::ConstPtr& bp_msg_ptr,
 		const terreslam::KeyPointMatches::ConstPtr& dd_kpm_msg_ptr,
 		const terreslam::KeyPointMatches::ConstPtr& ddd_kpm_msg_ptr,
+		const sensor_msgs::PointCloud2::ConstPtr& old_cloud_filtered_low_msg_ptr,
+		const sensor_msgs::PointCloud2::ConstPtr& cloud_filtered_low_msg_ptr,
 		const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
 	{
 		if(debug) std::cout << "Entry MA: " << entry_count << std::endl;
-		// ///Start chrono ticking
-		// std::chrono::duration<double> tick;
-		// std::chrono::high_resolution_clock::time_point end_t, start_t;
-		// start_t = std::chrono::high_resolution_clock::now();
-		// end_t = std::chrono::high_resolution_clock::now();
-		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+		///Start chrono ticking
+		std::chrono::duration<double> tick;
+		std::chrono::high_resolution_clock::time_point end_t, start_t;
+		start_t = std::chrono::high_resolution_clock::now();
+		end_t = std::chrono::high_resolution_clock::now();
+		tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
 		size_t sm = bm_msg_ptr->x_old.size();
 		assert(sm == bm_msg_ptr->stability.size() &&
@@ -174,6 +180,11 @@ private:
 			ddd_kpm_cur.at(i) = cv::Point3f(ddd_kpm_msg_ptr->x_cur.at(i), ddd_kpm_msg_ptr->y_cur.at(i), ddd_kpm_msg_ptr->z_cur.at(i));
 		}
 
+		pcl::PointCloud<pcl::PointXYZ>::Ptr old_filtered_low_pts (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::fromROSMsg(*old_cloud_filtered_low_msg_ptr, *old_filtered_low_pts);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cur_filtered_low_pts (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::fromROSMsg(*cloud_filtered_low_msg_ptr, *cur_filtered_low_pts);
+		
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cur_pts (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::fromROSMsg(*cloud_msg_ptr, *cur_pts);
 
@@ -224,10 +235,23 @@ private:
 				std::make_move_iterator(dd_kpm_cur.begin()),
 				std::make_move_iterator(dd_kpm_cur.end()));
 
-			float best_param[6] = {0.0f};
+			
 			size_t joint_sm = dd_sm+ddd_sm;
+
+			// float best_param[6] = {0.0f};
+			// bool inliers[joint_sm] = {true};
+			// fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
+
+			float best_param[3] = {0.0f};
 			bool inliers[joint_sm] = {true};
-			fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, RTr_KPs, inliers, cv::Point3f(0,0,0), 0.1, joint_sm, MA_debug_KPs);
+			fit3DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, inliers, cv::Point2f(0,0), 0.1, joint_sm, MA_debug_KPs);
+			float theta = best_param[0];
+			float tx = best_param[1];
+			float tz = best_param[2];
+			RTr_KPs = cv::Mat(cv::Matx44f(cos(theta), 0, -sin(theta), tx, 
+																		0         , 1, 0 			    , 0 , 
+																		sin(theta), 0, cos(theta) , tz,
+																		0         , 0, 0          , 1));
 
 			RTr = RTr_KPs.clone();
 		}
@@ -237,9 +261,20 @@ private:
 			{
 				cv::Mat RTr_2DKPs = RTr_identity.clone();
 
-				float best_param_2D[6] = {0.0f};
+				// float best_param_2D[6] = {0.0f};
+				// bool inliers_2D[dd_sm] = {true};
+				// fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
+
+				float best_param_2D[3] = {0.0f};
 				bool inliers_2D[dd_sm] = {true};
-				fit6DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, RTr_2DKPs, inliers_2D, cv::Point3f(0,0,0), 0.1, dd_sm, MA_debug_KPs);
+				fit3DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, inliers_2D, cv::Point2f(0,0), 0.1, dd_sm, MA_debug_KPs);
+				float theta = best_param_2D[0];
+				float tx = best_param_2D[1];
+				float tz = best_param_2D[2];
+				RTr_2DKPs = cv::Mat(cv::Matx44f(cos(theta), 0, -sin(theta), tx, 
+																				0         , 1, 0 			    , 0 , 
+																				sin(theta), 0, cos(theta) , tz,
+																				0         , 0, 0          , 1));
 
 				RTr = RTr_2DKPs.clone();
 			}
@@ -250,9 +285,20 @@ private:
 
 				if(MA_DDKPs) cv::transform(ddd_kpm_old, ddd_kpm_old, RTr(cv::Rect( 0, 0, 4, 3 )));
 
-				float best_param_3D[6] = {0.0f};
+				// float best_param_3D[6] = {0.0f};
+				// bool inliers_3D[ddd_sm] = {true};
+				// fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+
+				float best_param_3D[3] = {0.0f};
 				bool inliers_3D[ddd_sm] = {true};
-				fit6DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, RTr_3DKPs, inliers_3D, cv::Point3f(0,0,0), 0.1, ddd_sm, MA_debug_KPs);
+				fit3DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, inliers_3D, cv::Point2f(0,0), 0.1, ddd_sm, MA_debug_KPs);
+				float theta = best_param_3D[0];
+				float tx = best_param_3D[1];
+				float tz = best_param_3D[2];
+				RTr_3DKPs = cv::Mat(cv::Matx44f(cos(theta), 0, -sin(theta), tx, 
+																				0         , 1, 0 			    , 0 , 
+																				sin(theta), 0, cos(theta) , tz,
+																				0         , 0, 0          , 1));
 
 				if(MA_DDKPs) RTr = RTr * RTr_3DKPs;
 				else RTr = RTr_3DKPs.clone();
@@ -355,47 +401,59 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_regularization);
 
 		/// - MA Plannar Fine
-		pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp;
+		// pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp;
+		// gicp.setInputSource(old_filtered_low_pts);
+		// gicp.setInputTarget(cur_filtered_low_pts);
+		// gicp.setMaxCorrespondenceDistance(0.2);
+		// gicp.setMaximumIterations(50);
+		// gicp.align(*old_filtered_low_pts);
+		
+		// Eigen::Matrix4f gicp_trans = gicp.getFinalTransformation();
+		// cv::Mat RTr_plannar_fine;
+		// cv::eigen2cv(gicp_trans, RTr_plannar_fine);
+		// RTr = RTr * RTr_plannar_fine;
+
+		// util::tick_high_resolution(start_t, tick, elapsed_plannar_fine);
 
 		/// - MA Blob Fine
-		if(old_blobs_pts.size() != 0){
-		// pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
-		std::vector<cv::Mat> RTr_blob_fines;
-		cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
-		Eigen::Matrix4f ei_RTr;
-		cv::cv2eigen(RTr, ei_RTr);
-		for(size_t x=0; x<old_blobs_pts.size(); ++x)
-		{
-			pcl::transformPointCloud(old_blobs_pts.at(x), *old_blob_pts_ptr, ei_RTr);
-			pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-			icp.setInputSource(old_blob_pts_ptr);
-			icp.setInputTarget(cur_pts);
-			icp.setMaxCorrespondenceDistance(0.05);
-			icp.setMaximumIterations(50);
-			icp.setTransformationEpsilon(1e-8);
-			icp.setEuclideanFitnessEpsilon(1);
-			icp.align(*old_blob_pts_ptr);
+		// if(old_blobs_pts.size() >= 3){
+		// // pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
+		// std::vector<cv::Mat> RTr_blob_fines;
+		// cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
+		// Eigen::Matrix4f ei_RTr;
+		// cv::cv2eigen(RTr, ei_RTr);
+		// for(size_t x=0; x<old_blobs_pts.size(); ++x)
+		// {
+		// 	pcl::transformPointCloud(old_blobs_pts.at(x), *old_blob_pts_ptr, ei_RTr);
+		// 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+		// 	icp.setInputSource(old_blob_pts_ptr);
+		// 	icp.setInputTarget(cur_pts);
+		// 	icp.setMaxCorrespondenceDistance(0.05);
+		// 	icp.setMaximumIterations(50);
+		// 	icp.setTransformationEpsilon(1e-8);
+		// 	icp.setEuclideanFitnessEpsilon(1);
+		// 	icp.align(*old_blob_pts_ptr);
 
-			Eigen::Matrix4f transformation = icp.getFinalTransformation();
-			cv::Mat RTr_blob_fine;
-			cv::eigen2cv(transformation, RTr_blob_fine);
-			RTr_blob_fines.push_back(RTr_blob_fine);
+		// 	Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
+		// 	cv::Mat RTr_blob_fine;
+		// 	cv::eigen2cv(icp_trans, RTr_blob_fine);
+		// 	RTr_blob_fines.push_back(RTr_blob_fine);
 
-			pts_trans(cv::Rect( x, 0, 1, 3 )) = RTr_blob_fine(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(0, 0, 0, 1));
+		// 	pts_trans(cv::Rect( x, 0, 1, 3 )) = RTr_blob_fine(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(0, 0, 0, 1));
 			
-		}
-		cv::Mat col_avg, row_sum;
-		reduce(pts_trans,col_avg, 1, cv::REDUCE_AVG);
-		cv::Mat RTr_subtract_avg = RTr_identity.clone();
-		RTr_subtract_avg(cv::Rect( 3, 0, 1, 3 )) = col_avg*-1;
-		cv::Mat pts_trans_dev = RTr_subtract_avg(cv::Rect( 0, 0, 4, 3 ))*pts_trans;
-		reduce(cv::abs(pts_trans_dev),row_sum, 0, cv::REDUCE_SUM);
-		cv::Point min_loc;
-		cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
-		RTr = RTr * RTr_blob_fines.at(min_loc.x);
+		// }
+		// cv::Mat col_avg, row_sum;
+		// reduce(pts_trans,col_avg, 1, cv::REDUCE_AVG);
+		// cv::Mat RTr_subtract_avg = RTr_identity.clone();
+		// RTr_subtract_avg(cv::Rect( 3, 0, 1, 3 )) = col_avg*-1;
+		// cv::Mat pts_trans_dev = RTr_subtract_avg(cv::Rect( 0, 0, 4, 3 ))*pts_trans;
+		// reduce(cv::abs(pts_trans_dev),row_sum, 0, cv::REDUCE_SUM);
+		// cv::Point min_loc;
+		// cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
+		// RTr = RTr * RTr_blob_fines.at(min_loc.x);
 		
-		// util::tick_high_resolution(start_t, tick, elapsed_blob_fine);
-		}
+		// // util::tick_high_resolution(start_t, tick, elapsed_blob_fine);
+		// }
 
 
 		/// PRE-PUBLISH
@@ -586,6 +644,8 @@ private:
 	message_filters::Subscriber<terreslam::BlobPoints> blob_points_sub_filter_;
 	message_filters::Subscriber<terreslam::KeyPointMatches> dd_keypoint_matches_sub_filter_;
 	message_filters::Subscriber<terreslam::KeyPointMatches> ddd_keypoint_matches_sub_filter_;
+	message_filters::Subscriber<sensor_msgs::PointCloud2> old_cloud_filtered_low_sub_filter_;
+	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_filtered_low_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_filter_;
 	
 	typedef message_filters::sync_policies::ExactTime
@@ -593,6 +653,8 @@ private:
 		terreslam::BlobPoints,
 		terreslam::KeyPointMatches,
 		terreslam::KeyPointMatches,
+		sensor_msgs::PointCloud2,
+		sensor_msgs::PointCloud2,
 		sensor_msgs::PointCloud2> MyExactSyncPolicy;
 	message_filters::Synchronizer<MyExactSyncPolicy>* exactSync_;
 

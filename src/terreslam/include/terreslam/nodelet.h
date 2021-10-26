@@ -27,11 +27,13 @@ protected:
 	std::string blob_odom_topic;
 	std::string cloud_topic;
 	std::string cloud_xy_topic;
-	std::string cloud_filtered_topic;
+	std::string cloud_filtered_high_topic;
+	std::string cloud_filtered_low_topic;
+	std::string old_cloud_filtered_low_topic;
 	std::string cloud_filtered_blobs_topic;
 	std::string cloud_keypoints_topic;
 	std::string cloud_plane_topic;
-	std::string normal_filtered_topic;
+	std::string normal_filtered_high_topic;
 	std::string blob_matches_topic;
 	std::string blob_points_topic;
 	std::string dd_keypoint_matches_topic;
@@ -51,11 +53,13 @@ protected:
 	std::string blob_odom_frame_id;
 	std::string cloud_frame_id;
 	std::string cloud_xy_frame_id;
-	std::string cloud_filtered_frame_id;
+	std::string cloud_filtered_high_frame_id;
+	std::string cloud_filtered_low_frame_id;
+	std::string old_cloud_filtered_low_frame_id;
 	std::string cloud_filtered_blobs_frame_id;
 	std::string cloud_keypoints_frame_id;
 	std::string cloud_plane_frame_id;
-	std::string normal_filtered_frame_id;
+	std::string normal_filtered_high_frame_id;
 	std::string blob_matches_frame_id;
 	std::string blob_points_frame_id;
 	std::string dd_keypoint_matches_frame_id;
@@ -90,7 +94,6 @@ protected:
 	/// Plane Filter
 	bool use_normal_integral = false;
 	float PF_thresh;
-	bool PF_highpass;
 
 	/// Plane Detector
 	bool PD_debug;

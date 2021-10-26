@@ -54,8 +54,8 @@ private:
 		ros::NodeHandle & pnh = getPrivateNodeHandle();
 
 		/// Subscribers
-		cloud_filtered_sub_filter_.subscribe(nh, cloud_filtered_topic, 1);
-		normal_filtered_sub_filter_.subscribe(nh, normal_filtered_topic, 1);
+		cloud_filtered_sub_filter_.subscribe(nh, cloud_filtered_high_topic, 1);
+		normal_filtered_sub_filter_.subscribe(nh, normal_filtered_high_topic, 1);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
 			(MyExactSyncPolicy(queue_size_), cloud_filtered_sub_filter_, normal_filtered_sub_filter_);

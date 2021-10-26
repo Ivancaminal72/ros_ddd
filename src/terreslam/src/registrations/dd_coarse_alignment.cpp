@@ -432,4 +432,116 @@ namespace terreslam
 
 		return best_rmse;
 	} // fit3DofRANSAC()
+
+	// RANSAC fit in 3DOF: 1D rot and 2D translation (maximizes the number of inliers)
+	// NOTE: no data normalization is currently performed
+	float fit3DofRANSAC(const std::vector<cv::Point3f>& src_3d, const std::vector<cv::Point3f>& dst_3d,
+					float* best_param,  bool* inliers,
+					const cv::Point2f center ,
+					const float inlierMaxEr,
+					const int niter,
+					const bool debug) {
+		
+
+		std::vector<cv::Point2f> src, dst;
+		for (auto & pt : src_3d) src.push_back(cv::Point2f(pt.x, pt.z));
+		for (auto & pt : dst_3d) dst.push_back(cv::Point2f(pt.x, pt.z));
+		
+		const int ITERATION_TO_SETTLE = 2;		// iterations to settle inliers and param
+		const float INLIERS_RATIO_OK = 0.95f;	// stopping criterion
+
+		// size of data std::vector
+		unsigned int N = src.size();
+		assert(N==dst.size());
+
+		// unrealistic case
+		if(N<2) {
+			best_param[0] = 0.0f; // ?
+			best_param[1] = 0.0f;
+			best_param[2] = 0.0f;
+			return LARGE_NUMBER;
+		}
+
+		unsigned int ninliers;         			// current number of inliers
+		unsigned int best_ninliers = 0;			// number of inliers
+		float best_rmse = LARGE_NUMBER;			// error
+		float cur_rmse;                			// current distance error
+		float param[3];                			// rad, Tx, Ty
+		std::vector <cv::Point2f> src_2pt(2), dst_2pt(2);// min set of 2 points (1 correspondence generates 2 equations)
+		srand(time(NULL));
+
+		// iterations
+		for (int iter = 0; iter<niter; iter++) {
+			if(debug) cout<<"iteration "<<iter<<": ";
+			
+			// 1. Select a random set of 2 points (not obligatory inliers but valid)
+			int i1, i2;
+			i1 = rand() % N; // [0, N[
+			i2 = i1;
+			while (i2==i1) {
+				i2 = rand() % N;
+			}
+			src_2pt[0] = src[i1]; // corresponding points
+			src_2pt[1] = src[i2];
+			dst_2pt[0] = dst[i1];
+			dst_2pt[1] = dst[i2];
+			bool two_inliers[] = {true, true};
+
+			// 2. Quadratic fit for 2 points
+			cur_rmse = fit3DofQUADRATIC(src_2pt, dst_2pt, param, two_inliers, center);
+
+			// 3. Recalculate to settle params and inliers using a larger set
+			for (int iter2=0; iter2<ITERATION_TO_SETTLE; iter2++) {
+				ninliers = setInliers3Dof(src, dst, inliers, param, inlierMaxEr, center);   // changes inliers
+				cur_rmse = fit3DofQUADRATIC(src, dst, param, inliers, center);              // changes cur_param
+			}
+
+			// potential ill-condition or large error
+			if (ninliers<2) {
+				if(debug) cout<<" !!! less than 2 inliers "<<endl;
+				continue;
+			} else {
+				if(debug) cout<<" "<<ninliers<<" inliers;";
+			}
+
+			if(debug) cout<<" recalculate: RMSE = "<<cur_rmse<<endl;
+
+
+			// 4. found a better solution?
+			if (ninliers > best_ninliers) {
+				best_ninliers = ninliers;
+				best_param[0] = param[0];
+				best_param[1] = param[1];
+				best_param[2] = param[2];
+				best_rmse = cur_rmse;
+
+				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<best_param[2]<<endl;
+
+				// exit condition
+				float inlier_ratio = (float)best_ninliers/N;
+				if (inlier_ratio > INLIERS_RATIO_OK) {
+					if(debug) cout<<"Breaking early after "<< iter+1<<" iterations; inlier ratio = "<<inlier_ratio<<endl;
+					break;
+				}
+			} else if(ninliers == best_ninliers && best_rmse > cur_rmse) {
+				best_ninliers = ninliers;
+				best_param[0] = param[0];
+				best_param[1] = param[1];
+				best_param[2] = param[2];
+				best_rmse = cur_rmse;
+
+				if(debug) cout<<" --- Solution improved: "<< best_param[0]<<", "<<best_param[1]<<", "<<best_param[2]<<endl;
+			}
+		} // iterations
+
+		// 5. recreate inliers for the best parameters
+		ninliers = setInliers3Dof(src, dst, inliers, best_param, inlierMaxEr, center);
+
+		if(debug){
+			cout<<"Best iteration: "<<ninliers<<" inliers; recalculate: RMSE = "<<best_rmse<<endl;
+			cout<<" --- Final solution: "<< best_param[0]<<", "<<best_param[1]<<", "<<best_param[2]<<endl;
+		}
+
+		return best_rmse;
+	} // fit3DofRANSAC()
 }
