@@ -1,6 +1,7 @@
 Header header 
 
 float64 delta_time
+uint32[] ppa
 uint8[] stability
 
 float32[] x_old

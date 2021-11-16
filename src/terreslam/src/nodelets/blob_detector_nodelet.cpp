@@ -155,6 +155,7 @@ private:
 				blob.radius = centroid_dev;
 				blob.x=x_avg;
 				blob.z=z_avg;
+				blob.ppa = ppa;
 				current_blobs.emplace_back(blob);
 			}
 		}
@@ -314,6 +315,7 @@ private:
 		size_t sp_old = (*old_points).size();
 		size_t sp_cur = (*points).size();
 		std::vector<uint8_t> stability(sm);
+		std::vector<unsigned int> ppa(sm);
 		std::vector<float> bm_x_old(sm), bm_z_old(sm), bm_radius_old(sm), bm_height_old(sm);
 		std::vector<float> bm_x_cur(sm), bm_z_cur(sm), bm_radius_cur(sm), bm_height_cur(sm);
 		std::vector<float> bp_x_old(sp_old), bp_y_old(sp_old), bp_z_old(sp_old);
@@ -322,6 +324,7 @@ private:
 		unsigned int j_old = 0, j_cur = 0;
 		for(i=0; i<matches.size(); ++i)
 		{
+			ppa[i] = current_blobs.at(matches.at(i).first).ppa;
 			stability[i] = current_blobs.at(matches.at(i).first).stability;
 			bm_x_cur[i] = current_blobs.at(matches.at(i).first).x;
 			bm_z_cur[i] = current_blobs.at(matches.at(i).first).z;
@@ -365,6 +368,7 @@ private:
 		bm_msg_ptr->header.stamp = cf_msg_ptr->header.stamp;
 		bm_msg_ptr->delta_time = delta_time;
 		bm_msg_ptr->stability = stability;
+		bm_msg_ptr->ppa = ppa;
 		bm_msg_ptr->x_old = bm_x_old;
 		bm_msg_ptr->z_old = bm_z_old;
 		bm_msg_ptr->radius_old = bm_radius_old;

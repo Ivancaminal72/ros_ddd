@@ -104,6 +104,7 @@ private:
 
 		size_t sm = bm_msg_ptr->x_old.size();
 		assert(sm == bm_msg_ptr->stability.size() &&
+					 sm == bm_msg_ptr->ppa.size() &&
 					 sm == bm_msg_ptr->z_old.size() &&
 					 sm == bm_msg_ptr->radius_old.size() &&
 					 sm == bm_msg_ptr->height_old.size() &&
@@ -112,11 +113,13 @@ private:
 					 sm == bm_msg_ptr->radius_cur.size() &&
 					 sm == bm_msg_ptr->height_cur.size());
 		std::vector<uint8_t> stability(sm);
+		std::vector<uint32_t> ppa(sm);
 		std::vector<float> radius_old(sm), height_old(sm);
 		std::vector<float> radius_cur(sm), height_cur(sm);
 		std::vector<cv::Point2f> bm_old(sm), bm_cur(sm);
 		delta_time = bm_msg_ptr->delta_time;
 		stability = bm_msg_ptr->stability;
+		ppa = bm_msg_ptr->ppa;
 		radius_old = bm_msg_ptr->radius_old;
 		height_old = bm_msg_ptr->height_old;
 		radius_cur = bm_msg_ptr->radius_cur;
