@@ -497,11 +497,11 @@ private:
 		// cout<<"Ty: "<<RTr_acum.at<float>(1,3)<<endl;
 		// cout<<"Tz: "<<RTr_acum.at<float>(2,3)<<endl<<endl;
 
-		tf2::Matrix3x3 R_acc_tf2_m(RTr_acum.at<float>(0,0), RTr_acum.at<float>(0,1), RTr_acum.at<float>(0,2),
+		tf2::Matrix3x3 R_acum_tf2_m(RTr_acum.at<float>(0,0), RTr_acum.at<float>(0,1), RTr_acum.at<float>(0,2),
 															 RTr_acum.at<float>(1,0), RTr_acum.at<float>(1,1), RTr_acum.at<float>(1,2),
 															 RTr_acum.at<float>(2,0), RTr_acum.at<float>(2,1), RTr_acum.at<float>(2,2)); 
-		tf2::Quaternion R_acc_tf2_q;
-		R_acc_tf2_m.getRotation(R_acc_tf2_q);
+		tf2::Quaternion R_acum_tf2_q;
+		R_acum_tf2_m.getRotation(R_acum_tf2_q);
 
 		p.x = RTr_acum.at<float>(0,3);
 		p.y = RTr_acum.at<float>(1,3);
@@ -591,14 +591,14 @@ private:
 		/// - Trasnforms
 		static tf2_ros::TransformBroadcaster odom_broadcaster;
 		geometry_msgs::TransformStamped odom_trans;
-		geometry_msgs::Quaternion R_acc_msg_q = tf2::toMsg(R_acc_tf2_q);
+		geometry_msgs::Quaternion R_acum_msg_q = tf2::toMsg(R_acum_tf2_q);
 		odom_trans.header.stamp = cur_stamp;
 		odom_trans.header.frame_id = odom_frame_id;
 		odom_trans.child_frame_id = sub_cam_frame_id;
 		odom_trans.transform.translation.x = RTr_acum.at<float>(0,3);
 		odom_trans.transform.translation.y = RTr_acum.at<float>(1,3);
 		odom_trans.transform.translation.z = RTr_acum.at<float>(2,3);
-		odom_trans.transform.rotation = R_acc_msg_q;
+		odom_trans.transform.rotation = R_acum_msg_q;
 		odom_broadcaster.sendTransform(odom_trans);
 		visualization_trajectory_pub_.publish(trajectory);
 		
@@ -610,7 +610,7 @@ private:
 		odom.pose.pose.position.x = RTr_acum.at<float>(0,3);
 		odom.pose.pose.position.y = RTr_acum.at<float>(1,3);
 		odom.pose.pose.position.z = RTr_acum.at<float>(2,3);
-		odom.pose.pose.orientation = R_acc_msg_q;
+		odom.pose.pose.orientation = R_acum_msg_q;
 		odom_pub_.publish(odom);
 
 		entry_count++;

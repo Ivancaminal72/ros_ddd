@@ -52,10 +52,10 @@ private:
 		float Tx = o_msg_ptr->pose.pose.position.x;
 		float Ty = o_msg_ptr->pose.pose.position.y;
 		float Tz = o_msg_ptr->pose.pose.position.z;
-		geometry_msgs::Quaternion R_acc_msg_q = o_msg_ptr->pose.pose.orientation;
-		tf2::Quaternion R_acc_tf2_q;
-		tf2::fromMsg(R_acc_msg_q, R_acc_tf2_q);
-		cv::Mat R_acc = util::quat2Mat(R_acc_tf2_q);
+		geometry_msgs::Quaternion R_acum_msg_q = o_msg_ptr->pose.pose.orientation;
+		tf2::Quaternion R_acum_tf2_q;
+		tf2::fromMsg(R_acum_msg_q, R_acum_tf2_q);
+		cv::Mat R_acum = util::quat2Mat(R_acum_tf2_q);
 		
 
 		entry_count++;
