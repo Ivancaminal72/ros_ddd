@@ -10,6 +10,10 @@
 !/src/rtabmap_ros_*
 !/src/data_to_rosbag
 !/src/terreslam
+!/src/minkindr
+!/src/catkin_boost_python_buildtool
+!/src/numpy_eigen
+!/src/minkindr_ros
 
 #Configurations
 !/rviz
