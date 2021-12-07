@@ -4,6 +4,7 @@
  */
 
 #include "terreslam/nodelet.h"
+#include "terreslam/utils/util_types.h"
 #include "terreslam/utils/util_chrono.h"
 #include "terreslam/utils/util_general.h"
 
@@ -49,13 +50,14 @@ private:
 		// end_t = std::chrono::high_resolution_clock::now();
 		// tick = std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
 
-		float Tx = o_msg_ptr->pose.pose.position.x;
-		float Ty = o_msg_ptr->pose.pose.position.y;
-		float Tz = o_msg_ptr->pose.pose.position.z;
+		RTr_acum.at<float>(0,3) = o_msg_ptr->pose.pose.position.x;
+		RTr_acum.at<float>(1,3) = o_msg_ptr->pose.pose.position.y;
+		RTr_acum.at<float>(2,3) = o_msg_ptr->pose.pose.position.z;
 		geometry_msgs::Quaternion R_acum_msg_q = o_msg_ptr->pose.pose.orientation;
 		tf2::Quaternion R_acum_tf2_q;
 		tf2::fromMsg(R_acum_msg_q, R_acum_tf2_q);
-		cv::Mat R_acum = util::quat2Mat(R_acum_tf2_q);
+		cv::Mat tmp = util::quat2Mat(R_acum_tf2_q);
+		tmp.copyTo(RTr_acum(cv::Rect( 0, 0, 3, 3 )));
 		
 
 		entry_count++;
@@ -80,6 +82,13 @@ private:
 
 	/// Chrono timmings
 	std::vector<double> elapsed;
+
+	/// MA Accum
+	cv::Mat RTr_identity = (cv::Mat_<float>(4, 4)<<1, 0, 0, 0, 
+																								 0, 1, 0, 0, 
+																								 0, 0, 1, 0,
+																								 0, 0, 0, 1);
+	cv::Mat RTr_acum = RTr_identity.clone();
 
 };
 
