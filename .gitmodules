@@ -1,3 +1,12 @@
 [submodule "src/minkindr"]
 	path = src/minkindr
 	url = https://github.com/ethz-asl/minkindr.git
+[submodule "src/catkin_boost_python_buildtool"]
+	path = src/catkin_boost_python_buildtool
+	url = https://github.com/ethz-asl/catkin_boost_python_buildtool.git
+[submodule "src/numpy_eigen"]
+	path = src/numpy_eigen
+	url = https://github.com/ethz-asl/numpy_eigen.git
+[submodule "src/minkindr_ros"]
+	path = src/minkindr_ros
+	url = https://github.com/ethz-asl/minkindr_ros.git
