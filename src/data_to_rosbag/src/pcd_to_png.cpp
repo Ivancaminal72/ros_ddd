@@ -514,37 +514,37 @@ void PcdToPng::processLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
 
     // tick_high_resolution(start_t, tick, elapsed_load_pcd_msg);
 
-    // //Multi-core
-    // std::thread th(processPcd,
-    //               pointcloud,
-    //               width_[sub_cam_frame_id_],
-    //               height_[sub_cam_frame_id_],
-    //               T_cam0_lidar_,
-    //               Proj_[sub_cam_frame_id_],
-    //               pub_cam_frame_id_,
-    //               lidar_frame_id_,
-    //               std::ref(buffer_pcd_pub_),
-    //               std::ref(buffer_depth_pub_),
-    //               std::ref(buffer_depth_info_pub_),
-    //               //compute_intensity// std::ref(buffer_infrared_pub_),
-    //               //compute_intensity// std::ref(buffer_infrared_info_pub_),
-    //               std::ref(is_first_pcd_processed_));
-    // th.detach();
+    //Multi-core
+    std::thread th(processPcd,
+                  pointcloud,
+                  width_[sub_cam_frame_id_],
+                  height_[sub_cam_frame_id_],
+                  T_cam0_lidar_,
+                  Proj_[sub_cam_frame_id_],
+                  pub_cam_frame_id_,
+                  pub_lidar_frame_id_,
+                  std::ref(buffer_pcd_pub_),
+                  std::ref(buffer_depth_pub_),
+                  std::ref(buffer_depth_info_pub_),
+                  //compute_intensity// std::ref(buffer_infrared_pub_),
+                  //compute_intensity// std::ref(buffer_infrared_info_pub_),
+                  std::ref(is_first_pcd_processed_));
+    th.detach();
 
-    //Single-core
-    processPcd(pointcloud,
-              width_[sub_cam_frame_id_],
-              height_[sub_cam_frame_id_],
-              T_cam0_lidar_,
-              Proj_[sub_cam_frame_id_],
-              pub_cam_frame_id_,
-              pub_lidar_frame_id_,
-              std::ref(buffer_pcd_pub_),
-              std::ref(buffer_depth_pub_),
-              std::ref(buffer_depth_info_pub_),
-              //compute_intensity// std::ref(buffer_infrared_pub_),
-              //compute_intensity// std::ref(buffer_infrared_info_pub_),
-              std::ref(is_first_pcd_processed_));
+    // //Single-core
+    // processPcd(pointcloud,
+    //           width_[sub_cam_frame_id_],
+    //           height_[sub_cam_frame_id_],
+    //           T_cam0_lidar_,
+    //           Proj_[sub_cam_frame_id_],
+    //           pub_cam_frame_id_,
+    //           pub_lidar_frame_id_,
+    //           std::ref(buffer_pcd_pub_),
+    //           std::ref(buffer_depth_pub_),
+    //           std::ref(buffer_depth_info_pub_),
+    //           //compute_intensity// std::ref(buffer_infrared_pub_),
+    //           //compute_intensity// std::ref(buffer_infrared_info_pub_),
+    //           std::ref(is_first_pcd_processed_));
 
     width_.erase(sub_cam_frame_id_);
     height_.erase(sub_cam_frame_id_);
@@ -555,7 +555,7 @@ void PcdToPng::processLidar(const pcl::PointCloud<pcl::PointXYZI> &msg) {
 
     // tick_high_resolution(start_t, tick, elapsed_callback);
     // printElapsed(elapsed_load_pcd_msg, "Load pcd msg");
-    // printElapsed(elapsed_callback, "Callback total"); std::cout<<std::endl;
+    // printElapsed(elapsed_callback, "Callback processPcd"); std::cout<<std::endl;
   }
 }
 
@@ -601,11 +601,14 @@ void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
   // tick_high_resolution(start_t, tick, elapsed_load_pcd);
 
   // Start projection
-  ddd_pts_h = T * ddd_pts_h;
-  ddd_pts_p = (P * ddd_pts_h).array();
+  Eigen::Matrix<double, 3, 4> PTr;
+  PTr = P * T.matrix();
+  ddd_pts_p = (PTr * ddd_pts_h).array();
+  // ddd_pts_h = T * ddd_pts_h;
+  // ddd_pts_p = (P * ddd_pts_h).array();
   ddd_pts_p.row(0) /= ddd_pts_p.row(2);
   ddd_pts_p.row(1) /= ddd_pts_p.row(2);
-  depth_pts = ddd_pts_h.row(2);
+  depth_pts = ddd_pts_p.row(2);
   depth_pts = depth_pts*depthScale;
   depth_img = cv::Mat::zeros(height, width, CV_16UC1);
   //compute_intensity// infrared_img = cv::Mat::zeros(height, width, CV_16UC1);
@@ -617,10 +620,10 @@ void PcdToPng::processPcd(pcl::PointCloud<pcl::PointXYZI> pcd,
   //Store valid depth values
   for(int i=0; i<numPts; i++)
   {
-      //store registered pointcloud
-      pcd.at(i).x = (float) ddd_pts_h(0,i);
-      pcd.at(i).y = (float) ddd_pts_h(1,i);
-      pcd.at(i).z = (float) ddd_pts_h(2,i);
+      //store translated pointcloud
+      // pcd.at(i).x = (float) ddd_pts_h(0,i);
+      // pcd.at(i).y = (float) ddd_pts_h(1,i);
+      // pcd.at(i).z = (float) ddd_pts_h(2,i);
 
       x = round(ddd_pts_p(0,i));
       y = round(ddd_pts_p(1,i));
