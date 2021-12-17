@@ -2,7 +2,8 @@
 #IMPORTANT: do not let an unfinished depth leaf of the yaml tree entrees (unexpected behabiour)
 
 # Plane Filter
-PF/threshold: 0.12 #0.05
+PF/thresh_high: 0.12 #0.05
+PF/thresh_low: 0.0001
 
 # Plane Detector
 PD/debug: true

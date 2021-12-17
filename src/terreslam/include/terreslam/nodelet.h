@@ -93,7 +93,7 @@ protected:
 
 	/// Plane Filter
 	bool use_normal_integral = false;
-	float PF_thresh;
+	float PF_thresh_high, PF_thresh_low;
 
 	/// Plane Detector
 	bool PD_debug;

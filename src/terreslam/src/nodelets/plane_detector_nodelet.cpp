@@ -121,17 +121,18 @@ private:
 		size_t fivepercent = points->size() * 0.05f;
 		float min_step = 0.01;
 		float increment = min_step;
-		float PF_thresh_opt = PF_thresh;
+		float PF_thresh_high_opt = PF_thresh_high;
 		size_t old_size, reduction, remain;
 		
-		util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, cur_low_points, cur_low_normals, PF_thresh);
+		util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, NULL, NULL, PF_thresh_high);
+		util::curvatureFilter(points, normals, NULL, NULL, cur_low_points, cur_low_normals, PF_thresh_low);
 
 		/// Optimize elimination
 		if(cur_high_points->size() >= fivepercent)
 		{
 			old_size = cur_high_points->size();
-			PF_thresh_opt += increment;
-			util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, cur_low_points, cur_low_normals, PF_thresh_opt);
+			PF_thresh_high_opt += increment;
+			util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, NULL, NULL, PF_thresh_high_opt);
 		}
 
 		while(cur_high_points->size() >= fivepercent)
@@ -141,8 +142,8 @@ private:
 			increment = remain * increment / reduction;
 			increment = (increment > min_step) ? increment : min_step;
 			old_size = cur_high_points->size();
-			PF_thresh_opt += increment;
-			util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, cur_low_points, cur_low_normals, PF_thresh_opt);
+			PF_thresh_high_opt += increment;
+			util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, NULL, NULL, PF_thresh_high_opt);
 		}
 
 		/// PLANE DETECTOR

@@ -86,7 +86,8 @@ void Nodelet::onInit()
 	nh.getParam("max_pitchaxis_vel", max_pitchaxis_vel);
 	
 	/// - Plane filter parameters
-	nh.getParam("PF/threshold", PF_thresh);
+	nh.getParam("PF/thresh_high", PF_thresh_high);
+	nh.getParam("PF/thresh_low", PF_thresh_low);
 	
 	/// - Plane detector parameters
 	nh.getParam("PD/debug", PD_debug);

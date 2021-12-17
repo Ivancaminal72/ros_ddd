@@ -30,7 +30,7 @@ void IoDisk::WriteNormals
 	
 	pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointNormal>);
 	pcl::concatenateFields(*cloud_xyz, *normals, *cloud_with_normals);
-	pcl::io::savePCDFileASCII("/home/icaminal/outputs/unorganized/plane_detector/test_pcd.pcd", *cloud_with_normals);
+	pcl::io::savePCDFileASCII("/home/ivan/outputs/terreslam/unorganized/plane_detector/test_pcd.pcd", *cloud_with_normals);
 }
 
 }

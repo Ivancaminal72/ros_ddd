@@ -79,10 +79,14 @@ namespace util
 		pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
 		extract.setInputCloud (cloud);
 		extract.setIndices (fIndices);
-		extract.setNegative(false);
-		extract.filter(*high_cloud);
-		extract.setNegative(true);
-		extract.filter(*low_cloud);
+		if(high_cloud != NULL){
+			extract.setNegative(false);
+			extract.filter(*high_cloud);
+		}
+		if(low_cloud != NULL){
+			extract.setNegative(true);
+			extract.filter(*low_cloud);
+		}
 	}
 
 	void splitPointsNormal(ptrNormalCloud cloud, ptrNormalCloud high_cloud, ptrNormalCloud low_cloud, const std::vector<int>& indices)
@@ -94,10 +98,14 @@ namespace util
 		pcl::ExtractIndices<pcl::Normal> extract;
 		extract.setInputCloud (cloud);
 		extract.setIndices (fIndices);
-		extract.setNegative(false);
-		extract.filter(*high_cloud);
-		extract.setNegative(true);
-		extract.filter(*low_cloud);
+		if(high_cloud != NULL){
+			extract.setNegative(false);
+			extract.filter(*high_cloud);
+		}
+		if(low_cloud != NULL){
+			extract.setNegative(true);
+			extract.filter(*low_cloud);
+		}
 	}
 
 	void subtractPointsXY(pcl::PointCloud<pcl::PointXY>::Ptr cloud, const std::vector<int>& indices)
