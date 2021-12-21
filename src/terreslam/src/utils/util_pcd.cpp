@@ -38,28 +38,51 @@ namespace util
 			return (alpha << 24) + (red << 16) + (grn << 8) + blu;
 	}
 
+	void distanceFilter(ptrPointCloud points, ptrNormalCloud normals, float thresh)
+	{
+		std::vector<int> inidices;
+		// Reserve enough space for the indices
+		inidices.resize(points->size());
+		
+		int j = 0;
+		for (int i = 0; i < static_cast<int>(points->size()); ++i)
+		{
+			if(points->at(i).z > thresh) 
+				continue;
+			inidices[j] = i;
+			j++;
+		}
+		if (j != static_cast<int> (points->size()))
+		{
+			// Resize to the correct size
+			inidices.resize (j);
+		}
+		util::splitPointsXYZRGBA(points, points, NULL, inidices);
+		util::splitPointsNormal(normals, normals, NULL, inidices);
+	}
+
 	void curvatureFilter(ptrPointCloud points, ptrNormalCloud normals, ptrPointCloud high_points, ptrNormalCloud high_normals, ptrPointCloud low_points, ptrNormalCloud low_normals, float thresh)
- {
-	std::vector<int> inidices;
-	// Reserve enough space for the indices
-	inidices.resize(points->size());
-  
-	int j = 0;
-	for (int i = 0; i < static_cast<int>(points->size()); ++i)
 	{
-		if(normals->at(i).curvature < thresh) 
-			continue;
-		inidices[j] = i;
-		j++;
+		std::vector<int> inidices;
+		// Reserve enough space for the indices
+		inidices.resize(points->size());
+		
+		int j = 0;
+		for (int i = 0; i < static_cast<int>(points->size()); ++i)
+		{
+			if(normals->at(i).curvature < thresh) 
+				continue;
+			inidices[j] = i;
+			j++;
+		}
+		if (j != static_cast<int> (points->size()))
+		{
+			// Resize to the correct size
+			inidices.resize (j);
+		}
+		util::splitPointsXYZRGBA(points, high_points, low_points, inidices);
+		util::splitPointsNormal(normals, high_normals, low_normals, inidices);
 	}
-	if (j != static_cast<int> (points->size()))
-	{
-		// Resize to the correct size
-		inidices.resize (j);
-	}
-	util::splitPointsXYZRGBA(points, high_points, low_points, inidices);
-	util::splitPointsNormal(normals, high_normals, low_normals, inidices);
- }
 
 	void printEigenMatrix(Eigen::MatrixXd mat)
 	{
