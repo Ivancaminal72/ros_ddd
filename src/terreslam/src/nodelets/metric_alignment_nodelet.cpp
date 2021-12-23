@@ -422,44 +422,44 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_plannar_fine);
 
 		/// - MA Blob Fine separated
-		// if(old_blobs_pts.size() >= 3){
-		// // pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
-		// std::vector<cv::Mat> RTr_blob_fines;
-		// cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
-		// Eigen::Matrix4f ei_RTr;
-		// cv::cv2eigen(RTr, ei_RTr);
-		// for(size_t x=0; x<old_blobs_pts.size(); ++x)
-		// {
-		// 	pcl::transformPointCloud(old_blobs_pts.at(x), *old_blob_pts_ptr, ei_RTr);
-		// 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-		// 	icp.setInputSource(old_blob_pts_ptr);
-		// 	icp.setInputTarget(cur_pts);
-		// 	icp.setMaxCorrespondenceDistance(0.05);
-		// 	icp.setMaximumIterations(50);
-		// 	icp.setTransformationEpsilon(1e-8);
-		// 	icp.setEuclideanFitnessEpsilon(1);
-		// 	icp.align(*old_blob_pts_ptr);
+		if(old_blobs_pts.size() >= 3){
+		// pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
+		std::vector<cv::Mat> RTr_blob_fines;
+		cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
+		Eigen::Matrix4f ei_RTr;
+		cv::cv2eigen(RTr, ei_RTr);
+		for(size_t x=0; x<old_blobs_pts.size(); ++x)
+		{
+			pcl::transformPointCloud(old_blobs_pts.at(x), *old_blob_pts_ptr, ei_RTr);
+			pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+			icp.setInputSource(old_blob_pts_ptr);
+			icp.setInputTarget(cur_pts);
+			icp.setMaxCorrespondenceDistance(0.05);
+			icp.setMaximumIterations(50);
+			icp.setTransformationEpsilon(1e-8);
+			icp.setEuclideanFitnessEpsilon(1);
+			icp.align(*old_blob_pts_ptr);
 
-		// 	Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
-		// 	cv::Mat RTr_blob_fine;
-		// 	cv::eigen2cv(icp_trans, RTr_blob_fine);
-		// 	RTr_blob_fines.push_back(RTr_blob_fine);
+			Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
+			cv::Mat RTr_blob_fine;
+			cv::eigen2cv(icp_trans, RTr_blob_fine);
+			RTr_blob_fines.push_back(RTr_blob_fine);
 
-		// 	pts_trans(cv::Rect( x, 0, 1, 3 )) = RTr_blob_fine(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(0, 0, 0, 1));
+			pts_trans(cv::Rect( x, 0, 1, 3 )) = RTr_blob_fine(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(0, 0, 0, 1));
 			
-		// }
-		// cv::Mat col_avg, row_sum;
-		// reduce(pts_trans,col_avg, 1, cv::REDUCE_AVG);
-		// cv::Mat RTr_subtract_avg = RTr_identity.clone();
-		// RTr_subtract_avg(cv::Rect( 3, 0, 1, 3 )) = col_avg*-1;
-		// cv::Mat pts_trans_dev = RTr_subtract_avg(cv::Rect( 0, 0, 4, 3 ))*pts_trans;
-		// reduce(cv::abs(pts_trans_dev),row_sum, 0, cv::REDUCE_SUM);
-		// cv::Point min_loc;
-		// cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
-		// RTr = RTr * RTr_blob_fines.at(min_loc.x);
+		}
+		cv::Mat col_avg, row_sum;
+		reduce(pts_trans,col_avg, 1, cv::REDUCE_AVG);
+		cv::Mat RTr_subtract_avg = RTr_identity.clone();
+		RTr_subtract_avg(cv::Rect( 3, 0, 1, 3 )) = col_avg*-1;
+		cv::Mat pts_trans_dev = RTr_subtract_avg(cv::Rect( 0, 0, 4, 3 ))*pts_trans;
+		reduce(cv::abs(pts_trans_dev),row_sum, 0, cv::REDUCE_SUM);
+		cv::Point min_loc;
+		cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
+		RTr = RTr * RTr_blob_fines.at(min_loc.x);
 		
-		// // util::tick_high_resolution(start_t, tick, elapsed_blob_fine_separate);
-		// }
+		// util::tick_high_resolution(start_t, tick, elapsed_blob_fine_separate);
+		}
 
 		/// - MA Blob Fine joint
 		// if(old_blobs_pts.size() >= 3){
