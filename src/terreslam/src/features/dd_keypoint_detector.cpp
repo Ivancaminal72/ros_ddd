@@ -13,7 +13,7 @@ namespace terreslam
 std::vector<cv::KeyPoint> detectGFTTKeyPoints(const cv::Mat &image) 
 {
     std::vector<cv::Point2f> corners;
-    cv::goodFeaturesToTrack(image, corners, 500, 0.0005, 6);
+    cv::goodFeaturesToTrack(image, corners, 500, 0.05, 6);
     std::vector<cv::KeyPoint> kpts;
     for( size_t i = 0; i < corners.size(); ++i )
         kpts.push_back(cv::KeyPoint(corners[i], 1.f));
