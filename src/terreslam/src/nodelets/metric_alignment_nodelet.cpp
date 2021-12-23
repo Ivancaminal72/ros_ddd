@@ -469,7 +469,7 @@ private:
 		pcl::PointCloud<pcl::PointXYZ> joint_old_blobs_pts;
 		Eigen::Matrix4f ei_RTr;
 		cv::cv2eigen(RTr, ei_RTr);
-		// joint_old_blobs_pts += (*old_filtered_low_pts);
+		joint_old_blobs_pts += (*old_filtered_low_pts);
 		for(size_t x=0; x<old_blobs_pts.size(); ++x)
 		{
 			joint_old_blobs_pts += old_blobs_pts.at(x);
