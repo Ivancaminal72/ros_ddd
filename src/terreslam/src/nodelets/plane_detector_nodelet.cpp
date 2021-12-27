@@ -117,7 +117,7 @@ private:
 		
 		util::curvatureFilter(points, normals, cur_high_points, cur_high_normals, NULL, NULL, PF_thresh_high);
 		util::curvatureFilter(points, normals, NULL, NULL, cur_low_points, cur_low_normals, PF_thresh_low);
-		util::distanceFilter(cur_low_points, cur_low_normals, 20);
+		// util::distanceFilter(cur_low_points, cur_low_normals, 20);
 
 		/// Optimize elimination
 		if(cur_high_points->size() >= fivepercent)
