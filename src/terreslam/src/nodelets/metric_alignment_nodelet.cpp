@@ -142,21 +142,21 @@ private:
 					 sp_cur == bp_msg_ptr->y_cur.size() &&
 					 sp_cur == bp_msg_ptr->z_cur.size());
 		pcl::PointXYZ point_pcl;
-		std::vector<pcl::PointCloud<pcl::PointXYZ>> old_blobs_pts;
-		pcl::PointCloud<pcl::PointXYZ>::Ptr old_blob_pts_ptr (new pcl::PointCloud<pcl::PointXYZ>);
-		unsigned int blob_seg = bp_msg_ptr->s_old.at(0);
-		for(size_t i=0; i<sp_old; ++i)
+		std::vector<pcl::PointCloud<pcl::PointXYZ>> cur_blobs_pts;
+		pcl::PointCloud<pcl::PointXYZ>::Ptr blob_pts_ptr (new pcl::PointCloud<pcl::PointXYZ>);
+		unsigned int blob_seg = bp_msg_ptr->s_cur.at(0);
+		for(size_t i=0; i<sp_cur; ++i)
 		{
-			if(bp_msg_ptr->s_old.at(i) != blob_seg)
+			if(bp_msg_ptr->s_cur.at(i) != blob_seg)
 			{
-				blob_seg = bp_msg_ptr->s_old.at(i);
-				old_blobs_pts.push_back(*old_blob_pts_ptr);
-				old_blob_pts_ptr->clear();
+				blob_seg = bp_msg_ptr->s_cur.at(i);
+				cur_blobs_pts.push_back(*blob_pts_ptr);
+				blob_pts_ptr->clear();
 			}
-			point_pcl.x = bp_msg_ptr->x_old.at(i);
-			point_pcl.y = bp_msg_ptr->y_old.at(i);
-			point_pcl.z = bp_msg_ptr->z_old.at(i);
-			old_blob_pts_ptr->points.push_back(point_pcl);
+			point_pcl.x = bp_msg_ptr->x_cur.at(i);
+			point_pcl.y = bp_msg_ptr->y_cur.at(i);
+			point_pcl.z = bp_msg_ptr->z_cur.at(i);
+			blob_pts_ptr->points.push_back(point_pcl);
 		}
 
 		size_t dd_sm  = dd_kpm_msg_ptr->x_old.size();
@@ -413,13 +413,13 @@ private:
 		/// - MA Plannar Fine
 		// Eigen::Matrix4f ei_RTr;
 		// cv::cv2eigen(RTr, ei_RTr);
-		// pcl::transformPointCloud(*old_filtered_low_pts, *old_blob_pts_ptr, ei_RTr);
+		// pcl::transformPointCloud(*cur_filtered_low_pts, *cur_filtered_low_pts, ei_RTr);
 		// pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp;
-		// gicp.setInputSource(old_blob_pts_ptr);
-		// gicp.setInputTarget(cur_filtered_low_pts);
+		// gicp.setInputSource(cur_filtered_low_pts);
+		// gicp.setInputTarget(old_filtered_low_pts);
 		// gicp.setMaxCorrespondenceDistance(0.2);
 		// gicp.setMaximumIterations(50);
-		// gicp.align(*old_blob_pts_ptr);
+		// gicp.align(*cur_filtered_low_pts);
 		
 		// Eigen::Matrix4f gicp_trans = gicp.getFinalTransformation();
 		// cv::Mat RTr_plannar_fine;
@@ -429,67 +429,67 @@ private:
 		// util::tick_high_resolution(start_t, tick, elapsed_plannar_fine);
 
 		/// - MA Blob Fine separated
-		// if(old_blobs_pts.size() >= 3){
-		// // pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
-		// std::vector<cv::Mat> RTr_blob_fines;
-		// cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
-		// Eigen::Matrix4f ei_RTr;
-		// cv::cv2eigen(RTr, ei_RTr);
-		// for(size_t x=0; x<old_blobs_pts.size(); ++x)
-		// {
-		// 	pcl::transformPointCloud(old_blobs_pts.at(x), *old_blob_pts_ptr, ei_RTr);
-		// 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-		// 	icp.setInputSource(old_blob_pts_ptr);
-		// 	icp.setInputTarget(cur_pts);
-		// 	icp.setMaxCorrespondenceDistance(0.05);
-		// 	icp.setMaximumIterations(50);
-		// 	icp.setTransformationEpsilon(1e-8);
-		// 	icp.setEuclideanFitnessEpsilon(1);
-		// 	icp.align(*old_blob_pts_ptr);
+		if(cur_blobs_pts.size() >= 3){
+		// pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
+		std::vector<cv::Mat> RTr_blob_fines;
+		cv::Mat pts_trans(4,cur_blobs_pts.size(), CV_32FC1);
+		Eigen::Matrix4f ei_RTr;
+		cv::cv2eigen(RTr, ei_RTr);
+		for(size_t x=0; x<cur_blobs_pts.size(); ++x)
+		{
+			pcl::transformPointCloud(cur_blobs_pts.at(x), *blob_pts_ptr, ei_RTr);
+			pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+			icp.setInputSource(blob_pts_ptr);
+			icp.setInputTarget(old_pts);
+			icp.setMaxCorrespondenceDistance(0.05);
+			icp.setMaximumIterations(50);
+			icp.setTransformationEpsilon(1e-8);
+			icp.setEuclideanFitnessEpsilon(1);
+			icp.align(*blob_pts_ptr);
 
-		// 	Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
-		// 	cv::Mat RTr_blob_fine;
-		// 	cv::eigen2cv(icp_trans, RTr_blob_fine);
-		// 	RTr_blob_fines.push_back(RTr_blob_fine);
+			Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
+			cv::Mat RTr_blob_fine;
+			cv::eigen2cv(icp_trans, RTr_blob_fine);
+			RTr_blob_fines.push_back(RTr_blob_fine);
 
-		// 	pts_trans(cv::Rect( x, 0, 1, 3 )) = RTr_blob_fine(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(0, 0, 0, 1));
+			pts_trans(cv::Rect( x, 0, 1, 3 )) = RTr_blob_fine(cv::Rect( 0, 0, 4, 3 )) * cv::Mat(cv::Matx41f(0, 0, 0, 1));
 			
-		// }
-		// cv::Mat col_avg, row_sum;
-		// reduce(pts_trans,col_avg, 1, cv::REDUCE_AVG);
-		// cv::Mat RTr_subtract_avg = RTr_identity.clone();
-		// RTr_subtract_avg(cv::Rect( 3, 0, 1, 3 )) = col_avg*-1;
-		// cv::Mat pts_trans_dev = RTr_subtract_avg(cv::Rect( 0, 0, 4, 3 ))*pts_trans;
-		// reduce(cv::abs(pts_trans_dev),row_sum, 0, cv::REDUCE_SUM);
-		// cv::Point min_loc;
-		// cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
-		// RTr = RTr * RTr_blob_fines.at(min_loc.x);
+		}
+		cv::Mat col_avg, row_sum;
+		reduce(pts_trans,col_avg, 1, cv::REDUCE_AVG);
+		cv::Mat RTr_subtract_avg = RTr_identity.clone();
+		RTr_subtract_avg(cv::Rect( 3, 0, 1, 3 )) = col_avg*-1;
+		cv::Mat pts_trans_dev = RTr_subtract_avg(cv::Rect( 0, 0, 4, 3 ))*pts_trans;
+		reduce(cv::abs(pts_trans_dev),row_sum, 0, cv::REDUCE_SUM);
+		cv::Point min_loc;
+		cv::minMaxLoc(row_sum, NULL, NULL, &min_loc, NULL);
+		RTr = RTr * RTr_blob_fines.at(min_loc.x);
 		
-		// // util::tick_high_resolution(start_t, tick, elapsed_blob_fine_separate);
-		// }
+		// util::tick_high_resolution(start_t, tick, elapsed_blob_fine_separate);
+		}
 
 		/// - MA Blob Fine joint
-		// if(old_blobs_pts.size() >= 3){
+		// if(cur_blobs_pts.size() >= 3){
 		// // pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
 		// std::vector<cv::Mat> RTr_blob_fines;
-		// cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
+		// cv::Mat pts_trans(4,cur_blobs_pts.size(), CV_32FC1);
 		// pcl::PointCloud<pcl::PointXYZ> joint_old_blobs_pts;
 		// Eigen::Matrix4f ei_RTr;
 		// cv::cv2eigen(RTr, ei_RTr);
 		// // joint_old_blobs_pts += (*old_filtered_low_pts);
-		// for(size_t x=0; x<old_blobs_pts.size(); ++x)
+		// for(size_t x=0; x<cur_blobs_pts.size(); ++x)
 		// {
-		// 	joint_old_blobs_pts += old_blobs_pts.at(x);
+		// 	joint_old_blobs_pts += cur_blobs_pts.at(x);
 		// }
-		// pcl::transformPointCloud(joint_old_blobs_pts, *old_blob_pts_ptr, ei_RTr);
+		// pcl::transformPointCloud(joint_old_blobs_pts, *blob_pts_ptr, ei_RTr);
 		// pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-		// icp.setInputSource(old_blob_pts_ptr);
+		// icp.setInputSource(blob_pts_ptr);
 		// icp.setInputTarget(cur_pts);
 		// icp.setMaxCorrespondenceDistance(0.05);
 		// icp.setMaximumIterations(50);
 		// icp.setTransformationEpsilon(1e-8);
 		// icp.setEuclideanFitnessEpsilon(1);
-		// icp.align(*old_blob_pts_ptr);
+		// icp.align(*blob_pts_ptr);
 
 		// Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
 		// cv::Mat RTr_blob_fine;
@@ -500,27 +500,27 @@ private:
 		// }
 
 		/// - MA Blob Fine joint submap
-		// if(old_blobs_pts.size() >= 3){
+		// if(cur_blobs_pts.size() >= 3){
 		// // pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS); //Suppress PCL_ERRORs
 		// std::vector<cv::Mat> RTr_blob_fines;
-		// cv::Mat pts_trans(4,old_blobs_pts.size(), CV_32FC1);
+		// cv::Mat pts_trans(4,cur_blobs_pts.size(), CV_32FC1);
 		// pcl::PointCloud<pcl::PointXYZ> joint_old_blobs_pts;
 		// Eigen::Matrix4f ei_RTr;
 		// cv::cv2eigen(RTr, ei_RTr);
 		// // joint_old_blobs_pts += (*old_filtered_low_pts);
-		// for(size_t x=0; x<old_blobs_pts.size(); ++x)
+		// for(size_t x=0; x<cur_blobs_pts.size(); ++x)
 		// {
-		// 	joint_old_blobs_pts += old_blobs_pts.at(x);
+		// 	joint_old_blobs_pts += cur_blobs_pts.at(x);
 		// }
-		// pcl::transformPointCloud(joint_old_blobs_pts, *old_blob_pts_ptr, ei_RTr);
+		// pcl::transformPointCloud(joint_old_blobs_pts, *blob_pts_ptr, ei_RTr);
 		// pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-		// icp.setInputSource(old_blob_pts_ptr);
+		// icp.setInputSource(blob_pts_ptr);
 		// icp.setInputTarget(cur_pts);
 		// icp.setMaxCorrespondenceDistance(0.05);
 		// icp.setMaximumIterations(50);
 		// icp.setTransformationEpsilon(1e-8);
 		// icp.setEuclideanFitnessEpsilon(1);
-		// icp.align(*old_blob_pts_ptr);
+		// icp.align(*blob_pts_ptr);
 
 		// Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
 		// cv::Mat RTr_blob_fine;
