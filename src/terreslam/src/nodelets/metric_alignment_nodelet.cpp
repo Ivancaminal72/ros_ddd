@@ -64,6 +64,7 @@ private:
 		ddd_keypoint_matches_sub_filter_.subscribe(nh, ddd_keypoint_matches_topic, 3);
 		old_cloud_filtered_low_sub_filter_.subscribe(nh, old_cloud_filtered_low_topic, 3);
 		cloud_filtered_low_sub_filter_.subscribe(nh, cloud_filtered_low_topic, 3);
+		old_cloud_sub_filter_.subscribe(nh, old_cloud_topic, 3);
 		cloud_sub_filter_.subscribe(nh, cloud_topic, 3);
 
 		exactSync_ = new message_filters::Synchronizer<MyExactSyncPolicy>
@@ -74,8 +75,9 @@ private:
 			ddd_keypoint_matches_sub_filter_,
 			old_cloud_filtered_low_sub_filter_,
 			cloud_filtered_low_sub_filter_,
+			old_cloud_sub_filter_,
 			cloud_sub_filter_);
-		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3,_4,_5,_6,_7));
+		exactSync_->registerCallback(boost::bind(&MetricAlignmentNodelet::callback, this, _1, _2,_3,_4,_5,_6,_7,_8));
 
 		/// Publishers
 		cloud_keypoints_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_keypoints_topic, 10);
@@ -91,8 +93,9 @@ private:
 		const terreslam::KeyPointMatches::ConstPtr& dd_kpm_msg_ptr,
 		const terreslam::KeyPointMatches::ConstPtr& ddd_kpm_msg_ptr,
 		const sensor_msgs::PointCloud2::ConstPtr& old_cloud_filtered_low_msg_ptr,
-		const sensor_msgs::PointCloud2::ConstPtr& cloud_filtered_low_msg_ptr,
-		const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr)
+		const sensor_msgs::PointCloud2::ConstPtr& cur_cloud_filtered_low_msg_ptr,
+		const sensor_msgs::PointCloud2::ConstPtr& old_cloud_msg_ptr,
+		const sensor_msgs::PointCloud2::ConstPtr& cur_cloud_msg_ptr)
 	{
 		if(debug) std::cout << "Entry MA: " << entry_count << std::endl;
 		///Start chrono ticking
@@ -186,10 +189,12 @@ private:
 		pcl::PointCloud<pcl::PointXYZ>::Ptr old_filtered_low_pts (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::fromROSMsg(*old_cloud_filtered_low_msg_ptr, *old_filtered_low_pts);
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cur_filtered_low_pts (new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::fromROSMsg(*cloud_filtered_low_msg_ptr, *cur_filtered_low_pts);
+		pcl::fromROSMsg(*cur_cloud_filtered_low_msg_ptr, *cur_filtered_low_pts);
 		
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cur_pts (new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::fromROSMsg(*cloud_msg_ptr, *cur_pts);
+		pcl::fromROSMsg(*cur_cloud_msg_ptr, *cur_pts);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr old_pts (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::fromROSMsg(*old_cloud_msg_ptr, *old_pts);
 
 		ros::Time cur_stamp = bm_msg_ptr->header.stamp;
 		assert(cur_stamp == dd_kpm_msg_ptr->header.stamp &&
@@ -205,7 +210,7 @@ private:
 		{
 		float best_param[3] = {0.0f};
 		bool inliers[sm] = {true};
-		fit3DofRANSAC(bm_old, bm_cur, best_param, inliers, cv::Point2f(0,0), 0.1, 2*sm, MA_debug_Blobs_coarse);
+		fit3DofRANSAC(bm_cur, bm_old, best_param, inliers, cv::Point2f(0,0), 0.1, 2*sm, MA_debug_Blobs_coarse);
 
 		/// Transformation
 		float theta = best_param[0];
@@ -247,7 +252,7 @@ private:
 
 			float best_param[3] = {0.0f};
 			bool inliers[joint_sm] = {true};
-			fit3DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param, inliers, cv::Point2f(0,0), 0.1, joint_sm, MA_debug_KPs);
+			fit3DofRANSAC(ddd_kpm_cur, ddd_kpm_old, best_param, inliers, cv::Point2f(0,0), 0.1, joint_sm, MA_debug_KPs);
 			float theta = best_param[0];
 			float tx = best_param[1];
 			float tz = best_param[2];
@@ -270,7 +275,7 @@ private:
 
 				float best_param_2D[3] = {0.0f};
 				bool inliers_2D[dd_sm] = {true};
-				fit3DofRANSAC(dd_kpm_old, dd_kpm_cur, best_param_2D, inliers_2D, cv::Point2f(0,0), 0.1, dd_sm, MA_debug_KPs);
+				fit3DofRANSAC(dd_kpm_cur, dd_kpm_old, best_param_2D, inliers_2D, cv::Point2f(0,0), 0.1, dd_sm, MA_debug_KPs);
 				float theta = best_param_2D[0];
 				float tx = best_param_2D[1];
 				float tz = best_param_2D[2];
@@ -294,7 +299,7 @@ private:
 
 				float best_param_3D[3] = {0.0f};
 				bool inliers_3D[ddd_sm] = {true};
-				fit3DofRANSAC(ddd_kpm_old, ddd_kpm_cur, best_param_3D, inliers_3D, cv::Point2f(0,0), 0.1, ddd_sm, MA_debug_KPs);
+				fit3DofRANSAC(ddd_kpm_cur, ddd_kpm_old, best_param_3D, inliers_3D, cv::Point2f(0,0), 0.1, ddd_sm, MA_debug_KPs);
 				float theta = best_param_3D[0];
 				float tx = best_param_3D[1];
 				float tz = best_param_3D[2];
@@ -314,7 +319,7 @@ private:
 		
 		/// - MA Coarse Regularization
 		if(MA_regularisation){
-		blob_d_cur = cv::Point2f(RTr.at<float>(0,3), RTr.at<float>(2,3)); // x & z components
+		blob_d_cur = cv::Point2f(-RTr.at<float>(0,3), -RTr.at<float>(2,3)); // x & z components
 		blob_v_cur = blob_d_cur / delta_time;
 		
 		if(entry_count < 3)
@@ -402,6 +407,8 @@ private:
 		else trajectory.color.g = 0.0; //default
 
 		// util::tick_high_resolution(start_t, tick, elapsed_regularization);
+
+		
 
 		/// - MA Plannar Fine
 		// Eigen::Matrix4f ei_RTr;
@@ -542,13 +549,13 @@ private:
 		p.z = RTr_acum.at<float>(2,3);
 		trajectory.points.push_back(p);
 
-		cv::Mat R_inv = RTr(cv::Rect( 0, 0, 3, 3 )).t();
-		cv::Mat RTr_inv = cv::Mat(cv::Matx44f(R_inv.at<float>(0,0), R_inv.at<float>(0,1), R_inv.at<float>(0,2), -RTr.at<float>(0,3), 
-																					R_inv.at<float>(1,0), R_inv.at<float>(1,1), R_inv.at<float>(1,2), -RTr.at<float>(1,3), 
-																					R_inv.at<float>(2,0), R_inv.at<float>(2,1), R_inv.at<float>(2,2), -RTr.at<float>(2,3),
-																					0										, 0										, 0										,	1									));
+		// cv::Mat R_inv = RTr(cv::Rect( 0, 0, 3, 3 )).t();
+		// cv::Mat RTr_inv = cv::Mat(cv::Matx44f(R_inv.at<float>(0,0), R_inv.at<float>(0,1), R_inv.at<float>(0,2), -RTr.at<float>(0,3), 
+		// 																			R_inv.at<float>(1,0), R_inv.at<float>(1,1), R_inv.at<float>(1,2), -RTr.at<float>(1,3), 
+		// 																			R_inv.at<float>(2,0), R_inv.at<float>(2,1), R_inv.at<float>(2,2), -RTr.at<float>(2,3),
+		// 																			0										, 0										, 0										,	1									));
 		 
-		RTr_acum = RTr_acum * RTr_inv;
+		RTr_acum = RTr_acum * RTr;
 
 		// cout<<"Tx: "<<RTr.at<float>(0,3)<<endl;
 		// cout<<"Ty: "<<RTr.at<float>(1,3)<<endl;
@@ -716,6 +723,7 @@ private:
 	message_filters::Subscriber<terreslam::KeyPointMatches> ddd_keypoint_matches_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> old_cloud_filtered_low_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_filtered_low_sub_filter_;
+	message_filters::Subscriber<sensor_msgs::PointCloud2> old_cloud_sub_filter_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_filter_;
 	
 	typedef message_filters::sync_policies::ExactTime
@@ -723,6 +731,7 @@ private:
 		terreslam::BlobPoints,
 		terreslam::KeyPointMatches,
 		terreslam::KeyPointMatches,
+		sensor_msgs::PointCloud2,
 		sensor_msgs::PointCloud2,
 		sensor_msgs::PointCloud2,
 		sensor_msgs::PointCloud2> MyExactSyncPolicy;

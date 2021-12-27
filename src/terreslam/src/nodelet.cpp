@@ -28,7 +28,7 @@ void Nodelet::onInit()
 	nh.getParam("base_topic/odom", odom_topic);
 	nh.getParam("base_topic/blob_odom", blob_odom_topic);
 	nh.getParam("base_topic/cloud", cloud_topic);
-	nh.getParam("base_topic/cloud_xy", cloud_xy_topic);
+	nh.getParam("base_topic/old_cloud", old_cloud_topic);
 	nh.getParam("base_topic/cloud_filtered_high", cloud_filtered_high_topic);
 	nh.getParam("base_topic/cloud_filtered_low", cloud_filtered_low_topic);
 	nh.getParam("base_topic/old_cloud_filtered_low", old_cloud_filtered_low_topic);
@@ -53,7 +53,7 @@ void Nodelet::onInit()
 	odom_frame_id = (nh.getNamespace()+"/"+odom_topic).erase(0,1);
 	blob_odom_frame_id = (nh.getNamespace()+"/"+blob_odom_topic).erase(0,1);
 	cloud_frame_id = (nh.getNamespace()+"/"+cloud_topic).erase(0,1);
-	cloud_xy_frame_id = (nh.getNamespace()+"/"+cloud_xy_topic).erase(0,1);
+	old_cloud_frame_id = (nh.getNamespace()+"/"+old_cloud_topic).erase(0,1);
 	cloud_filtered_high_frame_id = (nh.getNamespace()+"/"+cloud_filtered_high_topic).erase(0,1);
 	cloud_filtered_low_frame_id = (nh.getNamespace()+"/"+cloud_filtered_low_topic).erase(0,1);
 	old_cloud_filtered_low_frame_id = (nh.getNamespace()+"/"+old_cloud_filtered_low_topic).erase(0,1);

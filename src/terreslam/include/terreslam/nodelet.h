@@ -26,7 +26,7 @@ protected:
 	std::string odom_topic;
 	std::string blob_odom_topic;
 	std::string cloud_topic;
-	std::string cloud_xy_topic;
+	std::string old_cloud_topic;
 	std::string cloud_filtered_high_topic;
 	std::string cloud_filtered_low_topic;
 	std::string old_cloud_filtered_low_topic;
@@ -52,7 +52,7 @@ protected:
 	std::string odom_frame_id;
 	std::string blob_odom_frame_id;
 	std::string cloud_frame_id;
-	std::string cloud_xy_frame_id;
+	std::string old_cloud_frame_id;
 	std::string cloud_filtered_high_frame_id;
 	std::string cloud_filtered_low_frame_id;
 	std::string old_cloud_filtered_low_frame_id;

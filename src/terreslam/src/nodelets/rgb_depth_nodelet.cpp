@@ -76,7 +76,7 @@ private:
 		image_rgb_pub_ = rgb_it_pub.advertiseCamera(pub_cam_topic,1);
 		image_depth_pub_ = depth_it_pub.advertiseCamera(pub_cam_depth_topic,1);
 		cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_topic, 10);
-		cloud_xy_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_xy_topic, 10);
+		old_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(old_cloud_topic, 10);
 		// timer_ = nh.createTimer(ros::Duration(1.0), boost::bind(& NodeletClass::timerCb, this, _1));
 
 		//Publish identity transforms
@@ -95,6 +95,8 @@ private:
 		Ts_identity.child_frame_id = pub_cam_depth_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);
 		Ts_identity.child_frame_id = cloud_frame_id;
+		static_tf_broadcaster.sendTransform(Ts_identity);
+		Ts_identity.child_frame_id = old_cloud_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);
 		Ts_identity.child_frame_id = cloud_filtered_high_frame_id;
 		static_tf_broadcaster.sendTransform(Ts_identity);
@@ -167,12 +169,7 @@ private:
 		uint8_t *rgb_ptr;
 		rgb_ptr=img_rgb.data;
 
-		scan_ = new Scan();
-		scan_->points() = ptrPointCloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-		scan_->normals() = ptrNormalCloud (new pcl::PointCloud<pcl::Normal>);
-		scan_->pixels() = ptrPixelCloud (new pcl::PointCloud<pcl::PointXY>);
-		scan_->imgRGB() = img_rgb;
-		scan_->imgDepth() = img_depth;
+		cur_points = ptrPointCloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
 		Eigen::Vector4d point_eigen;
 		Eigen::Vector4d point_eigen_backproj;
 		Eigen::Matrix4d P_inv = cam_model.P().inverse().matrix();
@@ -181,9 +178,6 @@ private:
 		/// clear the pointcloud 
 		/// the allocated memory does not release
 		/// the newly pushed elements cover the old ones
-		scan_->points()->clear();
-		scan_->normals()->clear();
-		scan_->pixels()->clear();
 
 		/// BACKPROJECTION
 		for (int v = 0; v < img_depth.rows; ++v)
@@ -199,15 +193,12 @@ private:
 					rgb_ptr++;
 					point_pcl.r=*rgb_ptr;
 					rgb_ptr++;
-					tmp_pointxy.x=u;
-					tmp_pointxy.y=v;
 					point_eigen << (double) u * depth_yx, (double) v * depth_yx, (double) depth_yx, 1;
 					point_eigen_backproj = P_inv * point_eigen;
 					point_pcl.x = (float) point_eigen_backproj(0);
 					point_pcl.y = (float) point_eigen_backproj(1);
 					point_pcl.z = (float) point_eigen_backproj(2);
-					scan_->points()->push_back(point_pcl);
-					scan_->pixels()->push_back(tmp_pointxy);
+					cur_points->push_back(point_pcl);
 				}
 				else if (use_normal_integral)
 				{
@@ -219,37 +210,30 @@ private:
 					point_pcl.r=*rgb_ptr;
 					rgb_ptr++;
 					point_pcl.x = point_pcl.y = point_pcl.z = bad_point;
-					scan_->points()->push_back(point_pcl);
+					cur_points->push_back(point_pcl);
 				}
 				else rgb_ptr+=3;
 			}
 
-		if(use_normal_integral)
-		{
-			/// Organize the point_cloud for the normal estimation
-			scan_->points()->width=width;
-			scan_->points()->height=height;
-		}
-
-		// std::cout<<"Number of valid depth points: "<<scan_->points()->size()<<std::endl;
+		// std::cout<<"Number of valid depth points: "<<cur_points->size()<<std::endl;
 
 		/// PUBLISH
 		/// - Cloud
 		sensor_msgs::PointCloud2 msg_pcd;
-		pcl::toROSMsg(*scan_->points(), msg_pcd);
+		pcl::toROSMsg(*cur_points, msg_pcd);
 		msg_pcd.header.frame_id = cloud_frame_id;
 		msg_pcd.header.stamp = info.header.stamp;
 		cloud_pub_.publish(msg_pcd);
 
-		/// - Cloud XY
-		pcl::toROSMsg(*scan_->pixels(), msg_pcd);
-		msg_pcd.header.frame_id = cloud_xy_frame_id;
-		msg_pcd.header.stamp = info.header.stamp;
-		cloud_xy_pub_.publish(msg_pcd);
-
-		scan_->release();
+		if(entry_count > 0)
+		{
+			pcl::toROSMsg(*old_points, msg_pcd);
+			msg_pcd.header.frame_id = old_cloud_frame_id;
+			msg_pcd.header.stamp = info.header.stamp;
+			old_cloud_pub_.publish(msg_pcd);
+		}
 		
-		/// RE-PUBLISH images
+		/// - Images
 		sensor_msgs::Image rgb_msg_pub = *rgb_msg;
 		sensor_msgs::Image depth_msg_pub = *depth_msg;
 		sensor_msgs::CameraInfo info_msg_pub = *info_msg;
@@ -260,6 +244,8 @@ private:
 		info_msg_pub.header.frame_id = pub_cam_depth_frame_id;
 		image_depth_pub_.publish(depth_msg_pub, info_msg_pub);
 		
+		//Update old data
+		old_points = cur_points;
 		
 		entry_count++;
 
@@ -282,7 +268,7 @@ private:
 
 	/// Comms
 	ros::Publisher cloud_pub_;
-	ros::Publisher cloud_xy_pub_;
+	ros::Publisher old_cloud_pub_;
   image_transport::CameraPublisher image_rgb_pub_;
   image_transport::CameraPublisher image_depth_pub_;
 	image_transport::SubscriberFilter rgb_sub_filter_;
@@ -296,7 +282,8 @@ private:
 	message_filters::Synchronizer<MyExactSyncPolicy> * exactSync_;
 
 	/// Types
-	Scan* scan_;
+	ptrPointCloud cur_points;
+	ptrPointCloud old_points;
 
 };
 
