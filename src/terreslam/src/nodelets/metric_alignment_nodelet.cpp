@@ -469,39 +469,11 @@ private:
 		// }
 
 		/// - MA Blob Fine joint
-		if(cur_blobs_pts.size() >= 3){
-		pcl::PointCloud<pcl::PointXYZ> joint_cur_blobs_pts;
-		Eigen::Matrix4f ei_RTr;
-		cv::cv2eigen(RTr, ei_RTr);
-		joint_cur_blobs_pts += (*cur_filtered_low_pts);
-		for(size_t x=0; x<cur_blobs_pts.size(); ++x)
-		{
-			joint_cur_blobs_pts += cur_blobs_pts.at(x);
-		}
-		pcl::transformPointCloud(joint_cur_blobs_pts, *blob_pts_ptr, ei_RTr);
-		pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-		icp.setInputSource(blob_pts_ptr);
-		icp.setInputTarget(old_pts);
-		icp.setMaxCorrespondenceDistance(0.05);
-		icp.setMaximumIterations(50);
-		icp.setTransformationEpsilon(1e-8);
-		icp.setEuclideanFitnessEpsilon(1);
-		icp.align(*blob_pts_ptr);
-
-		Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
-		cv::Mat RTr_blob_fine;
-		cv::eigen2cv(icp_trans, RTr_blob_fine);
-		RTr = RTr * RTr_blob_fine;
-		
-		// util::tick_high_resolution(start_t, tick, elapsed_blob_fine_joint);
-		}
-
-		/// - MA Blob Fine joint submap
 		// if(cur_blobs_pts.size() >= 3){
 		// pcl::PointCloud<pcl::PointXYZ> joint_cur_blobs_pts;
 		// Eigen::Matrix4f ei_RTr;
 		// cv::cv2eigen(RTr, ei_RTr);
-		// // joint_cur_blobs_pts += (*cur_filtered_low_pts);
+		// joint_cur_blobs_pts += (*cur_filtered_low_pts);
 		// for(size_t x=0; x<cur_blobs_pts.size(); ++x)
 		// {
 		// 	joint_cur_blobs_pts += cur_blobs_pts.at(x);
@@ -509,7 +481,7 @@ private:
 		// pcl::transformPointCloud(joint_cur_blobs_pts, *blob_pts_ptr, ei_RTr);
 		// pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
 		// icp.setInputSource(blob_pts_ptr);
-		// icp.setInputTarget(cur_pts);
+		// icp.setInputTarget(old_pts);
 		// icp.setMaxCorrespondenceDistance(0.05);
 		// icp.setMaximumIterations(50);
 		// icp.setTransformationEpsilon(1e-8);
@@ -523,6 +495,53 @@ private:
 		
 		// // util::tick_high_resolution(start_t, tick, elapsed_blob_fine_joint);
 		// }
+
+		/// - MA Blob Fine joint submap
+		if(cur_blobs_pts.size() >= 3){
+		pcl::PointCloud<pcl::PointXYZ> joint_cur_blobs_pts;
+		Eigen::Matrix4f ei_RTr;
+		cv::cv2eigen(RTr, ei_RTr);
+		joint_cur_blobs_pts += (*cur_filtered_low_pts);
+		for(size_t x=0; x<cur_blobs_pts.size(); ++x)
+		{
+			joint_cur_blobs_pts += cur_blobs_pts.at(x);
+		}
+		if(submaps.size() > 0) *old_pts = submaps.at(submaps.size()-1);
+		pcl::transformPointCloud(joint_cur_blobs_pts, *blob_pts_ptr, ei_RTr);
+		pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+		icp.setInputSource(blob_pts_ptr);
+		icp.setInputTarget(old_pts); //submap
+		icp.setMaxCorrespondenceDistance(0.05);
+		icp.setMaximumIterations(50);
+		icp.setTransformationEpsilon(1e-8);
+		icp.setEuclideanFitnessEpsilon(1);
+		icp.align(*blob_pts_ptr);
+
+		Eigen::Matrix4f icp_trans = icp.getFinalTransformation();
+		cv::Mat RTr_blob_fine;
+		cv::eigen2cv(icp_trans, RTr_blob_fine);
+		RTr = RTr * RTr_blob_fine;
+		
+		// util::tick_high_resolution(start_t, tick, elapsed_blob_fine_joint_submap);
+		}
+
+		//Update submaps
+		for(size_t i=0; i<submaps.size(); ++i)
+		{
+			cv::Mat R_inv = RTr(cv::Rect( 0, 0, 3, 3 )).t();
+			cv::Mat RTr_inv = cv::Mat(cv::Matx44f(R_inv.at<float>(0,0), R_inv.at<float>(0,1), R_inv.at<float>(0,2), -RTr.at<float>(0,3), 
+																						R_inv.at<float>(1,0), R_inv.at<float>(1,1), R_inv.at<float>(1,2), -RTr.at<float>(1,3), 
+																						R_inv.at<float>(2,0), R_inv.at<float>(2,1), R_inv.at<float>(2,2), -RTr.at<float>(2,3),
+																						0										, 0										, 0										,	1									));
+			Eigen::Matrix4f ei_RTr_inv;
+			cv::cv2eigen(RTr_inv, ei_RTr_inv);
+			pcl::transformPointCloud(submaps.at(i), submaps.at(i), ei_RTr_inv);
+			submaps.at(i) += *cur_pts;
+		} 
+		submaps.push_back(*cur_pts);
+		if(submaps.size() > 5) submaps.pop_front();
+
+		// util::tick_high_resolution(start_t, tick, elapsed_blob_fine_joint_update_submap);
 
 
 		/// PRE-PUBLISH
@@ -683,7 +702,7 @@ private:
 
 
 		// util::tick_high_resolution(start_t, tick, elapsed);
-		// util::printElapsed(elapsed, "Callback blob detector: ");
+		// util::printElapsed(elapsed, "Callback MA: ");
 		// util::printElapsed(elapsed_load_msg, "Load msg: ");
 		// util::printElapsed(elapsed_blob_coarse, "MA Blob Coarse: ");
 		// util::printElapsed(elapsed_kps, "MA Keypoints: ");
@@ -691,6 +710,8 @@ private:
 		// util::printElapsed(elapsed_plannar_fine, "MA Plannar fine: ");
 		// util::printElapsed(elapsed_blob_fine_separate, "MA Blob fine separate: ");
 		// util::printElapsed(elapsed_blob_fine_joint, "MA Blob fine joint: ");
+		// util::printElapsed(elapsed_blob_fine_joint_submap, "MA Blob fine joint submap: ");
+		// util::printElapsed(elapsed_blob_fine_joint_update_submap, "MA Blob fine joint update submap: ");
 
 	}
 
@@ -738,8 +759,10 @@ private:
 	std::vector<double> elapsed_kps;
 	std::vector<double> elapsed_regularization;
 	std::vector<double> elapsed_plannar_fine;
-	std::vector<double> elapsed_blob_fine_joint;
 	std::vector<double> elapsed_blob_fine_separate;
+	std::vector<double> elapsed_blob_fine_joint;
+	std::vector<double> elapsed_blob_fine_joint_submap;
+	std::vector<double> elapsed_blob_fine_joint_update_submap;
 
 	/// MA
 	cv::Mat RTr_identity = (cv::Mat_<float>(4, 4)<<1, 0, 0, 0, 
@@ -761,6 +784,9 @@ private:
 	std::deque<float> blob_vels_z;
 	std::deque<float> blob_vels2_x;
 	std::deque<float> blob_vels2_z;
+
+	//MA Blob Fine joint submap
+	std::deque<pcl::PointCloud<pcl::PointXYZ>> submaps;
 
 };
 
